@@ -50,7 +50,8 @@ Optional argument: `--force` (overwrite existing workspace files).
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/g4run" pull
    ```
-   First-run downloads ~1–2 GB into `~/.geant4_claude/sif/`. Reruns no-op.
+   First-run downloads ~1–2 GB into `${CLAUDE_PLUGIN_DATA}/cache/sif/`
+   (override with `GEANT4_CLAUDE_CACHE`). Reruns no-op.
 
 5. **Validate the example geometry** to confirm the container works:
    ```bash
@@ -104,7 +105,8 @@ Optional argument: `--force` (overwrite existing workspace files).
 
 - A populated workspace under `cwd`: `CLAUDE.md`, `.gitignore`, `geometries/`,
   `macros/`, `runs/`, `analysis/`.
-- A cached `.sif` at `~/.geant4_claude/sif/g4install_11.4.0-almalinux-9.4.sif`.
+- A cached `.sif` at `${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
+  (resolved by `bin/g4run`; override with `GEANT4_CLAUDE_CACHE`).
 - (Optional, on user consent) Geant4 source tree at
   `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/` matching the container's
   Geant4 version.
@@ -115,7 +117,7 @@ Optional argument: `--force` (overwrite existing workspace files).
 |--------|--------------|-----|
 | `apptainer: command not found` | Apptainer not installed. | Install apptainer; rerun. |
 | `cp: cannot stat '${CLAUDE_PLUGIN_ROOT}/templates/...'` | Plugin not properly installed. | Re-install the `geant4_claude` plugin. |
-| `apptainer pull` fails with auth/network error | Offline or registry unreachable. | Retry with network; or set `GEANT4_CLAUDE_CACHE` to a directory that already has the `.sif`. |
+| `apptainer pull` fails with auth/network error | Offline or registry unreachable. | Retry with network; or set `GEANT4_CLAUDE_CACHE` to a directory that already has the `.sif`. The default cache lives at `${CLAUDE_PLUGIN_DATA}/cache/` (plugin-scoped). |
 | Existing files refuse to be touched | Workspace already initialized. | Re-run with `/geant4-init --force` (only after confirming with the user). |
 | `validate-gdml` fails | Container exec broken or template corrupted. | Run `g4run shell`, manually `xmllint` the file; report the error. |
 | `git clone` of Geant4 source fails (network, tag missing) | Offline, GitHub unreachable, or the image's Geant4 version is not yet tagged on `Geant4/geant4`. | User can skip; re-run `/geant4-init` later. Manual fallback: `git clone --depth 1 --branch v<G4_VERSION> https://github.com/Geant4/geant4.git <plugin>/wiki/raw/geant4-src`. |

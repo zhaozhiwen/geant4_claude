@@ -64,7 +64,7 @@ In a fresh project directory:
 ```text
 > /geant4-init
 ✓ wrote workspace (CLAUDE.md, .gitignore, geometries/, macros/, runs/, analysis/)
-✓ pulled image  → ~/.geant4_claude/sif/g4install_11.4.0-almalinux-9.4.sif
+✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
 ✓ validated     geometries/example.gdml
 
 > /geant4-detector "1×1×10 cm lead block in a 50 cm air world, sensitive"

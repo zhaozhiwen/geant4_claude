@@ -28,8 +28,8 @@ $ cd ~/projects/my-detector
 $ claude
 > /geant4-init
 ✓ wrote workspace skeleton (geometries/, macros/, runs/, analysis/, CLAUDE.md)
-✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ~/.geant4_claude/sif)
-✓ built generic main → ~/.geant4_claude/build/geant4_claude_main
+✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${CLAUDE_PLUGIN_DATA}/cache/sif)
+✓ built generic main → ${CLAUDE_PLUGIN_DATA}/cache/build/geant4_claude_main
 
 > /geant4-detector "1x1x10 cm lead block centered at origin, air world 50 cm"
 ✓ wrote geometries/det.gdml (validated against schema)
@@ -83,7 +83,7 @@ Three things to notice:
 ### `bin/g4run`
 
 ```
-bin/g4run build              # build src/ into ~/.geant4_claude/build/ (idempotent)
+bin/g4run build              # build src/ into <cache>/build/ (idempotent; see info)
 bin/g4run sim   <gdml> <mac> <out_dir>
 bin/g4run shell              # interactive shell inside the container
 bin/g4run root  <args…>      # forward to ROOT inside the container
@@ -91,8 +91,12 @@ bin/g4run root  <args…>      # forward to ROOT inside the container
 
 Internally each subcommand:
 
-1. ensures the `.sif` for the pinned tag exists at `~/.geant4_claude/sif/…`,
-   pulling on first use;
+1. ensures the `.sif` for the pinned tag exists at `<cache>/sif/…`, pulling
+   on first use. The cache resolves in this order: `$GEANT4_CLAUDE_CACHE`
+   override → `$CLAUDE_PLUGIN_DATA/cache` (the default when invoked through
+   Claude Code) → `$HOME/.geant4_claude` (legacy fallback). On the first call
+   after this contract change, an existing `$HOME/.geant4_claude` is
+   auto-migrated into the new default if the destination is empty;
 2. invokes `apptainer exec --bind <project>,<cache> <sif> bash -lc
    'source /usr/local/bin/docker-entrypoint.sh && <cmd>'`.
 

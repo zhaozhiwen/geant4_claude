@@ -11,7 +11,23 @@ IMAGE_URI="docker://${IMAGE_TAG}"
 ENTRYPOINT="/usr/local/bin/docker-entrypoint.sh"
 
 # --- paths -------------------------------------------------------------------
-CACHE_DIR="${GEANT4_CLAUDE_CACHE:-$HOME/.geant4_claude}"
+# Cache resolution order (highest priority first):
+#   1. $GEANT4_CLAUDE_CACHE                — explicit user override.
+#   2. $CLAUDE_PLUGIN_DATA/cache           — plugin-scoped, the new default
+#                                            when invoked through Claude Code.
+#   3. $HOME/.geant4_claude                — legacy default; final fallback
+#                                            for bare-shell / CI use.
+LEGACY_CACHE_DIR="${HOME}/.geant4_claude"
+resolve_cache_dir() {
+  if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
+    printf '%s\n' "${GEANT4_CLAUDE_CACHE}"
+  elif [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]]; then
+    printf '%s\n' "${CLAUDE_PLUGIN_DATA}/cache"
+  else
+    printf '%s\n' "${LEGACY_CACHE_DIR}"
+  fi
+}
+CACHE_DIR="$(resolve_cache_dir)"
 SIF_DIR="${CACHE_DIR}/sif"
 BUILD_DIR="${CACHE_DIR}/build"
 SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
@@ -26,6 +42,23 @@ die()  { printf '[g4run] error: %s\n' "$*" >&2; exit 1; }
 
 require_apptainer() {
   command -v apptainer >/dev/null 2>&1 || die "apptainer not found on PATH. Install apptainer first (https://apptainer.org)."
+}
+
+# One-time migration: when the resolved cache differs from the legacy
+# ~/.geant4_claude path and the legacy path holds real content, move it to the
+# resolved location. Only runs when the destination is empty (no merge), so
+# repeated invocations are no-ops. Same-filesystem mv is atomic and cheap.
+maybe_migrate_legacy_cache() {
+  [[ "${CACHE_DIR}" != "${LEGACY_CACHE_DIR}" ]] || return 0
+  [[ -d "${LEGACY_CACHE_DIR}" ]] || return 0
+  if [[ -e "${CACHE_DIR}" ]] && [[ -n "$(ls -A "${CACHE_DIR}" 2>/dev/null)" ]]; then
+    log "note: legacy cache at ${LEGACY_CACHE_DIR} exists alongside ${CACHE_DIR}; skipping auto-migration. Set GEANT4_CLAUDE_CACHE=${LEGACY_CACHE_DIR} to keep using the legacy path, or remove one of them."
+    return 0
+  fi
+  mkdir -p "$(dirname "${CACHE_DIR}")"
+  if [[ -e "${CACHE_DIR}" ]]; then rmdir "${CACHE_DIR}" 2>/dev/null || true; fi
+  log "migrating cache: ${LEGACY_CACHE_DIR} -> ${CACHE_DIR}"
+  mv "${LEGACY_CACHE_DIR}" "${CACHE_DIR}"
 }
 
 ensure_sif() {
@@ -50,9 +83,24 @@ in_container() {
 
 # --- subcommands -------------------------------------------------------------
 cmd_info() {
+  local cache_src
+  if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
+    cache_src="GEANT4_CLAUDE_CACHE override"
+  elif [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]]; then
+    cache_src="CLAUDE_PLUGIN_DATA (plugin default)"
+  else
+    cache_src="legacy default (\$HOME/.geant4_claude)"
+  fi
   echo "image:    ${IMAGE_TAG}"
   echo "sif:      ${SIF_PATH} $([[ -f ${SIF_PATH} ]] && echo '[present]' || echo '[not pulled]')"
-  echo "cache:    ${CACHE_DIR}"
+  echo "cache:    ${CACHE_DIR}  [${cache_src}]"
+  if [[ "${CACHE_DIR}" != "${LEGACY_CACHE_DIR}" && -d "${LEGACY_CACHE_DIR}" ]]; then
+    if [[ -e "${CACHE_DIR}" ]] && [[ -n "$(ls -A "${CACHE_DIR}" 2>/dev/null)" ]]; then
+      echo "legacy:   ${LEGACY_CACHE_DIR}  [present — auto-migration skipped, destination not empty]"
+    else
+      echo "legacy:   ${LEGACY_CACHE_DIR}  [present — will auto-migrate on next runtime call]"
+    fi
+  fi
   echo "build:    ${BUILD_DIR} $([[ -x ${BUILD_DIR}/geant4_claude_main ]] && echo '[built]' || echo '[not built]')"
   echo "plugin:   ${PLUGIN_ROOT}"
   command -v apptainer >/dev/null 2>&1 \
@@ -128,12 +176,20 @@ Subcommands:
   validate-gdml <file>          xmllint a GDML file inside the container.
 
 Image: ${IMAGE_TAG}
-Cache: ${CACHE_DIR}  (override with GEANT4_CLAUDE_CACHE)
+Cache: ${CACHE_DIR}
+Cache resolution order:
+  1. \$GEANT4_CLAUDE_CACHE              (explicit override)
+  2. \$CLAUDE_PLUGIN_DATA/cache         (default when invoked via Claude Code)
+  3. \$HOME/.geant4_claude              (legacy fallback)
 EOF
 }
 
 # --- dispatch ----------------------------------------------------------------
 sub="${1:-}"; shift || true
+case "${sub}" in
+  ""|-h|--help|help) usage; exit 0 ;;
+esac
+maybe_migrate_legacy_cache
 case "${sub}" in
   pull)           cmd_pull "$@" ;;
   info)           cmd_info "$@" ;;
@@ -142,6 +198,5 @@ case "${sub}" in
   sim)            cmd_sim "$@" ;;
   root)           cmd_root "$@" ;;
   validate-gdml)  cmd_validate_gdml "$@" ;;
-  ""|-h|--help|help) usage ;;
   *)              usage; die "unknown subcommand: ${sub}" ;;
 esac

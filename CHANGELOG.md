@@ -47,6 +47,21 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ### Changed
 
+- **Runtime cache default moved into the plugin.** `bin/g4run` now resolves the
+  cache directory in this order: `$GEANT4_CLAUDE_CACHE` (explicit override) →
+  `$CLAUDE_PLUGIN_DATA/cache` (the new default when invoked through Claude
+  Code) → `$HOME/.geant4_claude` (legacy fallback for bare-shell / CI use).
+  Existing `$HOME/.geant4_claude` content is auto-migrated into the new
+  default on the first runtime call when the destination is empty (atomic
+  `mv` on the same filesystem); if both exist with content, migration is
+  skipped and a one-line note tells the user how to keep the legacy path
+  with `GEANT4_CLAUDE_CACHE=$HOME/.geant4_claude`. `g4run info` now prints
+  the resolution source and any present legacy directory. **User impact:**
+  the `.sif` and build outputs now live alongside the plugin's other
+  per-user state under `~/.claude/plugins/data/<plugin-id>/cache/` and are
+  cleaned up when the plugin is uninstalled. Trade-off: if a user uninstalls
+  and reinstalls the plugin, the multi-GB image must be re-pulled — set
+  `GEANT4_CLAUDE_CACHE` to a stable path to avoid that.
 - **`DESIGN.md` moved to `docs/DESIGN.md`.** All references in `README.md`,
   `CLAUDE.md`, and `wiki/CLAUDE.md` updated. The file now also contains the
   MVP boundary section (5 things real Geant4 apps do that v0.0.1 doesn't)
