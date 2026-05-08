@@ -69,14 +69,25 @@ ensure_sif() {
   apptainer pull "${SIF_PATH}" "${IMAGE_URI}"
 }
 
+# Resolve symlinks before handing paths to apptainer. On shared-FS hosts the
+# user's $HOME or $(pwd) can be a symlink chain (e.g. ~/work -> /work/... ->
+# /w/...); apptainer will --bind the symlink path but then fail to chdir to
+# it inside the container. `pwd -P` and `readlink -f` give the physical
+# path that apptainer can actually mount and enter.
+container_workdir()   { pwd -P; }
+container_cache_dir() { readlink -f "${CACHE_DIR}"; }
+
 # Run a shell command inside the container, with the entrypoint sourced and
 # the current working directory plus the cache bind-mounted.
 in_container() {
   ensure_sif
-  local cmd="$1"
+  local cmd="$1" wd cache_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
   apptainer exec \
-    --bind "$(pwd)" \
-    --bind "${CACHE_DIR}" \
+    --bind "${wd}" \
+    --bind "${cache_real}" \
+    --pwd "${wd}" \
     "${SIF_PATH}" \
     bash -lc "source ${ENTRYPOINT} && ${cmd}"
 }
@@ -115,22 +126,30 @@ cmd_pull() {
 
 cmd_shell() {
   ensure_sif
+  local wd cache_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
   log "entering container ($(basename "${SIF_PATH}")). Type 'exit' to leave."
   apptainer exec \
-    --bind "$(pwd)" \
-    --bind "${CACHE_DIR}" \
+    --bind "${wd}" \
+    --bind "${cache_real}" \
+    --pwd "${wd}" \
     "${SIF_PATH}" \
     bash -lc "source ${ENTRYPOINT} && exec bash"
 }
 
 cmd_root() {
   ensure_sif
+  local wd cache_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
   # The container entrypoint ends in `exec "$@"` and would otherwise clobber
   # forwarded positional args; DOCKER_ENTRYPOINT_SOURCE_ONLY=1 suppresses it.
   apptainer exec \
     --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
-    --bind "$(pwd)" \
-    --bind "${CACHE_DIR}" \
+    --bind "${wd}" \
+    --bind "${cache_real}" \
+    --pwd "${wd}" \
     "${SIF_PATH}" \
     bash -lc 'source "$0" && root -l -b -q "$@"' "${ENTRYPOINT}" "$@"
 }

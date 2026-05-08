@@ -75,6 +75,26 @@ release. A breaking change to the `Hits` TTree schema or to the
 - **`plugin.json` enriched.** Added `keywords`, `homepage`, and `repository`
   fields for marketplace discovery.
 
+### Fixed
+
+- **`bin/g4run` now uses canonical (symlink-resolved) paths for the
+  apptainer bind and working directory.** All three `apptainer exec` sites
+  (`in_container`, `cmd_shell`, `cmd_root`) now pass `pwd -P` to both
+  `--bind` and `--pwd`, and `readlink -f "${CACHE_DIR}"` for the cache
+  bind. Without this, on hosts where `$HOME` or `$(pwd)` traverses a
+  symlink chain (e.g. `~/work_solid` → `/work/halla/...` →
+  `/w/halla-scshelf2102/...` on JLab's shared filesystem), apptainer would
+  bind the symlink path successfully but then fail to `chdir` inside the
+  container, breaking every plugin command. Reported by a fresh-install
+  smoke test on JLab; symptom was `validate-gdml` working only after
+  `cd`-ing to the canonical `/w/...` path. **User impact:** the plugin now
+  works regardless of how the user `cd`-s into their workspace.
+- **`plugin.json` `repository` is now a string URL** (was an `{type, url}`
+  object); the Claude Code plugin manifest schema requires a string, so
+  the previous shape failed install with
+  `"repository: Invalid input: expected string, received object"` on
+  fresh clones.
+
 ### Documentation
 
 - README now documents the auto-install side effects users see when first
