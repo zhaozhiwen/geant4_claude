@@ -59,33 +59,72 @@ Optional argument: `--force` (overwrite existing workspace files).
    ```
 
 6. **Offer the Geant4 source checkout (one-time, plugin-wide).** The wiki's
-   `sources/geant4-code/synthesis/` pages cite specific `.cc:line` ranges. Those
-   citations are only verifiable if the Geant4 source tree is present at
-   `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/`. The tree is gitignored (large,
-   regenerable) so a fresh-clone install does not ship it.
+   `sources/geant4-code/synthesis/` pages cite specific `.cc:line` ranges.
+   Those citations are only verifiable if the Geant4 source tree is locally
+   present.
 
-   Skip this step silently if the tree is already present:
+   The canonical location is `${CLAUDE_PLUGIN_DATA}/geant4-src/` so the
+   tree survives plugin version bumps (the plugin checkout at
+   `${CLAUDE_PLUGIN_ROOT}` is replaced on update; `${CLAUDE_PLUGIN_DATA}` is
+   not). A symlink at `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src` points at
+   the canonical tree so wiki pages can keep using the relative
+   `wiki/raw/geant4-src/...` references.
+
+   First, migrate any pre-relocation tree and (re)create the symlink:
    ```bash
-   test -d "${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/source" && echo "[g4c] geant4-src already checked out"
+   GEANT4_SRC="${CLAUDE_PLUGIN_DATA}/geant4-src"
+   LEGACY_SRC="${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src"
+
+   # One-time migration: a real directory at LEGACY_SRC is from a
+   # pre-relocation install. Move it into CLAUDE_PLUGIN_DATA.
+   if [ -d "${LEGACY_SRC}" ] && [ ! -L "${LEGACY_SRC}" ]; then
+     if [ -e "${GEANT4_SRC}" ]; then
+       echo "[g4c] note: both ${LEGACY_SRC} and ${GEANT4_SRC} exist; skipping auto-migration. Inspect manually."
+     else
+       mkdir -p "$(dirname "${GEANT4_SRC}")"
+       mv "${LEGACY_SRC}" "${GEANT4_SRC}"
+       echo "[g4c] migrated geant4-src -> ${GEANT4_SRC}"
+     fi
+   fi
+
+   # (Re)create the symlink. Plugin updates wipe ${CLAUDE_PLUGIN_ROOT},
+   # so /geant4-init must rebuild this link each run.
+   if [ -d "${GEANT4_SRC}" ]; then
+     mkdir -p "$(dirname "${LEGACY_SRC}")"
+     if [ -L "${LEGACY_SRC}" ] || [ ! -e "${LEGACY_SRC}" ]; then
+       ln -sfn "${GEANT4_SRC}" "${LEGACY_SRC}"
+     elif [ -d "${LEGACY_SRC}" ]; then
+       echo "[g4c] warning: ${LEGACY_SRC} is a real directory; refusing to overwrite. Resolve manually."
+     fi
+   fi
+   ```
+
+   Skip the prompt silently if the tree is already present:
+   ```bash
+   test -d "${GEANT4_SRC}/source" && echo "[g4c] geant4-src already checked out at ${GEANT4_SRC}"
    ```
 
    If missing, derive the matching tag from the pinned image and ask the user:
    ```bash
    G4_VERSION=$(sed -n 's/^IMAGE_TAG=.*g4install:\([0-9.]*\)-.*/\1/p' "${CLAUDE_PLUGIN_ROOT}/bin/g4run")
-   echo "[g4c] would clone Geant4 v${G4_VERSION} source (~150 MB shallow) into ${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/"
+   echo "[g4c] would clone Geant4 v${G4_VERSION} source (~150 MB shallow) into ${GEANT4_SRC}"
    ```
 
    Then use `AskUserQuestion`:
-   - **Question**: `Clone Geant4 v<G4_VERSION> source into the plugin's wiki/raw/ for offline citation verification?`
+   - **Question**: `Clone Geant4 v<G4_VERSION> source into the plugin's data dir for offline citation verification?`
    - **Options**:
      1. *Yes, shallow clone* — recommended; ~150 MB; no git history.
      2. *Skip for now* — wiki synthesis pages still readable, but `.cc:line` citations cannot be cross-checked locally.
 
-   On **Yes**, clone the tag matching the container's Geant4 version:
+   On **Yes**, clone the tag matching the container's Geant4 version, then
+   create the symlink so wiki references resolve:
    ```bash
+   mkdir -p "$(dirname "${GEANT4_SRC}")"
    git clone --depth 1 --branch "v${G4_VERSION}" \
        https://github.com/Geant4/geant4.git \
-       "${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src"
+       "${GEANT4_SRC}"
+   mkdir -p "$(dirname "${LEGACY_SRC}")"
+   ln -sfn "${GEANT4_SRC}" "${LEGACY_SRC}"
    ```
    On **Skip**, continue. The user can re-trigger this step later by running
    `/geant4-init` again from any workspace (or `--force`); the check is
@@ -108,8 +147,9 @@ Optional argument: `--force` (overwrite existing workspace files).
 - A cached `.sif` at `${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
   (resolved by `bin/g4run`; override with `GEANT4_CLAUDE_CACHE`).
 - (Optional, on user consent) Geant4 source tree at
-  `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/` matching the container's
-  Geant4 version.
+  `${CLAUDE_PLUGIN_DATA}/geant4-src/` matching the container's Geant4
+  version, with a symlink at `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src`
+  pointing at it so wiki page references continue to resolve.
 
 ## Failure modes
 
@@ -120,7 +160,8 @@ Optional argument: `--force` (overwrite existing workspace files).
 | `apptainer pull` fails with auth/network error | Offline or registry unreachable. | Retry with network; or set `GEANT4_CLAUDE_CACHE` to a directory that already has the `.sif`. The default cache lives at `${CLAUDE_PLUGIN_DATA}/cache/` (plugin-scoped). |
 | Existing files refuse to be touched | Workspace already initialized. | Re-run with `/geant4-init --force` (only after confirming with the user). |
 | `validate-gdml` fails | Container exec broken or template corrupted. | Run `g4run shell`, manually `xmllint` the file; report the error. |
-| `git clone` of Geant4 source fails (network, tag missing) | Offline, GitHub unreachable, or the image's Geant4 version is not yet tagged on `Geant4/geant4`. | User can skip; re-run `/geant4-init` later. Manual fallback: `git clone --depth 1 --branch v<G4_VERSION> https://github.com/Geant4/geant4.git <plugin>/wiki/raw/geant4-src`. |
+| `git clone` of Geant4 source fails (network, tag missing) | Offline, GitHub unreachable, or the image's Geant4 version is not yet tagged on `Geant4/geant4`. | User can skip; re-run `/geant4-init` later. Manual fallback: `git clone --depth 1 --branch v<G4_VERSION> https://github.com/Geant4/geant4.git ${CLAUDE_PLUGIN_DATA}/geant4-src && ln -sfn ${CLAUDE_PLUGIN_DATA}/geant4-src ${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src`. |
+| `wiki/raw/geant4-src` exists as a real directory after a plugin update | Pre-relocation install left a real dir at the legacy path; auto-migration was skipped because the new canonical path was also present. | Inspect both, keep the desired one, remove the other, then re-run `/geant4-init` to recreate the symlink. |
 
 ## Notes
 

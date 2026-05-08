@@ -32,9 +32,12 @@ release. A breaking change to the `Hits` TTree schema or to the
 - **Optional Geant4 source checkout offered by `/geant4-init`** — first time
   the user runs `/geant4-init`, the command asks whether to shallow-clone the
   Geant4 source tree (tag matched to the pinned container's Geant4 version)
-  into `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/`. Plugin-wide and idempotent:
-  later `/geant4-init` calls in other projects detect the existing tree and
-  skip the prompt. Required only to verify the wiki's source-citing synthesis
+  into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at
+  `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src` so wiki pages keep using the
+  relative `wiki/raw/geant4-src/...` references. The data-dir location means
+  the tree survives plugin version bumps. Plugin-wide and idempotent: later
+  `/geant4-init` calls in other projects detect the existing tree and skip
+  the prompt. Required only to verify the wiki's source-citing synthesis
   pages against actual Geant4 code.
 - **Geant4 + physics wiki** (`wiki/`) — 69-page Obsidian vault covering
   Geant4 toolkit mechanics (38 example summaries + 24 source-grounded
@@ -47,6 +50,11 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ### Changed
 
+- **Auto-migration of any pre-existing `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/`
+  directory** into the new canonical `${CLAUDE_PLUGIN_DATA}/geant4-src/` on
+  the next `/geant4-init` run (when the destination is empty). Affects only
+  early `[Unreleased]` adopters whose tree was at the legacy location; the
+  v0.0.1 release never shipped the source-clone feature.
 - **Runtime cache default moved into the plugin.** `bin/g4run` now resolves the
   cache directory in this order: `$GEANT4_CLAUDE_CACHE` (explicit override) →
   `$CLAUDE_PLUGIN_DATA/cache` (the new default when invoked through Claude

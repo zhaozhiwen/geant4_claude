@@ -55,7 +55,7 @@ Two things install automatically the first time Claude Code loads the plugin —
 
 If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the four-command demo to work.
 
-The first `/geant4-init` you run will additionally **ask once** whether to shallow-clone the Geant4 source tree (matching the pinned container's version, ~150 MB) into `<plugin>/wiki/raw/geant4-src/`. This is optional — say *Skip* and the four-command demo still works. Saying *Yes* is what lets Claude verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run `/geant4-init` later to be asked again.
+The first `/geant4-init` you run will additionally **ask once** whether to shallow-clone the Geant4 source tree (matching the pinned container's version, ~150 MB) into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at `<plugin>/wiki/raw/geant4-src` so wiki page references keep working. The data-dir location means the tree survives plugin version bumps. This is optional — say *Skip* and the four-command demo still works. Saying *Yes* is what lets Claude verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run `/geant4-init` later to be asked again.
 
 ## Quickstart (the four-command demo)
 
