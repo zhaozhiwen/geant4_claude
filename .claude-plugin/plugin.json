@@ -17,8 +17,5 @@
     "claude-code-plugin"
   ],
   "homepage": "https://github.com/zhaozhiwen/geant4_claude",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/zhaozhiwen/geant4_claude.git"
-  }
+  "repository": "https://github.com/zhaozhiwen/geant4_claude.git"
 }
