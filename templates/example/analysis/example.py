@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Default plot: per-event energy deposit histogram for a single run.
+"""Default plot for a run produced by the example main: per-event
+energy-deposit histogram.
 
 Usage: python analysis/example.py runs/<run_id>
 
-Reads runs/<run_id>/hits.root (TTree 'Hits') and writes edep_hist.png next
-to it. Run config (particle, energy, n_events) comes from config.json — the
-provenance record produced by /geant4-run.
+Reads runs/<run_id>/hits.root (TTree 'Hits') and writes edep_hist.png
+next to it. Schema-aware only of the example's TTree — your own
+analysis goes in analysis/<run_id>.py.
 """
-import json
 import pathlib
 import sys
 
@@ -20,29 +20,32 @@ import uproot
 
 
 def main(run_dir: pathlib.Path) -> None:
-    cfg = json.loads((run_dir / "config.json").read_text())
-    with uproot.open(run_dir / "hits.root") as f:
+    root_path = run_dir / "hits.root"
+    with uproot.open(root_path) as f:
         t = f["Hits"]
         event = t["event"].array(library="np")
         edep = t["edep"].array(library="np")  # MeV
 
-    n_events = cfg["n_events"]
+    if len(event) == 0:
+        print(f"WARNING: {root_path} has no entries")
+        return
+
+    n_events = int(event.max() + 1)
     per_event = np.bincount(event, weights=edep, minlength=n_events)
 
     fig, ax = plt.subplots()
     ax.hist(per_event, bins=50)
     ax.set_xlabel("Energy deposit per event [MeV]")
     ax.set_ylabel("Events")
-    ax.set_title(
-        f"{cfg['particle']} @ {cfg['energy_MeV']} MeV, {n_events} events"
-    )
+    ax.set_title(f"{run_dir.name} — {n_events} events, {len(edep)} hits")
     out = run_dir / "edep_hist.png"
     fig.savefig(out, dpi=120)
 
     print(f"wrote {out}")
-    print(f"  mean = {per_event.mean():.4g} MeV")
-    print(f"  std  = {per_event.std():.4g} MeV")
-    print(f"  hits = {len(edep)}")
+    print(f"  events     = {n_events}")
+    print(f"  total hits = {len(edep)}")
+    print(f"  mean edep  = {per_event.mean():.4g} MeV/event")
+    print(f"  std edep   = {per_event.std():.4g} MeV/event")
 
 
 if __name__ == "__main__":

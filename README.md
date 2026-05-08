@@ -1,13 +1,15 @@
 # geant4_claude
 
-A Claude Code plugin that lets you **design a Geant4 detector, run a
-simulation, and analyze the output** through four slash commands. Geant4
-and ROOT live in a pinned apptainer image; analysis runs on the host with
-[`uproot`](https://github.com/scikit-hep/uproot5).
+A Claude Code plugin that lets you **build, run, and analyze your own
+Geant4 simulation** through five slash commands plus an opt-in working
+example. Geant4 and ROOT live in a pinned apptainer image; analysis runs
+on the host with [`uproot`](https://github.com/scikit-hep/uproot5).
 
-> Status: **MVP / v0.0.1**. The four commands work end-to-end. C++
-> `DetectorConstruction`, scoring meshes, and physics-list flags are not
-> in this release — see [docs/DESIGN.md](docs/DESIGN.md) §"Open questions".
+> Status: **v0.1.0**. The four core commands (`init`, `build`, `run`,
+> `analyze`) are content-neutral — they work with any user `main.cc` and
+> any output schema. `/geant4-detector` writes standalone GDML that any
+> Geant4 application can load; `/geant4-example` drops in a ready-to-build
+> demo for users who want a starting point.
 
 ## Requirements
 
@@ -53,34 +55,59 @@ Two things install automatically the first time Claude Code loads the plugin —
 
 2. **`pdg` Python package** auto-installs into a managed venv at `~/.claude/plugins/data/<plugin-id>/venv/` via a `SessionStart` hook (`hooks/install-deps.sh`). First session takes ~10–30 s while pip pulls `pdg` + `sqlalchemy` (~50 MB on disk); later sessions are a 3 ms diff/no-op. Claude Code may ask you to approve the hook running `pip install` on your machine. The venv lives outside this repo, survives plugin updates, and is deleted automatically when you uninstall the plugin. Used by the plugin to look up PDG particle data on demand. See [docs/DESIGN.md](docs/DESIGN.md) §"Python deps via SessionStart hook".
 
-If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the four-command demo to work.
+If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the commands to work.
 
-The first `/geant4-init` you run will additionally **ask once** whether to shallow-clone the Geant4 source tree (matching the pinned container's version, ~150 MB) into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at `<plugin>/wiki/raw/geant4-src` so wiki page references keep working. The data-dir location means the tree survives plugin version bumps. This is optional — say *Skip* and the four-command demo still works. Saying *Yes* is what lets Claude verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run `/geant4-init` later to be asked again.
+The first `/geant4-init` you run will additionally **ask once** whether to shallow-clone the Geant4 source tree (matching the pinned container's version, ~150 MB) into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at `<plugin>/wiki/raw/geant4-src` so wiki page references keep working. The data-dir location means the tree survives plugin version bumps. Optional — say *Skip* and the commands still work. Saying *Yes* is what lets Claude verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run `/geant4-init` later to be asked again.
 
-## Quickstart (the four-command demo)
+## Quickstart — two ways
+
+### A. Try the example end-to-end
 
 In a fresh project directory:
 
 ```text
 > /geant4-init
-✓ wrote workspace (CLAUDE.md, .gitignore, geometries/, macros/, runs/, analysis/)
+✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md)
 ✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
-✓ validated     geometries/example.gdml
 
-> /geant4-detector "1×1×10 cm lead block in a 50 cm air world, sensitive"
-✓ wrote geometries/det.gdml
+> /geant4-example
+✓ wrote src/{geant4_claude_main.cc, CMakeLists.txt}, geometries/example.gdml,
+  macros/run.mac, analysis/example.py
+✓ validated geometries/example.gdml
 
-> /geant4-run --particle e- --energy 1 GeV --events 1000
+> /geant4-build
+[g4run] built: ./build
+✓ build/geant4_claude_main
+
+> /geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
 [g4c] attached SD to 1 sensitive volume(s)
 [g4c] run ended: 1000 events written to runs/<run_id>/hits.root
-✓ runs/<run_id>/{hits.root, log.txt, config.json, run.mac}
+✓ runs/<run_id>/{hits.root, log.txt, config.json}
 
 > /geant4-analyze runs/<run_id>
 ✓ runs/<run_id>/edep_hist.png
-  mean = 640 MeV  std = 78 MeV  hits = 1.2 M
+  events = 1000, total hits = 1.2M, mean edep = 640 MeV/event
 ```
 
-That's the loop. Edit GDML or macros, run again, analyze.
+### B. Build and run your own simulation
+
+```text
+> /geant4-init                        # one-time: skeleton + image pull
+# now drop in your own src/main.cc and src/CMakeLists.txt
+# (use /geant4-detector if you want NL-driven GDML)
+
+> /geant4-build
+> /geant4-run --exe build/<your-binary> -- <your args> {run_dir}/<your-output>
+> /geant4-analyze runs/<run_id>
+```
+
+`/geant4-run` is content-neutral: it allocates `runs/<id>/`, exports
+`RUN_DIR`/`RUN_ID`, substitutes `{run_dir}` / `{run_id}` placeholders in
+your args, captures provenance, and runs whatever binary you point it at
+inside the pinned container. `/geant4-analyze` inspects the resulting
+ROOT file's schema; if it matches the example's `Hits` TTree it uses the
+canned plot, otherwise it generates a custom analysis script in
+`analysis/<run_id>.py` based on what it actually found.
 
 ## Layout
 
@@ -93,11 +120,12 @@ geant4_claude/
 ├── requirements.txt              Python deps (pdg) installed by SessionStart hook
 ├── hooks/                        hooks.json + install-deps.sh
 ├── bin/g4run                     the only bridge to apptainer
-├── commands/                     /geant4-init, -detector, -run, -analyze
+├── commands/                     /geant4-{init, build, run, analyze, detector, example}
 ├── skills/                       geant4-geometry, -physics-list, -analysis
 ├── agents/geant4-runner.md       subagent for long sims
-├── src/                          generic Geant4 main + CMakeLists
-├── templates/workspace/          what /geant4-init writes into a project
+├── templates/workspace/          empty skeleton /geant4-init copies in
+├── templates/example/            opt-in demo /geant4-example copies in
+│   └── src/                      geant4_claude_main.cc + CMakeLists.txt
 └── wiki/                         Geant4 + physics knowledge base (Obsidian vault)
 ```
 
@@ -107,30 +135,41 @@ The plugin ships a curated knowledge base of 69 pages on Geant4 mechanics and th
 
 ## What goes in the user's project
 
-`/geant4-init` scaffolds:
+`/geant4-init` scaffolds an empty skeleton:
 
 ```
 my-project/
 ├── CLAUDE.md          rules for Claude inside this workspace
 ├── .gitignore         excludes runs/, *.root, build/, __pycache__/
-├── geometries/        GDML, one per detector design
+├── src/               your main.cc + CMakeLists.txt go here
+├── geometries/        GDML files (optional; if you load geometry at runtime)
 ├── macros/            Geant4 .mac files
 ├── runs/              one sub-dir per /geant4-run (gitignored)
-└── analysis/          uproot scripts (template: example.py)
+└── analysis/          uproot scripts
 ```
 
-The workspace is opinionated. Skills and commands assume this layout;
-don't rename the four directories.
+`/geant4-example` adds a working demo on top: a generic GDML-driven
+`main.cc`, a sample geometry/macro, and a starter analysis script. The
+directory layout is opinionated — skills and commands assume those
+six directory names.
 
 ## Design highlights
 
 - **Single runtime seam.** Every Geant4, ROOT, CMake, or g++ call goes
   through `bin/g4run`. The container tag lives in that script alone.
-- **GDML for geometry.** No recompile per geometry change. Volumes
-  marked `<auxiliary auxtype="sensitive" auxvalue="true"/>` get a
-  generic SD attached automatically and stream hits into a flat TTree.
-- **Flat TTree contract.** `Hits` with branches
-  `event/volume/edep/x/y/z/t/pdg`. Stable across the v0.x series.
+- **Content-neutral wrapper.** `bin/g4run` knows nothing about the user's
+  CMake target name, output schema, or argument shape. It just CMake-builds
+  whatever source you point at, and execs whatever binary you point at,
+  inside the pinned container.
+- **Per-user data dir.** The runtime cache (`.sif`) and any optional
+  Geant4 source clone live under `${CLAUDE_PLUGIN_DATA}/`, so they
+  survive plugin version bumps.
+- **GDML when you want it.** `/geant4-detector` writes standalone GDML
+  files for users whose `main.cc` loads geometry at runtime; the example
+  main shipped by `/geant4-example` is one such consumer.
+- **Schema-aware analysis.** `/geant4-analyze` inspects the ROOT file
+  and either uses the canned `Hits`-TTree plot (example schema) or
+  generates a custom analysis script tailored to the actual branches.
 - **Analysis on the host with `uproot`.** No host-side ROOT install
   required. ROOT remains available inside the container via
   `g4run root <macro>`.

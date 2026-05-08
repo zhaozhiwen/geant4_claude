@@ -1,5 +1,5 @@
 ---
-description: Plot and summarize a run; produces edep_hist.png plus a one-paragraph summary.
+description: Inspect a run's output schema, plot/summarize it (canned fast-path for the example, custom script otherwise).
 allowed-tools: Bash, Read, Write, Glob
 ---
 
@@ -7,88 +7,121 @@ allowed-tools: Bash, Read, Write, Glob
 
 ## Purpose
 
-Turn `runs/<id>/hits.root` into a default histogram + a short text summary
-so the user can sanity-check a run without writing any analysis code.
+Read what the user's binary wrote into `runs/<id>/` and produce a useful
+plot + summary. Two paths:
 
-For richer plots, the **`geant4-analysis`** skill has the recipes; users
-should write their own scripts under `analysis/` once the default plot
-isn't enough.
+- **Fast path** — if a `Hits` TTree with the example schema exists
+  (`event/I`, `volume/C`, `edep/D`, `x,y,z,t/D`, `pdg/I`), use the canned
+  per-event energy-deposit histogram.
+- **Custom path** — for any other schema, inspect the file, generate an
+  analysis script tailored to the actual branches, and run it.
+
+Either way the output lands in `runs/<id>/` (plots, summary), with
+optional reusable scripts dropped in `analysis/`.
 
 ## Inputs
 
-- `runs/<id>` (required, positional) — the run directory written by
-  `/geant4-run`.
-- `--script <path>` (optional) — use a custom analysis script instead
-  of the default `analysis/example.py`. Script must accept the run
-  directory as its single positional arg.
+- `runs/<id>` (required, positional) — the run directory.
+- `--script <path>` (optional) — bypass the schema check; use this script.
+- `--root-file <name>` (optional) — pick a specific `.root` if the run
+  has more than one (default: pick the only `.root`, or stop if
+  multiple).
 
 ## Steps
 
 1. **Sanity checks.**
    ```bash
-   test -d "${RUN_DIR}"           || { echo "no such run dir"; exit 1; }
-   test -s "${RUN_DIR}/hits.root" || { echo "hits.root missing or empty"; exit 1; }
-   test -s "${RUN_DIR}/config.json" || { echo "config.json missing"; exit 1; }
+   test -d "${RUN_DIR}" || { echo "no such run dir"; exit 1; }
+   ```
+   Find the ROOT file:
+   ```bash
+   if [[ -n "${ROOT_FILE:-}" ]]; then
+     RF="${RUN_DIR}/${ROOT_FILE}"
+   else
+     mapfile -t roots < <(find "${RUN_DIR}" -maxdepth 1 -name '*.root')
+     case ${#roots[@]} in
+       0) echo "no .root file in ${RUN_DIR}"; exit 1 ;;
+       1) RF="${roots[0]}" ;;
+       *) echo "multiple .root files; pass --root-file <name>"; printf '  %s\n' "${roots[@]}"; exit 1 ;;
+     esac
+   fi
+   test -s "${RF}" || { echo "${RF}: empty"; exit 1; }
    ```
 
-2. **Verify the host has uproot.**
+2. **Verify host has uproot.**
    ```bash
    python3 -c "import uproot, numpy, matplotlib" 2>/dev/null \
-     || { cat <<EOF
-[geant4-analyze] missing Python deps. Install with one of:
-  pip install --user uproot numpy matplotlib
-or
-  python3 -m venv .venv && . .venv/bin/activate && pip install uproot numpy matplotlib
-EOF
-        exit 1; }
+     || { echo "missing Python deps; install: pip install --user uproot numpy matplotlib"; exit 1; }
    ```
-   Stop if missing — do not auto-install. Tell the user the two install
-   options above and let them pick.
+   Stop if missing; do not auto-install.
 
-3. **Pick the script.**
-   - If `--script` was passed, use it.
-   - Else, if `analysis/example.py` exists in the workspace, use it
-     (the workspace template ships one).
-   - Else, write a minimal default script to `analysis/example.py`
-     (same contents as the workspace template) and use that.
+3. **Inspect the schema** (Python one-liner; preserves the exact branch
+   types and dtypes for later codegen):
+   ```bash
+   python3 - "${RF}" <<'PY'
+import sys, uproot
+with uproot.open(sys.argv[1]) as f:
+    for k, t in f.items():
+        if hasattr(t, "keys"):
+            print(f"{k}:")
+            for b in t.keys():
+                print(f"  {b}  {t[b].typename}")
+PY
+   ```
 
-4. **Run the script.**
+4. **Pick the analysis path.**
+   - If `--script` was passed → use it. Skip to step 6.
+   - Else if the file has a TTree named `Hits` with branches `event`,
+     `edep`, and at least `volume` or `pdg` → **fast path**: use
+     `analysis/example.py` if present in the workspace, else materialize
+     a copy from `${CLAUDE_PLUGIN_ROOT}/templates/example/analysis/example.py`.
+   - Else → **custom path**: generate a fresh script at
+     `analysis/<run_id>.py` that:
+     - opens the ROOT file,
+     - loads each branch as a numpy array,
+     - prints the branch min/mean/max,
+     - histograms the most plausible "energy"/"signal" branch (any
+       branch named `edep`, `e`, `energy`, `signal`, or the first
+       float-typed branch with name length ≥ 3),
+     - writes a PNG into `${RUN_DIR}/`.
+
+   Use the `geant4-analysis` skill for the uproot recipes.
+
+5. **Run the script.**
    ```bash
    python3 "${SCRIPT}" "${RUN_DIR}"
    ```
-   The default script reads `config.json`, opens `hits.root`,
-   aggregates per-event edep, and writes `${RUN_DIR}/edep_hist.png`
-   alongside a few summary statistics on stdout.
 
-5. **Show the user:**
-   - the path to `edep_hist.png`,
-   - the printed summary (mean, std, total hits),
+6. **Show the user:**
+   - the schema dump from step 3,
+   - the path to the PNG and any other outputs,
+   - the summary printed by the script,
    - a hint:
-     ```
-     For per-volume sums, hit maps, or longitudinal profiles, see the
-     geant4-analysis skill. Scripts go in analysis/.
-     ```
+     `For per-volume sums, hit maps, longitudinal profiles, etc., see the geant4-analysis skill. Custom scripts go in analysis/.`
 
 ## Outputs
 
-- `runs/<id>/edep_hist.png` (created by the script).
-- Stdout summary: `mean`, `std`, `hits`.
-- No state changes outside `analysis/` (only if the default script
-  needed to be created) and `runs/<id>/`.
+- `runs/<id>/<plot>.png` (canned `edep_hist.png` on the fast path; the
+  generated script picks the name on the custom path).
+- Stdout schema dump + summary statistics.
+- Possibly a new `analysis/<run_id>.py` on the custom path (versioned;
+  user can edit and re-run).
 
 ## Failure modes
 
 | Symptom | Likely cause | Fix |
-|--------|--------------|-----|
-| `ModuleNotFoundError: uproot` | Host Python doesn't have the analysis stack. | Run the install line printed in step 2. |
-| `FileNotFoundError: hits.root` | Wrong run id or the sim never wrote output. | Check `runs/<id>/log.txt` for an error from `/geant4-run`. |
-| `ValueError: minlength must be non-negative` (per-event histogram) | `n_events` in `config.json` is missing or wrong. | Open `config.json` and confirm; rerun the sim if the record was lost. |
-| Empty histogram (mean = 0) | No volume tagged sensitive in the GDML. | Add `<auxiliary auxtype="sensitive" auxvalue="true"/>` to the volume of interest; rerun. |
+|---------|--------------|-----|
+| `ModuleNotFoundError: uproot` | Host Python missing the analysis stack. | `pip install --user uproot numpy matplotlib`. |
+| `no .root file in runs/<id>` | Binary didn't produce a ROOT file (or wrote elsewhere). | Inspect `runs/<id>/log.txt`; check the binary's args / `RUN_DIR` handling. |
+| `KeyError: 'Hits'` (custom schema) | The fast-path script was forced on a non-`Hits` file. | Don't pass `--script`; let the command auto-detect, or pass a script that matches your schema. |
+| Empty histogram | All entries zero, or selected branch is wrong. | Check the schema dump; explicitly pick the branch via a custom script. |
 
 ## Notes
 
-- `analysis/example.py` is a template, not sacred. Edit it freely; the
-  command will keep using it as long as it accepts the run dir as
-  argv[1] and writes `edep_hist.png` next to `hits.root`.
-- Anything ROOT-specific (TBrowser, RooFit) can be invoked with
+- The canned `example.py` in `analysis/` is a starting point, not sacred.
+  Edit it freely; the command keeps using it as long as it accepts the
+  run dir as `argv[1]`.
+- ROOT-specific tools (TBrowser, RooFit) run inside the container via
   `g4run root <macro.C>` — see the `geant4-analysis` skill.
+- The custom-path script is generated *once per run id*; rerun the
+  command on the same run to overwrite it, or hand-edit it freely.

@@ -35,14 +35,20 @@ If the answer is "I don't know," it's `FTFP_BERT`.
 ## How to switch (without recompiling the plugin)
 
 The plugin's main currently hard-codes `FTFP_BERT`. **MVP limitation:**
-you cannot swap the physics list from a macro alone. Two options:
+you cannot swap the physics list from a macro alone. Three options:
 
-1. **Recommended:** open an issue / file a PR adding a `--physics-list`
-   flag to the generic main. This is the right long-term answer.
-2. **Workaround:** fork the plugin's `src/geant4_claude_main.cc`, replace
-   the `FTFP_BERT` constructor with the desired list (e.g.
-   `Shielding`, `QGSP_BIC_HP`), rebuild with `g4run build`. Document the
-   choice in the workspace's `CLAUDE.md` so future runs aren't ambiguous.
+1. **You're using the example main.** Open `src/geant4_claude_main.cc`
+   (copied into your workspace by `/geant4-example`), replace the
+   `FTFP_BERT` constructor with the desired list (e.g. `Shielding`,
+   `QGSP_BIC_HP`), then `/geant4-build`.
+2. **You have your own main.** Edit your `main.cc` to hold the physics
+   list constant your app needs (or thread a CLI/env knob through), then
+   `/geant4-build`.
+3. **Long-term:** open an issue / PR adding a `--physics-list` flag to
+   the example main so users no longer have to fork the file.
+
+Document the choice in the workspace's `CLAUDE.md` so future runs aren't
+ambiguous.
 
 Either way, **never** silently change the physics list — record the
 choice in `runs/<id>/config.json` (extend the schema with a

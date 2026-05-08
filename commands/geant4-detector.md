@@ -11,6 +11,13 @@ Turn a natural-language detector description (e.g. "1×1×10 cm lead block in
 a 50 cm air world, sensitive") into a syntactically valid GDML file under
 `geometries/`. Validation runs in-container before declaring success.
 
+This command produces a **standalone GDML file**. Any Geant4 application
+that calls `G4GDMLParser::Read("geometries/<name>.gdml")` can consume it.
+The optional `<auxiliary auxtype="sensitive" auxvalue="true"/>` tag is a
+hint — the example main shipped by `/geant4-example` reads it to
+auto-attach a sensitive detector, but the tag is harmless to other
+applications that ignore it.
+
 ## Inputs
 
 - The user's free-text description as the slash-command argument.
@@ -34,8 +41,9 @@ a 50 cm air world, sensitive") into a syntactically valid GDML file under
    geometry that's load-bearing for physics.
 
 2. **Consult the skill** `geant4-geometry` for GDML syntax (units,
-   structure, NIST materials, the `<auxiliary auxtype="sensitive"
-   auxvalue="true"/>` convention). Don't reinvent the schema.
+   structure, NIST materials, the optional `<auxiliary auxtype="sensitive"
+   auxvalue="true"/>` convention used by the example main). Don't
+   reinvent the schema.
 
 3. **Write the GDML** to `geometries/<name>.gdml`. Required structure:
 
@@ -78,14 +86,17 @@ a 50 cm air world, sensitive") into a syntactically valid GDML file under
 
 5. **Show the user** the path to the GDML and a one-line summary of what
    was written (shapes, materials, sensitive volumes). Suggest the next
-   step:
-   `/geant4-run --geometry geometries/<name>.gdml`.
+   step, depending on how their `main.cc` consumes geometry:
+   - example main: rebuild if needed, then run with the GDML as the
+     first positional arg —
+     `/geant4-run --exe build/geant4_claude_main -- geometries/<name>.gdml macros/<name>.mac {run_dir}/hits.root`;
+   - their own main: load it via `G4GDMLParser::Read("geometries/<name>.gdml")`.
 
 ## Outputs
 
-- `geometries/<name>.gdml` — well-formed and conforming to the contract
-  the generic main expects (NIST material refs, optional sensitive aux
-  tags).
+- `geometries/<name>.gdml` — well-formed GDML. NIST material refs,
+  `lunit`-tagged dimensions, optional `<auxiliary auxtype="sensitive"
+  auxvalue="true"/>` on volumes meant to be scored.
 
 ## Failure modes
 

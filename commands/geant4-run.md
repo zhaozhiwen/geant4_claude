@@ -1,5 +1,5 @@
 ---
-description: Run a Geant4 simulation; produce runs/<id>/{hits.root, log.txt, config.json}.
+description: Execute a user-built Geant4 binary inside the container; capture provenance into runs/<id>/.
 allowed-tools: Bash, Read, Write, Glob
 ---
 
@@ -7,102 +7,98 @@ allowed-tools: Bash, Read, Write, Glob
 
 ## Purpose
 
-Execute one Geant4 simulation against a GDML geometry and a Geant4 macro,
-storing the output and full provenance in a fresh `runs/<id>/` directory.
+Run **the user's compiled Geant4 application** inside the pinned
+container, with full provenance capture into a fresh `runs/<id>/`
+directory. Content-neutral: works with any binary the user built via
+`/geant4-build`, regardless of CLI shape or output schema.
 
-## Inputs (flags, all optional; sensible defaults)
+## Inputs
 
-| Flag          | Default                       | Meaning |
-|---------------|-------------------------------|---------|
-| `--geometry`  | `geometries/example.gdml`     | GDML file. |
-| `--macro`     | `macros/run.mac`              | Pre-written Geant4 macro. Used as-is unless any of `--particle/--energy/--events` is also passed. |
-| `--particle`  | (use macro)                   | e.g. `e-`, `gamma`, `mu-`, `pi+`. |
-| `--energy`    | (use macro)                   | Numeric + unit, e.g. `1 GeV`, `500 MeV`. |
-| `--events`    | (use macro)                   | Integer event count. |
-| `--name`      | auto                          | Optional human-readable suffix appended to `run_id`. |
+| Flag            | Required? | Meaning |
+|-----------------|-----------|---------|
+| `--exe <path>`  | yes (or auto-detect) | Path to the executable. Default: if exactly one executable exists under `./build/`, use it; otherwise stop and ask. |
+| `--name <slug>` | no        | Human-readable suffix appended to the run id. |
+| `--`            | no        | Everything after `--` is forwarded as positional args to the executable. |
 
-If any of `--particle / --energy / --events` is passed, a fresh macro is
-synthesized at `runs/<id>/run.mac` (see step 3) and used in place of `--macro`.
-Mixing partial overrides is allowed; missing fields are pulled from the
-provided `--macro` defaults.
+Two placeholders are substituted in forwarded args:
+
+- `{run_dir}` → the absolute path of the just-allocated `runs/<id>/`.
+- `{run_id}`  → just the id string.
+
+The same path is also exported as `RUN_DIR` in the executable's
+environment, so a binary that reads `getenv("RUN_DIR")` will see it.
 
 ## Steps
 
-1. **Sanity checks.**
+1. **Pick the executable.** If `--exe` is set, use it. Else:
    ```bash
-   test -f "${GEOMETRY:-geometries/example.gdml}" || { echo "geometry not found"; exit 1; }
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" info | grep -q '\[built\]' \
-     || "${CLAUDE_PLUGIN_ROOT}/bin/g4run" build
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml "${GEOMETRY:-geometries/example.gdml}"
+   mapfile -t exes < <(find build -maxdepth 3 -type f -executable -not -path '*CMakeFiles*' 2>/dev/null)
    ```
-   Build is idempotent — does nothing if `geant4_claude_main` is already
-   present. Validation catches malformed GDML before the run starts.
+   - 0 executables → stop, suggest `/geant4-build` (or `/geant4-example`).
+   - 1 executable  → use it.
+   - >1            → stop, list them, ask the user to pass `--exe`.
+
+   ```bash
+   test -x "${EXE}" || { echo "${EXE}: not executable"; exit 1; }
+   ```
 
 2. **Allocate a run id.**
    ```bash
    RUN_ID="$(date -u +%Y%m%d-%H%M%S)-$(head -c3 /dev/urandom | xxd -p)"
-   [[ -n "${NAME}" ]] && RUN_ID="${RUN_ID}-${NAME}"
-   RUN_DIR="runs/${RUN_ID}"
+   [[ -n "${NAME:-}" ]] && RUN_ID="${RUN_ID}-${NAME}"
+   RUN_DIR="$(pwd -P)/runs/${RUN_ID}"
    mkdir -p "${RUN_DIR}"
    ```
 
-3. **Resolve the macro.** If any override is set, write
-   `${RUN_DIR}/run.mac` from scratch:
-   ```text
-   /run/initialize
-   /gun/particle <PARTICLE>
-   /gun/energy <ENERGY>
-   /gun/position 0 0 -200 mm
-   /gun/direction 0 0 1
-   /run/beamOn <EVENTS>
+3. **Substitute placeholders** in the forwarded args:
+   ```bash
+   resolved_args=()
+   for a in "${ARGS[@]}"; do
+     a="${a//\{run_dir\}/${RUN_DIR}}"
+     a="${a//\{run_id\}/${RUN_ID}}"
+     resolved_args+=("${a}")
+   done
    ```
-   For unspecified knobs, copy the corresponding line from the user's
-   `--macro` (default `macros/run.mac`). Set `MACRO="${RUN_DIR}/run.mac"`.
-   Otherwise `MACRO="${MACRO_FLAG:-macros/run.mac}"`.
 
-4. **Write the provenance record** at `${RUN_DIR}/config.json`:
+4. **Write provenance** at `${RUN_DIR}/config.json`:
    ```json
    {
      "run_id":      "<RUN_ID>",
-     "geometry":    "<GEOMETRY>",
-     "macro":       "<MACRO>",
-     "particle":    "<from macro or override>",
-     "energy_MeV":  <numeric MeV>,
-     "n_events":    <int>,
-     "image":       "<IMAGE_TAG from g4run info>",
-     "image_digest": "<sha256 from apptainer inspect, optional>",
-     "git_sha":     "<git rev-parse HEAD, or null if not a repo>",
+     "executable":  "<EXE>",
+     "args":        [<resolved_args ...>],
+     "image":       "<IMAGE_TAG read from g4run info>",
+     "git_sha":     "<git rev-parse HEAD, or null>",
      "started_utc": "<ISO-8601>",
-     "duration_s":  null
+     "duration_s":  null,
+     "exit_status": null
    }
    ```
-   Parse `<energy_MeV>` and `<n_events>` from the resolved macro by
-   grepping `/gun/energy` and `/run/beamOn`. Convert the energy to MeV
-   (e.g. `1 GeV` → `1000`).
 
-5. **Run the simulation.** Stream stdout+stderr to `log.txt`:
+5. **Run the executable.** Stream stdout+stderr to `log.txt`. Export
+   `RUN_DIR` and `RUN_ID` for the binary's benefit.
    ```bash
    START=$(date +%s)
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" sim \
-     "${GEOMETRY}" "${MACRO}" "${RUN_DIR}/hits.root" \
-     2>&1 | tee "${RUN_DIR}/log.txt"
+   ( export RUN_DIR RUN_ID
+     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" exec "${EXE}" "${resolved_args[@]}"
+   ) 2>&1 | tee "${RUN_DIR}/log.txt"
    STATUS=${PIPESTATUS[0]}
    END=$(date +%s)
    ```
 
-6. **Patch `config.json`** with `duration_s = $((END-START))`.
+6. **Patch `config.json`** with `duration_s = $((END-START))` and
+   `exit_status = ${STATUS}`.
 
-7. **Verify output and report.**
-   - `[[ -s "${RUN_DIR}/hits.root" ]]` — file exists and is non-empty.
-   - `grep -q "run ended" "${RUN_DIR}/log.txt"` — Geant4 wrote the
-     end-of-run banner.
-   - On failure (`STATUS != 0` or hits.root missing): show the user the
-     last 30 lines of `log.txt` and stop. Do not delete the run directory
-     — its `config.json` and `log.txt` are useful for debugging.
+7. **Verify and report.**
+   - Don't assert anything about output files — the binary may write
+     `hits.root`, `tracks.root`, `summary.json`, or nothing at all. Just
+     list whatever's in `${RUN_DIR}` after the run.
+   - On `STATUS != 0`: show the user the last 30 lines of `log.txt` and
+     stop. Do not delete the run dir — the log + config are the
+     debugging trail.
    - On success, summarize:
      ```
      ✓ run <RUN_ID> finished in <duration>s
-       → runs/<RUN_ID>/hits.root, log.txt, config.json
+       → runs/<RUN_ID>/{log.txt, config.json, ...whatever the binary wrote}
      Next: /geant4-analyze runs/<RUN_ID>
      ```
 
@@ -110,24 +106,26 @@ provided `--macro` defaults.
 
 ```
 runs/<run_id>/
-├── hits.root      # TTree "Hits" with branches event/volume/edep/x/y/z/t/pdg
-├── log.txt        # full Geant4 stdout+stderr
-├── config.json    # provenance (the file analysis tools must read)
-└── run.mac        # only present when overrides were used
+├── log.txt        # full stdout+stderr from the executable
+├── config.json    # generic provenance (the file analysis tools must read)
+└── ...            # whatever your binary wrote (hits.root, etc.)
 ```
 
 ## Failure modes
 
 | Symptom | Likely cause | Fix |
-|--------|--------------|-----|
-| `geant4_claude_main: command not found` (after `g4run build`) | Container or src/ missing. | `g4run info`; check `src/CMakeLists.txt` is in the plugin root. |
-| `G4GDML: ERROR: ...` | Geometry file invalid or material reference wrong. | Run `g4run validate-gdml <file>`; consult the `geant4-geometry` skill. |
-| Empty `hits.root` (no entries) | No volume tagged sensitive, or no energy deposit. | Confirm the GDML has `<auxiliary auxtype="sensitive" auxvalue="true"/>` on at least one volume; check the gun energy is non-zero. |
-| Run hangs | Macro never reaches `/run/beamOn`, or beam count is huge. | Inspect `log.txt`; reduce `--events`. |
+|---------|--------------|-----|
+| `not an executable: <path>` | Binary missing or not built. | Run `/geant4-build`. |
+| `more than one executable under build/` | Ambiguous default. | Pass `--exe build/<your-binary>`. |
+| Binary segfaults or `G4Exception` | Bug in user's main, missing GDML reference, OOM. | Inspect `runs/<id>/log.txt`. |
+| Output file missing where you expected it | Binary wrote relative to its own CWD or a hardcoded path. | Either pass `{run_dir}/<filename>` as an arg, or read `RUN_DIR` from env in your `main.cc`. |
+| Run hangs | Macro never reaches `/run/beamOn`, or beam count is huge. | Inspect `log.txt`; reduce events; consider the `geant4-runner` agent for long sims. |
 
 ## Notes
 
-- Run directories are immutable by convention. To rerun with different
-  parameters, invoke `/geant4-run` again — it allocates a new id.
-- `config.json` is the canonical provenance record. Analysis scripts read
-  `n_events`, `particle`, `energy_MeV` from there; do not hand-edit it.
+- Run directories are immutable by convention. Re-run = new id.
+- For runs expected to take more than a few minutes, dispatch the
+  `geant4-runner` agent so context doesn't bloat with the live log.
+- Don't capture macro semantics (particle, energy, n_events) here —
+  those live inside the macro file, not in the run wrapper. Analysis
+  scripts should parse the macro themselves if they need them.

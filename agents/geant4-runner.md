@@ -15,12 +15,12 @@ caller's job. You monitor.
 
 The caller hands you:
 
-- a run command (the exact `g4run sim <gdml> <macro> <out.root>`
-  invocation, or a `/geant4-run --geometry … --macro …` instruction),
+- a run command (a `/geant4-run --exe … -- <args>` invocation, or the
+  raw `g4run exec <executable> <args…>` it would dispatch to),
 - the run id and run directory it will produce,
 - an estimate of how long it should take (so you can flag a hang),
 - optionally, things to watch for (e.g. "alert if any event deposits
-  > 10 GeV").
+  > 10 GeV", or "expect one ROOT file under runs/<id>/ at the end").
 
 ## Steps
 
@@ -34,24 +34,29 @@ The caller hands you:
 
 2. **Poll.** Every 30–60 s (longer for very long runs), tail the last
    ~20 lines of `log.txt`. Look for:
-   - `[g4c] run ended` → simulation finished, go to step 4.
+   - the process exiting (`wait $PID` returning, or `kill -0 $PID`
+     failing) → simulation finished, go to step 4.
    - Geant4 `***` exception banners → stop, surface to caller.
    - `WARNING: G4Navigator` / `[OVLP]` overlap warnings → note but
      don't stop.
-   - Long silences with no `event` progression → possible hang;
-     after 3× the user's estimate, ask the caller to confirm or kill.
+   - Long silences with no progress lines (`event`, `Run`, `>>>`) →
+     possible hang; after 3× the user's estimate, ask the caller to
+     confirm or kill.
 
 3. **Summarize progress.** Every poll, give the caller one short line:
    `[runner] event N/M, ~T elapsed, last log: <last interesting line>`.
    Don't dump the whole log unless asked.
 
-4. **Wrap up.** When `[g4c] run ended` appears (or `wait $PID` returns):
-   - confirm `runs/<id>/hits.root` is non-empty,
-   - read the run-end banner for event count,
-   - write `runs/<id>/config.json`'s `duration_s` if not already set,
-   - hand back: run id, duration, hits count (use `g4run root` with a
-     one-liner to read TTree entries), any warnings worth flagging,
-     and the relative paths the caller should look at next.
+4. **Wrap up.** When the process exits:
+   - list the contents of `runs/<id>/`; flag any expected ROOT file
+     missing or zero-size,
+   - if a `Hits` TTree (or any TTree the caller named) is present,
+     report the entry count via `g4run root` with a one-liner,
+   - write `runs/<id>/config.json`'s `duration_s` and `exit_status` if
+     `/geant4-run` didn't already,
+   - hand back: run id, duration, exit status, key counts, any
+     warnings worth flagging, and the relative paths the caller should
+     look at next.
 
 ## What you do NOT do
 

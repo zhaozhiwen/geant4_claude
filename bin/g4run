@@ -29,12 +29,10 @@ resolve_cache_dir() {
 }
 CACHE_DIR="$(resolve_cache_dir)"
 SIF_DIR="${CACHE_DIR}/sif"
-BUILD_DIR="${CACHE_DIR}/build"
 SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
 SIF_PATH="${SIF_DIR}/${SIF_NAME}"
 
 PLUGIN_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-SRC_DIR="${PLUGIN_ROOT}/src"
 
 # --- helpers -----------------------------------------------------------------
 log()  { printf '[g4run] %s\n' "$*" >&2; }
@@ -112,7 +110,6 @@ cmd_info() {
       echo "legacy:   ${LEGACY_CACHE_DIR}  [present — will auto-migrate on next runtime call]"
     fi
   fi
-  echo "build:    ${BUILD_DIR} $([[ -x ${BUILD_DIR}/geant4_claude_main ]] && echo '[built]' || echo '[not built]')"
   echo "plugin:   ${PLUGIN_ROOT}"
   command -v apptainer >/dev/null 2>&1 \
     && echo "apptainer: $(apptainer --version)" \
@@ -154,22 +151,77 @@ cmd_root() {
     bash -lc 'source "$0" && root -l -b -q "$@"' "${ENTRYPOINT}" "$@"
 }
 
-cmd_build() {
-  if [[ ! -f "${SRC_DIR}/CMakeLists.txt" ]]; then
-    die "src/CMakeLists.txt not present (Phase 2 deliverable). Skipping build."
-  fi
-  mkdir -p "${BUILD_DIR}"
-  in_container "cd '${BUILD_DIR}' && cmake -S '${SRC_DIR}' -B '${BUILD_DIR}' && cmake --build '${BUILD_DIR}' -j"
-  log "built ${BUILD_DIR}/geant4_claude_main"
+# Echo the host paths that need an explicit --bind beyond the workspace and
+# cache. A path is auto-covered if it's under the bound workdir or cache.
+extra_binds_for() {
+  local wd="$1" cache_real="$2"; shift 2
+  local p
+  for p in "$@"; do
+    [[ -z "$p" ]] && continue
+    if [[ "$p" != "${wd}"* && "$p" != "${cache_real}"* ]]; then
+      printf -- '--bind\n%s\n' "$p"
+    fi
+  done
 }
 
-cmd_sim() {
-  local gdml="${1:-}" mac="${2:-}" out="${3:-}"
-  [[ -n "${gdml}" && -n "${mac}" && -n "${out}" ]] \
-    || die "usage: g4run sim <geometry.gdml> <run.mac> <output.root>"
-  [[ -x "${BUILD_DIR}/geant4_claude_main" ]] \
-    || die "geant4_claude_main not built. Run 'g4run build' first (requires Phase 2)."
-  in_container "${BUILD_DIR}/geant4_claude_main '${gdml}' '${mac}' '${out}'"
+cmd_build() {
+  local src_dir="${1:-}" build_dir="${2:-}"
+  [[ -n "${src_dir}" && -n "${build_dir}" ]] \
+    || die "usage: g4run build <src_dir> <build_dir>"
+  [[ -d "${src_dir}" ]] || die "source dir does not exist: ${src_dir}"
+  [[ -f "${src_dir}/CMakeLists.txt" ]] \
+    || die "no CMakeLists.txt in ${src_dir}"
+  mkdir -p "${build_dir}"
+
+  ensure_sif
+  local wd cache_real src_real build_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
+  src_real="$(readlink -f "${src_dir}")"
+  build_real="$(readlink -f "${build_dir}")"
+
+  local -a binds=(--bind "${wd}" --bind "${cache_real}")
+  while IFS= read -r line; do binds+=("${line}"); done < <(
+    extra_binds_for "${wd}" "${cache_real}" "${src_real}" "${build_real}"
+  )
+
+  apptainer exec \
+    --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
+    "${binds[@]}" \
+    --pwd "${wd}" \
+    "${SIF_PATH}" \
+    bash -lc 'source "$0" && cmake -S "$1" -B "$2" && cmake --build "$2" -j' \
+    "${ENTRYPOINT}" "${src_real}" "${build_real}"
+  log "built: ${build_real}"
+}
+
+cmd_exec() {
+  local exe="${1:-}"
+  [[ -n "${exe}" ]] || die "usage: g4run exec <executable> [args...]"
+  shift
+  local exe_real
+  exe_real="$(readlink -f "${exe}" 2>/dev/null || true)"
+  [[ -n "${exe_real}" && -x "${exe_real}" ]] || die "not an executable: ${exe}"
+
+  ensure_sif
+  local wd cache_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
+
+  local -a binds=(--bind "${wd}" --bind "${cache_real}")
+  while IFS= read -r line; do binds+=("${line}"); done < <(
+    extra_binds_for "${wd}" "${cache_real}" "${exe_real}"
+  )
+
+  # DOCKER_ENTRYPOINT_SOURCE_ONLY=1 stops the container entrypoint from
+  # exec'ing positional args, since we want them as args to our exe.
+  apptainer exec \
+    --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
+    "${binds[@]}" \
+    --pwd "${wd}" \
+    "${SIF_PATH}" \
+    bash -lc 'source "$0" && exec "$@"' \
+    "${ENTRYPOINT}" "${exe_real}" "$@"
 }
 
 cmd_validate_gdml() {
@@ -187,11 +239,11 @@ Usage: g4run <subcommand> [args]
 
 Subcommands:
   pull                          Pull and cache the pinned container image.
-  info                          Show image, cache, and build status.
+  info                          Show image and cache status.
   shell                         Open an interactive shell inside the container.
-  build                         Build src/geant4_claude_main (Phase 2).
-  sim <gdml> <mac> <out.root>   Run a simulation (Phase 2).
-  root <args...>                Run ROOT inside the container.
+  build <src> <build>           CMake-build the user source tree inside the container.
+  exec  <executable> [args...]  Run an executable inside the container.
+  root  <args...>               Run ROOT inside the container.
   validate-gdml <file>          xmllint a GDML file inside the container.
 
 Image: ${IMAGE_TAG}
@@ -214,7 +266,7 @@ case "${sub}" in
   info)           cmd_info "$@" ;;
   shell)          cmd_shell "$@" ;;
   build)          cmd_build "$@" ;;
-  sim)            cmd_sim "$@" ;;
+  exec)           cmd_exec "$@" ;;
   root)           cmd_root "$@" ;;
   validate-gdml)  cmd_validate_gdml "$@" ;;
   *)              usage; die "unknown subcommand: ${sub}" ;;

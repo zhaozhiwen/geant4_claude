@@ -9,10 +9,57 @@ A bump of the pinned container image tag is at minimum a **minor**
 release. A breaking change to the `Hits` TTree schema or to the
 `runs/<id>/config.json` provenance contract is a **major** release.
 
-## [Unreleased]
+## [0.1.0] - 2026-05-08
+
+### Breaking
+
+- **Command surface generalized from "demo" to "toolchain".** The four
+  core commands (`/geant4-init`, `/geant4-build`, `/geant4-run`,
+  `/geant4-analyze`) now operate on **the user's own Geant4 simulation**
+  — any `main.cc`, any output schema. Old shapes that assumed the
+  plugin's specific binary, GDML-driven geometry, and `Hits`-schema
+  output are gone:
+    - `/geant4-init` now writes an **empty workspace skeleton**
+      (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus
+      `CLAUDE.md` and `.gitignore`). It no longer ships
+      `geometries/example.gdml`, `macros/run.mac`, or
+      `analysis/example.py`.
+    - `/geant4-run` is now generic: `--exe <path> [-- args...]` with
+      `{run_dir}` / `{run_id}` placeholder substitution and `RUN_DIR` /
+      `RUN_ID` env vars exported to the binary. The old example-specific
+      flags (`--particle`, `--energy`, `--events`, `--macro`, `--geometry`)
+      are gone — drive your macro file yourself.
+    - `/geant4-analyze` now inspects the run's ROOT file and either uses
+      the canned `Hits`-TTree fast-path or generates a custom analysis
+      script in `analysis/<run_id>.py` matching the actual schema.
+    - `runs/<id>/config.json` is now a **generic provenance record**:
+      `executable`, `args`, `image`, `git_sha`, `started_utc`,
+      `duration_s`, `exit_status`. The example-specific fields
+      (`geometry`, `macro`, `particle`, `energy_MeV`, `n_events`) are
+      gone — analysis scripts that need them must parse the macro
+      directly. **This is a major-bump-worthy change to the provenance
+      schema, but happening pre-1.0.**
+- **`bin/g4run` subcommands changed.**
+    - `g4run build` now requires explicit `<src_dir> <build_dir>`
+      arguments (was implicit plugin-internal paths).
+    - `g4run sim <gdml> <mac> <out.root>` is **renamed** to
+      `g4run exec <executable> [args...]` and is now content-neutral.
+- **Plugin no longer ships a top-level `src/`.** The example main lived
+  there in v0.0.1; it has moved to `templates/example/src/` and is
+  copied into the user's workspace by `/geant4-example`.
 
 ### Added
 
+- **`/geant4-build`** — CMake-builds any source tree (`./src` by default)
+  into `./build/` inside the pinned container.
+- **`/geant4-example`** — drops a complete working demo (GDML detector +
+  macro + generic GDML-loading `main.cc` with `Hits` TTree + uproot
+  analysis) into the workspace as a learning / smoke-test starting point.
+  Idempotent; supports `--force` for re-copy.
+- **Schema-aware `/geant4-analyze` fast-path** — automatically picks the
+  canned per-event edep histogram when a `Hits` TTree matching the example
+  schema is found; otherwise generates a custom analysis script tailored to
+  the file's actual branches (writes into `analysis/<run_id>.py`).
 - **Claude Code marketplace manifest** (`.claude-plugin/marketplace.json`) —
   this repo now doubles as a single-plugin marketplace pointing at itself
   (`"source": "./"`). Users can install with

@@ -27,44 +27,49 @@ C++ for the common case. The plugin contributes:
 $ cd ~/projects/my-detector
 $ claude
 > /geant4-init
-✓ wrote workspace skeleton (geometries/, macros/, runs/, analysis/, CLAUDE.md)
+✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md)
 ✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${CLAUDE_PLUGIN_DATA}/cache/sif)
-✓ built generic main → ${CLAUDE_PLUGIN_DATA}/cache/build/geant4_claude_main
 
-> /geant4-detector "1x1x10 cm lead block centered at origin, air world 50 cm"
-✓ wrote geometries/det.gdml (validated against schema)
+> /geant4-example                   # opt-in: drop in a working demo
+✓ wrote src/{geant4_claude_main.cc, CMakeLists.txt}, geometries/example.gdml,
+  macros/run.mac, analysis/example.py
 
-> /geant4-run --particle e- --energy 1 GeV --events 1000
-✓ run 20260503-221045-a3f9c0 finished in 8.2 s
-  → runs/20260503-221045-a3f9c0/{hits.root, log.txt, config.json}
+> /geant4-build
+✓ built build/geant4_claude_main
 
-> /geant4-analyze runs/20260503-221045-a3f9c0
-✓ edep_hist.png   (mean = 312 MeV, fwhm ≈ 78 MeV, 1000 events)
+> /geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
+✓ run 20260508-221045-a3f9c0 finished in 8.2 s
+  → runs/20260508-221045-a3f9c0/{hits.root, log.txt, config.json}
+
+> /geant4-analyze runs/20260508-221045-a3f9c0
+✓ edep_hist.png  (1000 events, ~1.2M hits, mean = 312 MeV/event)
 ```
 
 ## Architecture
 
 ```
-                ┌────────────────────────────────────────────────────────┐
-                │                    user's project                      │
-                │  geometries/   macros/   runs/<id>/   analysis/        │
-                └───▲────────────────▲─────────────▲──────────▲──────────┘
-                    │ writes/edits   │ writes      │ reads    │ writes plots
-                    │                │             │          │
-   ┌────────────────┴───┐    ┌───────┴────────┐    │   ┌──────┴───────────┐
-   │ /geant4-detector   │    │ /geant4-run    │    │   │ /geant4-analyze  │
-   │  (Claude + skills) │    │  (Claude)      │    │   │  (Claude)        │
-   └────────┬───────────┘    └───────┬────────┘    │   └──────┬───────────┘
-            │                        │             │          │
-            │              bin/g4run sim …         │          │ python (uproot, numpy, mpl)
-            │                        │             │          │
-            │                ┌───────▼─────────────┴──────────┐
-            │                │  apptainer exec sif:           │
-            │                │  source docker-entrypoint.sh   │
-            │                │  geant4_claude_main GDML MAC   │
-            └─ validation ──►│  (Geant4 11.4.0, ROOT)         │
-              (xmllint via   │  → hits.root + log.txt          │
-               bin/g4run)    └────────────────────────────────┘
+                ┌──────────────────────────────────────────────────────────────┐
+                │                       user's project                        │
+                │  src/   geometries/   macros/   build/   runs/<id>/   analysis/  │
+                └──▲──────▲──────────────▲───────▲───────▲───────────────▲────┘
+                   │      │              │       │       │ reads         │ writes plots
+                   │      │              │       │       │               │
+  ┌─────────┐  ┌───┴──┐  ┌┴─────────┐  ┌─┴────┐ ┌┴────┐ │           ┌────┴───────────┐
+  │ /init   │  │/det- │  │/build    │  │/run  │ │/run │ │           │ /analyze       │
+  │         │  │ector │  │          │  │      │ │     │ │           │  (Claude)      │
+  └────┬────┘  └──┬───┘  └────┬─────┘  └──┬───┘ └─┬───┘ │           └────┬───────────┘
+       │          │           │            │     │     │                │
+       │  validation          │            │     │     │                │ python (uproot, numpy, mpl)
+       │  via g4run           │            │     │     │                │
+       │  validate-gdml       │            │     │     │                │
+       │                      │            │     │     │                │
+       │           ┌──────────▼────────────▼─────▼─────┴────────────────┴┐
+       │           │  bin/g4run  (apptainer exec sif:                    │
+       │           │   source docker-entrypoint.sh; cmake / exec)        │
+       └──────────►│   build → ./build/<binary>                          │
+                   │   exec  → user binary writes into runs/<id>/        │
+                   │  (Geant4 11.4.0, ROOT 6.38)                         │
+                   └─────────────────────────────────────────────────────┘
 
                  image: ghcr.io/gemc/g4install:11.4.0-almalinux-9.4
 ```
@@ -73,8 +78,9 @@ Three things to notice:
 
 - **`bin/g4run` is the single seam** between the plugin and the simulator.
   Everything else above the dashed line is Claude prompting + Python.
-- **Geometry edits never trigger a rebuild.** GDML is data; the generic main
-  is built once per host.
+- **GDML decouples geometry from rebuilds (when the user opts in).** The
+  example main parses GDML at runtime, so geometry changes don't require
+  recompilation. Users with hardcoded geometry rebuild via `/geant4-build`.
 - **Analysis runs on the host**, not in the container. ROOT files are read
   with `uproot`, which requires only `pip install uproot numpy matplotlib`.
 
@@ -83,11 +89,18 @@ Three things to notice:
 ### `bin/g4run`
 
 ```
-bin/g4run build              # build src/ into <cache>/build/ (idempotent; see info)
-bin/g4run sim   <gdml> <mac> <out_dir>
-bin/g4run shell              # interactive shell inside the container
-bin/g4run root  <args…>      # forward to ROOT inside the container
+bin/g4run build <src_dir> <build_dir>     # CMake-build user source inside the container
+bin/g4run exec  <executable> [args…]      # run any binary inside the container
+bin/g4run shell                           # interactive shell inside the container
+bin/g4run root  <args…>                   # forward to ROOT inside the container
+bin/g4run validate-gdml <file>            # xmllint a GDML file inside the container
+bin/g4run pull / info                     # image management & status
 ```
+
+`build` and `exec` are content-neutral — `bin/g4run` knows nothing about
+the user's CMake target name, output schema, or argument shape. Slash
+commands carry the workspace conventions; the wrapper just runs the
+container.
 
 Internally each subcommand:
 
@@ -103,39 +116,45 @@ Internally each subcommand:
 The image tag is the only place it appears. Bumping the tag is a minor-version
 bump for the plugin.
 
-### Generic Geant4 main (`src/geant4_claude_main.cc`)
+### Example main (`templates/example/src/geant4_claude_main.cc`)
+
+Shipped as a **template**, not a contract. Users get it in their workspace
+by running `/geant4-example`; from that point on it's their copy to edit.
+The plugin ships no compiled code itself — every build is the user's
+build, in their workspace's `./build/`.
 
 CLI: `geant4_claude_main <geometry.gdml> <run.mac> <output.root>`.
 
 Behavior:
 
 - Loads `geometry.gdml` via `G4GDMLParser`.
-- Default physics list: `FTFP_BERT` (overridable in the macro).
+- Default physics list: `FTFP_BERT` (the user can swap this in their copy).
 - Attaches a generic sensitive detector to every logical volume tagged with
   GDML `auxiliary` `<auxiliary auxtype="sensitive" auxvalue="true"/>`.
 - Writes one flat TTree `Hits` with branches:
   `event/I, volume/C, edep/D, x/D, y/D, z/D, t/D, pdg/I`.
 - Runs the macro, then writes and closes the TFile.
 
-That schema is the contract analysis tools depend on. Adding branches is
-backwards-compatible; renaming or removing one is a breaking change requiring
-a plugin major-version bump.
+That schema is the **example's** contract — `/geant4-analyze` checks for
+it and falls back to a custom-script path when the user's binary writes
+something different.
 
 ### Run record (`runs/<id>/config.json`)
 
+The provenance schema is generic — it captures *what was run*, not *what
+the macro said*. Macro semantics (particle, energy, n_events) live in the
+macro file, not here; analysis scripts that need them parse the macro.
+
 ```json
 {
-  "run_id":      "20260503-221045-a3f9c0",
-  "geometry":    "geometries/det.gdml",
-  "macro":       "macros/run.mac",
-  "particle":    "e-",
-  "energy_MeV":  1000,
-  "n_events":    1000,
+  "run_id":      "20260508-221045-a3f9c0",
+  "executable":  "build/geant4_claude_main",
+  "args":        ["geometries/example.gdml", "macros/run.mac", "runs/20260508-221045-a3f9c0/hits.root"],
   "image":       "ghcr.io/gemc/g4install:11.4.0-almalinux-9.4",
-  "image_digest":"sha256:…",
   "git_sha":     "<workspace HEAD or null>",
-  "started_utc": "2026-05-03T22:10:45Z",
-  "duration_s":  8.2
+  "started_utc": "2026-05-08T22:10:45Z",
+  "duration_s":  8.2,
+  "exit_status": 0
 }
 ```
 
@@ -144,12 +163,18 @@ the provenance record.
 
 ## Slash command surface
 
+The four core commands operate on **the user's own simulation** (any
+`main.cc`, any output schema). One additional command drops in a working
+demo, and one helper writes GDML.
+
 | Command | One-line purpose |
-|--------|------------------|
-| `/geant4-init` | Scaffold workspace, pull image, build generic main. On first run, also offers (one prompt, plugin-wide) to shallow-clone the Geant4 source tree to `${CLAUDE_PLUGIN_DATA}/geant4-src/` (with a symlink at `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src` so wiki references resolve) for offline citation verification. |
-| `/geant4-detector` | Translate a natural-language detector spec into a validated GDML file. |
-| `/geant4-run` | Run a simulation and produce a fresh `runs/<id>/`. |
-| `/geant4-analyze` | Read `runs/<id>/hits.root`, produce plots + summary. |
+|---------|------------------|
+| `/geant4-init` | Scaffold an empty workspace skeleton (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md` and `.gitignore`); pull the pinned image. On first run, also offers (one prompt, plugin-wide) to shallow-clone the Geant4 source tree to `${CLAUDE_PLUGIN_DATA}/geant4-src/` for offline citation verification. |
+| `/geant4-build` | CMake-build the user's source tree (`./src` → `./build` by default) inside the container. |
+| `/geant4-run` | Execute the user's binary inside the container; allocate `runs/<id>/`; capture generic provenance (executable, args, image, git_sha, duration, exit status). Substitutes `{run_dir}`/`{run_id}` placeholders and exports `RUN_DIR`/`RUN_ID` so the binary can write into the run dir. |
+| `/geant4-analyze` | Inspect the run's ROOT file. Schema-aware fast-path (canned per-event edep histogram) when a `Hits` TTree matching the example schema is found; otherwise generates a custom analysis script tailored to the actual branches. |
+| `/geant4-detector` | Translate a natural-language detector spec into a validated standalone GDML file under `geometries/`. The output is consumable by any `main.cc` that calls `G4GDMLParser::Read(...)`. |
+| `/geant4-example` | Drop the demo (GDML detector + macro + generic main + analysis) into the workspace as a starting point for users who want a working pipeline before writing their own. |
 
 Each command's full contract lives in its `.md` file under `commands/`.
 
@@ -164,19 +189,37 @@ Each command's full contract lives in its `.md` file under `commands/`.
 A skill never executes the workflow — it's syntax + judgment. Workflow lives
 in commands.
 
-## Workspace conventions (what `/geant4-init` writes)
+## Workspace conventions
+
+`/geant4-init` writes a **generic skeleton**:
 
 ```
 my-project/
-├── CLAUDE.md            # rules for Claude inside this workspace (tight version of plugin rules)
+├── CLAUDE.md            # rules for Claude inside this workspace
 ├── .gitignore           # excludes runs/, *.root, build/, __pycache__/
-├── geometries/
-│   └── example.gdml     # 1×1×10 cm lead block in air world; sensitive
-├── macros/
-│   └── run.mac          # particle gun, FTFP_BERT, /run/beamOn 1000
-├── runs/                # one subdir per /geant4-run invocation
-└── analysis/
-    └── example.py       # uproot read + edep histogram
+├── src/                 # user's main.cc and CMakeLists.txt go here (or /geant4-example fills it)
+├── geometries/          # GDML files, one per detector (optional)
+├── macros/              # Geant4 macro files
+├── runs/                # one subdir per /geant4-run invocation (gitignored)
+└── analysis/            # python analysis scripts
+```
+
+`/geant4-example` adds the demo on top:
+
+```
+my-project/
+├── src/
+│   ├── geant4_claude_main.cc    # GDML loader + GenericSD + Hits TTree
+│   └── CMakeLists.txt           # find_package(Geant4 / ROOT), add_executable
+├── geometries/example.gdml      # 1×1×10 cm lead block in air world; sensitive
+├── macros/run.mac               # 1 GeV e-, /run/beamOn 1000
+└── analysis/example.py          # uproot → per-event edep histogram
+```
+
+`/geant4-build` writes:
+
+```
+my-project/build/<binary>        # gitignored
 ```
 
 Each directory has a single, well-defined role. Skills and commands assume
@@ -213,7 +256,7 @@ rename these four.
 
 **What we do:** Hard-code `new FTFP_BERT(0)`.
 
-**Impact on users:** Users with non-standard physics needs (HP neutrons, optical photons, radioactive decay, medical dosimetry) must edit `src/geant4_claude_main.cc` and trigger a rebuild. This friction is the single biggest barrier for users beyond "generic HEP calorimeter."
+**Impact on users:** Users of the example main with non-standard physics needs (HP neutrons, optical photons, radioactive decay, medical dosimetry) must edit their copy of `src/geant4_claude_main.cc` (placed by `/geant4-example`) and re-run `/geant4-build`. Users with their own `main.cc` already wire whatever physics list they need. This friction is the single biggest barrier for new users coming in via `/geant4-example`.
 
 **Upgrade path:** `--physics-list <name>` flag to `geant4-run`, plus `--extra-physics <comma-list>` for additive constructors. Logged in `config.json`. Single CLI surface. Estimated: ~50 lines of C++ + command update.
 
@@ -288,7 +331,7 @@ The plugin uses the GDML `<auxiliary>` mechanism (Geant4 G04 pattern — see [wi
 </volume>
 ```
 
-**Walk** (in `src/geant4_claude_main.cc::ConstructSDandField`, ~lines 120–143):
+**Walk** (in `templates/example/src/geant4_claude_main.cc::ConstructSDandField`, ~lines 120–143):
 
 ```cpp
 auto aux = parser.GetVolumeAuxiliaryInformation(lv);

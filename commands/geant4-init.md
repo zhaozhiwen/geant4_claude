@@ -9,7 +9,10 @@ allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 
 Set up a fresh Geant4 simulation workspace in the user's current working
 directory, and pre-pull the pinned apptainer image so later commands run
-without surprise downloads.
+without surprise downloads. The workspace is **generic** — it has empty
+`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` directories ready
+for your own simulation. Run `/geant4-example` afterwards if you want a
+ready-to-build sample dropped in.
 
 ## Inputs
 
@@ -26,7 +29,7 @@ Optional argument: `--force` (overwrite existing workspace files).
 
 2. **Detect collisions.** List existing entries that would be touched:
    ```bash
-   ls -A 2>/dev/null | grep -E '^(CLAUDE\.md|\.gitignore|geometries|macros|runs|analysis)$' || true
+   ls -A 2>/dev/null | grep -E '^(CLAUDE\.md|\.gitignore|src|geometries|macros|runs|analysis)$' || true
    ```
    - If the list is non-empty and `--force` was *not* passed: stop, show the
      user what's already there, and ask whether to re-run with `--force`.
@@ -40,10 +43,12 @@ Optional argument: `--force` (overwrite existing workspace files).
    The template ships:
    - `CLAUDE.md` — workspace rules for future Claude sessions.
    - `.gitignore` — excludes `runs/`, `*.root`, `build/`, `__pycache__/`.
-   - `geometries/example.gdml` — 1×1×10 cm Pb block in air.
-   - `macros/run.mac` — 1 GeV e- gun, 1000 events.
-   - `runs/.gitkeep`
-   - `analysis/example.py` — uproot read + edep histogram.
+   - `src/.gitkeep` — empty source directory (your `main.cc` and
+     `CMakeLists.txt` go here, or `/geant4-example` will populate it).
+   - `geometries/.gitkeep`, `macros/.gitkeep`, `analysis/.gitkeep` —
+     empty directories with the conventional names that the rest of the
+     plugin's commands expect.
+   - `runs/.gitkeep`.
 
 4. **Pull the runtime image** through the wrapper. This is the *only* sanctioned
    way to invoke the Geant4 runtime; all later commands also go through it:
@@ -53,12 +58,7 @@ Optional argument: `--force` (overwrite existing workspace files).
    First-run downloads ~1–2 GB into `${CLAUDE_PLUGIN_DATA}/cache/sif/`
    (override with `GEANT4_CLAUDE_CACHE`). Reruns no-op.
 
-5. **Validate the example geometry** to confirm the container works:
-   ```bash
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml geometries/example.gdml
-   ```
-
-6. **Offer the Geant4 source checkout (one-time, plugin-wide).** The wiki's
+5. **Offer the Geant4 source checkout (one-time, plugin-wide).** The wiki's
    `sources/geant4-code/synthesis/` pages cite specific `.cc:line` ranges.
    Those citations are only verifiable if the Geant4 source tree is locally
    present.
@@ -130,20 +130,23 @@ Optional argument: `--force` (overwrite existing workspace files).
    `/geant4-init` again from any workspace (or `--force`); the check is
    idempotent.
 
-7. **Report status:**
+6. **Report status:**
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/g4run" info
    ```
    Then summarize for the user, in this order:
    - workspace files written,
    - image cached at,
-   - what to do next (`/geant4-detector` or edit `geometries/example.gdml`,
-     then `/geant4-run`).
+   - what to do next: either drop in your own `src/main.cc` +
+     `src/CMakeLists.txt` and run `/geant4-build`, or run
+     `/geant4-example` to populate the workspace with a working sample
+     (GDML detector + macro + main + analysis script).
 
 ## Outputs
 
-- A populated workspace under `cwd`: `CLAUDE.md`, `.gitignore`, `geometries/`,
-  `macros/`, `runs/`, `analysis/`.
+- A populated workspace under `cwd`: `CLAUDE.md`, `.gitignore`, `src/`,
+  `geometries/`, `macros/`, `runs/`, `analysis/` (all empty except
+  `CLAUDE.md` and `.gitignore`).
 - A cached `.sif` at `${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
   (resolved by `bin/g4run`; override with `GEANT4_CLAUDE_CACHE`).
 - (Optional, on user consent) Geant4 source tree at
@@ -159,7 +162,6 @@ Optional argument: `--force` (overwrite existing workspace files).
 | `cp: cannot stat '${CLAUDE_PLUGIN_ROOT}/templates/...'` | Plugin not properly installed. | Re-install the `geant4_claude` plugin. |
 | `apptainer pull` fails with auth/network error | Offline or registry unreachable. | Retry with network; or set `GEANT4_CLAUDE_CACHE` to a directory that already has the `.sif`. The default cache lives at `${CLAUDE_PLUGIN_DATA}/cache/` (plugin-scoped). |
 | Existing files refuse to be touched | Workspace already initialized. | Re-run with `/geant4-init --force` (only after confirming with the user). |
-| `validate-gdml` fails | Container exec broken or template corrupted. | Run `g4run shell`, manually `xmllint` the file; report the error. |
 | `git clone` of Geant4 source fails (network, tag missing) | Offline, GitHub unreachable, or the image's Geant4 version is not yet tagged on `Geant4/geant4`. | User can skip; re-run `/geant4-init` later. Manual fallback: `git clone --depth 1 --branch v<G4_VERSION> https://github.com/Geant4/geant4.git ${CLAUDE_PLUGIN_DATA}/geant4-src && ln -sfn ${CLAUDE_PLUGIN_DATA}/geant4-src ${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src`. |
 | `wiki/raw/geant4-src` exists as a real directory after a plugin update | Pre-relocation install left a real dir at the legacy path; auto-migration was skipped because the new canonical path was also present. | Inspect both, keep the desired one, remove the other, then re-run `/geant4-init` to recreate the symlink. |
 
