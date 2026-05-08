@@ -17,7 +17,7 @@ release. A breaking change to the `Hits` TTree schema or to the
   this repo now doubles as a single-plugin marketplace pointing at itself
   (`"source": "./"`). Users can install with
   `/plugin marketplace add zhaozhiwen/geant4_claude` followed by
-  `/plugin install geant4-claude@geant4-marketplace`, in addition to the
+  `/plugin install geant4-claude@geant4-claude`, in addition to the
   existing manual `git clone` path.
 - **deepwiki MCP server** (`.mcp.json` at plugin root) — auto-loaded when the
   plugin is enabled. Exposes `mcp__deepwiki__ask_question`,

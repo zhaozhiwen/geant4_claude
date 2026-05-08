@@ -29,7 +29,7 @@ In Claude Code:
 
 ```text
 /plugin marketplace add zhaozhiwen/geant4_claude
-/plugin install geant4-claude@geant4-marketplace
+/plugin install geant4-claude@geant4-claude
 ```
 
 The first command registers this repo as a marketplace (it ships
