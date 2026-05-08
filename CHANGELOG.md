@@ -23,6 +23,13 @@ release. A breaking change to the `Hits` TTree schema or to the
   `${CLAUDE_PLUGIN_DATA}/venv/` on first session (uv-first, `python3 -m venv`
   fallback). Idempotent diff/install pattern: ~3 ms no-op on subsequent
   sessions, ~10–30 s on first install, ~50 MB on disk.
+- **Optional Geant4 source checkout offered by `/geant4-init`** — first time
+  the user runs `/geant4-init`, the command asks whether to shallow-clone the
+  Geant4 source tree (tag matched to the pinned container's Geant4 version)
+  into `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/`. Plugin-wide and idempotent:
+  later `/geant4-init` calls in other projects detect the existing tree and
+  skip the prompt. Required only to verify the wiki's source-citing synthesis
+  pages against actual Geant4 code.
 - **Geant4 + physics wiki** (`wiki/`) — 69-page Obsidian vault covering
   Geant4 toolkit mechanics (38 example summaries + 24 source-grounded
   synthesis pages), particle physics (PDG "Passage of Particles Through
