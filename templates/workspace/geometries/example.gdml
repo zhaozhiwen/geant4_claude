@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+  <!-- 1x1x10 cm lead block centered in a 50 cm air world.
+       The aux tag marks the lead block as a sensitive volume so the
+       generic main attaches a hit-collecting SD to it. -->
+
+  <solids>
+    <box name="world_solid" x="500" y="500" z="500" lunit="mm"/>
+    <box name="det_solid"   x="10"  y="10"  z="100" lunit="mm"/>
+  </solids>
+
+  <structure>
+    <volume name="det_lv">
+      <materialref ref="G4_Pb"/>
+      <solidref ref="det_solid"/>
+      <auxiliary auxtype="sensitive" auxvalue="true"/>
+    </volume>
+    <volume name="world_lv">
+      <materialref ref="G4_AIR"/>
+      <solidref ref="world_solid"/>
+      <physvol>
+        <volumeref ref="det_lv"/>
+        <position name="det_pos" x="0" y="0" z="0" unit="mm"/>
+      </physvol>
+    </volume>
+  </structure>
+
+  <setup name="Default" version="1.0">
+    <world ref="world_lv"/>
+  </setup>
+</gdml>

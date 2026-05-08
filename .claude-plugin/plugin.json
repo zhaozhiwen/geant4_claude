@@ -1,0 +1,24 @@
+{
+  "name": "geant4-claude",
+  "description": "Design, run, and analyze Geant4 simulations for user-defined detectors. Geant4 and ROOT are accessed through a pinned apptainer image; analysis runs on the host with uproot.",
+  "version": "0.0.1",
+  "author": {
+    "name": "Zhiwen Zhao"
+  },
+  "keywords": [
+    "geant4",
+    "simulation",
+    "physics",
+    "detector",
+    "monte-carlo",
+    "particle-physics",
+    "apptainer",
+    "uproot",
+    "claude-code-plugin"
+  ],
+  "homepage": "https://github.com/zhiwenzhao/geant4_claude",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhiwenzhao/geant4_claude.git"
+  }
+}

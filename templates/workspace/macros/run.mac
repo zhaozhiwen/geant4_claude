@@ -1,0 +1,11 @@
+# Default macro for /geant4-run.
+# 1 GeV electron gun aimed along +z, fired into the example lead block.
+
+/run/initialize
+
+/gun/particle e-
+/gun/energy 1 GeV
+/gun/position 0 0 -200 mm
+/gun/direction 0 0 1
+
+/run/beamOn 1000

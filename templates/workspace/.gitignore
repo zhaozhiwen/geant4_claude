@@ -1,0 +1,8 @@
+# geant4_claude workspace — generated artifacts
+runs/*/
+!runs/.gitkeep
+*.root
+build/
+__pycache__/
+.venv/
+.ipynb_checkpoints/

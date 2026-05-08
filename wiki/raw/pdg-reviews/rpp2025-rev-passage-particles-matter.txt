@@ -1,0 +1,2172 @@
+1                            34. Passage of Particles Through Matter
+
+
+                      34. Passage of Particles Through Matter
+
+Revised August 2023 by D.E. Groom (LBNL) and S.R. Klein (NSD LBNL; UC Berkeley).
+
+
+    34.1     Notation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .            .   .   .   .   .    1
+    34.2     Electronic energy loss by heavy particles . . . . . . . . . . . . . . . . . .               .   .   .   .   .    2
+           34.2.1 Moments and cross sections . . . . . . . . . . . . . . . . . . . . . . .               .   .   .   .   .    2
+           34.2.2 Maximum energy transfer to an electron in a single collision . . . . .                 .   .   .   .   .    3
+           34.2.3 Stopping power at intermediate energies . . . . . . . . . . . . . . . .                .   .   .   .   .    4
+           34.2.4 Mean excitation energy . . . . . . . . . . . . . . . . . . . . . . . . .               .   .   .   .   .    6
+           34.2.5 Density effect . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .           .   .   .   .   .    7
+           34.2.6 Energy loss at low energies . . . . . . . . . . . . . . . . . . . . . . .              .   .   .   .   .   10
+           34.2.7 Energetic knock-on electrons (δ rays) . . . . . . . . . . . . . . . . . .              .   .   .   .   .   11
+           34.2.8 Restricted energy loss rates for relativistic ionizing particles . . . . .             .   .   .   .   .   11
+           34.2.9 Fluctuations in energy loss . . . . . . . . . . . . . . . . . . . . . . .              .   .   .   .   .   11
+           34.2.10 Energy loss in mixtures and compounds . . . . . . . . . . . . . . . .                 .   .   .   .   .   14
+           34.2.11 Ionization yields . . . . . . . . . . . . . . . . . . . . . . . . . . . . .           .   .   .   .   .   15
+    34.3     Multiple scattering through small angles . . . . . . . . . . . . . . . . . . .              .   .   .   .   .   15
+    34.4     Photon and electron interactions in matter . . . . . . . . . . . . . . . . .                .   .   .   .   .   17
+           34.4.1 Collision energy losses by e± . . . . . . . . . . . . . . . . . . . . . .              .   .   .   .   .   17
+           34.4.2 Radiation length . . . . . . . . . . . . . . . . . . . . . . . . . . . . .             .   .   .   .   .   18
+           34.4.3 Bremsstrahlung energy loss by e± . . . . . . . . . . . . . . . . . . .                 .   .   .   .   .   19
+           34.4.4 Critical energy . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .            .   .   .   .   .   20
+           34.4.5 Energy loss by photons . . . . . . . . . . . . . . . . . . . . . . . . .               .   .   .   .   .   21
+           34.4.6 Bremsstrahlung and pair production at very high energies . . . . . .                   .   .   .   .   .   22
+           34.4.7 Photonuclear and electronuclear interactions at still higher energies .                .   .   .   .   .   25
+    34.5     Electromagnetic cascades . . . . . . . . . . . . . . . . . . . . . . . . . . .              .   .   .   .   .   27
+    34.6     Muon energy loss at high energy . . . . . . . . . . . . . . . . . . . . . . .               .   .   .   .   .   29
+    34.7     Cherenkov and transition radiation . . . . . . . . . . . . . . . . . . . . . .              .   .   .   .   .   33
+           34.7.1 Optical Cherenkov radiation . . . . . . . . . . . . . . . . . . . . . .                .   .   .   .   .   33
+           34.7.2 Coherent radio Cherenkov radiation . . . . . . . . . . . . . . . . . .                 .   .   .   .   .   34
+           34.7.3 Transition radiation . . . . . . . . . . . . . . . . . . . . . . . . . . .             .   .   .   .   .   35
+
+    This review covers the interactions of photons and electrically charged particles in matter,
+concentrating on energies of interest for high-energy physics and astrophysics and processes of
+interest for particle detectors (ionization, Cherenkov radiation, transition radiation). Much of the
+focus is on particles heavier than electrons (π ± , p, etc.). Although the charge number z of the
+projectile is included in the equations, only z = 1 is discussed in detail. Muon radiative losses
+are discussed, as are photon/electron interactions at high to ultrahigh energies. Neutrons are not
+discussed.
+34.1 Notation
+    The notation and important numerical values are shown in Table 34.1.
+
+
+
+
+                S. Navas et al. (Particle Data Group), Phys. Rev. D 110, 030001 (2024) and 2025 update
+                                               1st December, 2025 11:51am
+2                          34. Passage of Particles Through Matter
+
+
+            Table 34.1: Summary of variables used in this section. The kinematic
+            variables β and γ have their usual relativistic meanings.
+
+                   Symb.                 Definition                 Value or (usual) units
+                   me c2electron mass × c2                          0.510 998 950 00(15) MeV
+                   re classical electron radius
+                           e2 /4π0 me c2                           2.817 940 3227(19) fm
+                   α fine structure constant
+                           e2 /4π0 ~c                              1/137.035 999 139(31)
+                   NA Avogadro’s number                             6.022 140 76 × 1023 mol−1
+                   ρ     density                                    g cm−3
+                   x     mass per unit area                         g cm−2
+                   M     incident particle mass                     MeV/c2
+                   E     incident part. energy γM c2                MeV
+                   T     kinetic energy, (γ − 1)M c2                MeV
+                   W     energy transfer to an electron             MeV
+                       in a single collision
+                   WmaxMaximum possible energy transfer MeV
+                       to an electron in a single collision
+                   k   bremsstrahlung photon energy          MeV
+                   z   charge number of incident particle
+                   Z atomic number of absorber
+                   A atomic mass of absorber                 g mol−1
+                   K 4πNA re2 me c2                          0.307 075 MeV mol−1 cm2
+                       (Coefficient for dE/dx)
+                   I   mean excitation energy                eV (Nota bene!)
+                   δ(βγ)density effect correction to ionization energy loss
+                                                             p
+                   ~ωp plasma energy                           ρ hZ/Ai × 28.816 eV
+                          p
+                                   3
+                            4πN r m c /α  2                     |−→ ρ in g cm−3
+                                   e e     e
+                   Ne    electron density                        (units of re )−3
+                   wj    weight fraction of the jth element     in a compound or mixt.
+                   nj    ∝ number of jth kind of atoms in       a compound or mixture
+                   X0    radiation length                        g cm−2
+                   Ec    critical energy for electrons           MeV
+                   Eµc   critical energy for muons               GeV
+                         scale energy 4π/α me c2
+                                       p
+                   Es                                            21.2052 MeV
+                   RM    Molière radius                          g cm−2
+
+
+
+
+34.2 Electronic energy loss by heavy particles
+34.2.1 Moments and cross sections
+    The electronic interactions of fast charged particles with speed v = βc occur in single collisions
+with energy losses W [1], leading to ionization, atomic, or collective excitation. Most frequently
+the energy losses are small (for 90% of all collisions the energy losses are less than 100 eV). In
+thin absorbers few collisions will take place and the total energy loss will show a large variance [1];
+also see Sec. 34.2.9 below. For particles with charge ze more massive than electrons (“heavy”
+
+                                               1st December, 2025
+3                         34. Passage of Particles Through Matter
+
+
+particles), scattering from free electrons is adequately described by the Rutherford differential
+cross section [2, 3].
+                             dσR (W ; β)   2πre2 me c2 z 2 (1 − β 2 W/Wmax )
+                                         =                                   ,                (34.1)
+                                dW               β2                W2
+where Wmax , the maximum energy transfer possible in a single collision, is discussed below. It
+differs from the classical cross section by the factor (1 − β 2 W/W max), which arises when the spin
+of the target electrons is taken into account.
+    Bethe’s original theory applied only to energies above which atomic effects are not important.
+The free-electron cross section (Eq. (34.1)) was used to extend the cross section to Wmax . This
+free-electron approximation is not valid if W is not large compared to electron binding energies.
+For this energy regime Bethe [4, 5] used “Born Theorie” to obtain the differential cross section
+                                   dσB (W ; β)   dσR (W, β)
+                                               =            B(W ) .                              (34.2)
+                                      dW            dW
+Electronic binding is accounted for by the correction factor B(W ). Examples of B(W ) and dσB /dW
+can be seen in Figs. 5 and 6 of Ref. [1]. For a given material, the correction results in introducing an
+effective ionization energy I “which is a geometric average of the excitation energies of the medium
+weighed by the corresponding oscillator strength.” [6]. The nontrivial task of finding these values
+is discussed in Sec. 34.2.4.
+     At high energies the stopping power is further modified by polarization of the medium, and this
+“density effect,” discussed in Sec. 34.2.5, must also be included.
+     The mean number of collisions with energy loss between W and W +dW occurring in a distance
+δx is Ne δx (dσ/dW )dW , where dσ(W ; β)/dW , where the cross section is the Rutherford formula
+if free electrons can be assumed and the Bethe form where binding energy is important. It is
+convenient to define the moments
+                                                          dσ(W ; β)
+                                                 Z
+                                Mj (β) = Ne δx       Wj             dW ,                         (34.3)
+                                                            dW
+so that M0 is the mean number of collisions in δx, M1 is the mean energy loss in δx, (M2 −M1 )2 is the
+variance, etc. The number of collisions is Poisson-distributed with mean M0 . Ne is either measured
+in electrons/g (Ne = NA Z/A) or electrons/cm3 (Ne = NA ρZ/A). The former is used throughout
+this chapter, since quantities of interest (dE/dx, X0 , etc.) vary smoothly with composition when
+there is no density dependence.
+34.2.2 Maximum energy transfer to an electron in a single collision
+   For a point-like particle with mass M >> me ,
+                                                2me c2 β 2 γ 2
+                                Wmax =                            .                              (34.4)
+                                          1 + 2γme /M + (me /M )2
+
+In older references [2,9] the “low-energy” approximation Wmax = 2me c2 β 2 γ 2 , valid for 2γme  M ,
+is often implicit. For a pion in copper, the error thus introduced into dE/dx is greater than 6% at
+100 GeV. For 2γme  M , Wmax = M c2 β 2 γ.
+    At energies of order 100 GeV, the maximum 4-momentum transfer to the electron can exceed
+1 GeV/c, where hadronic structure effects modify the cross sections. This problem has been inves-
+tigated by J.D. Jackson [10], who concluded that for incident hadrons (but not for large nuclei)
+corrections to dE/dx are negligible below energies where radiative effects dominate. While the
+cross section for rare hard collisions is modified, the average stopping power, dominated by many
+softer collisions, is almost unchanged.
+
+                                          1st December, 2025
+4                                                           34. Passage of Particles Through Matter
+
+
+
+ Mass stopping power [MeV cm2/g]
+                                                                                   μ+ on Cu
+                            100                      μ−
+                                                                                     Bethe                           Radiative
+                                                Andersen-
+                                                 Ziegler
+                                                                                                 Radiative
+                                        Lindhard-
+
+
+
+
+                                                                                                                    Eμc
+                                         Scharff
+
+
+
+                                                                                                  effects
+                                   10                                                            reach 1%                          Radiative
+                                                                                Minimum                                             losses
+                                                                                ionization
+                                             Nuclear
+                                              losses                                                                               Without δ
+                                    1
+                                                                                                                               4            5
+                                   0.001            0.01            0.1        1           10           100   1000        10           10
+                                                                                                  βγ
+
+                                    0.1              1              10         100           1          10    100          1            10      100
+                                                      [MeV/c]                                  [GeV/c]                               [TeV/c]
+                                                                                         Muon momentum
+Figure 34.1: Mass stopping power (dE/dx) for positive muons in copper as a function of βγ =
+p/M c over nine orders of magnitude in momentum (12 orders of magnitude in kinetic energy).
+Solid curves indicate the total stopping power. Data below the break at βγ ≈ 0.1 are taken from
+ICRU 49 [6] assuming only β dependence, and data at higher energies are from [7]. Vertical bands
+indicate boundaries between different approximations discussed in the text. The short dotted lines
+labeled “µ− ” illustrate the “Barkas effect,” the dependence of stopping power on projectile charge
+at very low energies [8]. dE/dx in the radiative region is not simply a function of β.
+
+34.2.3 Stopping power at intermediate energies
+   The mean rate of energy loss by moderately relativistic charged heavy particles is well described
+by the “Bethe equation” [2, 4, 5, 9],
+                                                                                     "                                         #
+                                                           dE             1 1 2me c2 β 2 γ 2 Wmax
+                                                                          2Z                             δ(βγ)
+                                                               
+                                                         −          = Kz   2
+                                                                              ln        2
+                                                                                                  − β2 −       .                                (34.5)
+                                                           dx            Aβ 2         I                    2
+Eq. (34.5) is valid in the region 0.1 . βγ . 1000 with an accuracy of a few percent. At βγ ∼ 0.1
+the projectile speed is comparable to atomic electron “speed,” and at βγ ∼ 1000 radiative effects
+begin to be important (Sec. 34.6). Both limits are Z dependent. A minor dependence on M at
+high energies is introduced through Wmax , but for all practical purposes the stopping power in a
+given material is a function of β alone. Small corrections are discussed in Sec. 34.2.6.1,2
+    This is the mass stopping power; with the symbol definitions and values given in Table 34.1,
+the units are MeV g−1 cm2 . As can be seen from Fig. 34.2, dE/dx defined in this way is about
+the same for most materials, decreasing slowly with Z. The linear stopping power, in MeV/cm, is
+ρ dE/dx, where ρ is the density in g/cm3 .
+    1
+      For incident spin 1/2 particles, (Wmax /E)2 /4 is included in the square brackets. Although this correction is
+within the uncertainties in the total stopping power, its inclusion avoids a systematic bias.
+    2
+      In this section, “dE/dx” will be understood to mean the mass stopping power “h−dE/dxi.”
+
+                                                                                   1st December, 2025
+5                         34. Passage of Particles Through Matter
+
+
+    The stopping power at first falls as 1/β α where α ≈ 1.7–1.5, decreasing with increasing Z, and
+reaches a broad minimum at βγ = 3.8–3.0 as Z rises from 6 to 82. It then inexorably rises as
+the argument of the logarithmic term increases. Two independent mechanisms contribute. Two
+thirds of the rise is produced by the explicit β 2 γ 2 dependence through the relativistic flattening
+and extension of the particle’s electric field. Rather than producing ionization at greater and
+greater distances, the field polarizes the medium, cancelling the increase in the logarithmic term
+at high energies. This is taken into account by the density-effect correction δ(βγ). The other
+third is introduced by the β 2 γ dependence of Wmax , the maximum possible energy transfer to a
+recoil electron. “Hard collision” events increasingly extend the tail of the energy loss distribution,
+increasing the mean but with little effect on the position of the maximum, the most probable energy
+loss.
+    Few concepts in high-energy physics are as misused as dE/dx, since the mean is weighted by
+rare events with large single-collision energy losses. Even with samples of hundreds of events in a
+typical detector, the mean energy loss cannot be obtained dependably. Far better and more easily
+measured is the most probable energy loss, discussed in Sec. 34.2.9. The most probable energy loss
+in a typical detector is considerably smaller than the mean given by the Bethe equation. It does
+not continue to rise with the mean stopping power, but approaches a “Fermi plateau.”
+   In analysing TPC data (Sec. 35.6.4), the same end is often accomplished by using a restricted
+energy loss, the mean of 50%–70% of the samples with the smallest signals as the estimator.
+    Although it must be used with cautions and caveats, dE/dx as described in Eq. (34.5) still
+forms the basis of much of our understanding of energy loss by charged particles. Extensive tables
+are available [6, 7] and pdg.lbl.gov/current/AtomicNuclearProperties/.
+    For heavy projectiles, like ions, additional terms are required to account for higher-order photon
+coupling to the target, and to account for the finite target radius. These can change dE/dx by a
+factor of two or more for the heaviest nuclei in certain kinematic regimes [11].
+    The function as computed for muons on copper is shown as the “Bethe” region of Fig. 34.1.
+Mean energy loss behavior below this region is discussed in Sec. 34.2.6, and the radiative effects
+at high energy are discussed in Sec. 34.6. Only in the Bethe region is it a function of β alone; the
+mass dependence is more complicated elsewhere. The stopping power in several other materials
+is shown in Fig. 34.2. Except in hydrogen, particles with the same speed have similar rates of
+energy loss in different materials, although there is a slow decrease in the rate of energy loss with
+increasing Z. The qualitative behavior difference at high energies between a gas (He in the figure)
+and the other materials shown in the figure is due to the density-effect correction, δ(βγ), discussed
+in Sec. 34.2.5. The stopping power functions are characterized by broad minima whose position
+drops from βγ = 3.5 to 3.0 as Z goes from 7 to 100. The values of minimum ionization as a function
+of atomic number are shown in Fig. 34.3.
+    In practical cases, most relativistic particles (e.g., cosmic-ray muons) have mean energy loss
+rates close to the minimum; they are “minimum-ionizing particles,” or mip’s.
+    Eq. (34.5) may be integrated to find the total (or partial) “continuous slowing-down approx-
+imation” (CSDA) range R for a particle which loses energy only through ionization and atomic
+excitation. Since dE/dx depends only on β, R/M is a function of E/M or pc/M . In practice,
+range is a useful concept only for low-energy hadrons (R . λI , where λI is the nuclear interac-
+tion length), and for muons below a few hundred GeV (above which radiative effects dominate).
+Fig. 34.4 shows R/M as a function of βγ (= p/M c) for a variety of materials.
+   The mass scaling of dE/dx and range is valid for the electronic losses described by the Bethe
+equation, but not for radiative losses.
+
+                                         1st December, 2025
+6                                     34. Passage of Particles Through Matter
+
+
+                               10
+                                8
+
+                                6
+     〈– dE/dx〉 (MeV g —1cm2)
+
+                                                                        H2 liquid
+                                5
+                                4
+                                                                        He gas
+                                3
+                                                                                        C
+                                                                                   Al
+                                                                              Fe
+                                2                                        Sn
+                                                                       Pb
+
+
+
+                                1
+                                0.1    1.0          10       100               1000         10 000
+                                                     βγ = p/Mc
+
+                                       0.1       1.0       10       100                      1000
+                                              Muon momentum (GeV/c)
+
+                                      0.1         1.0      10        100                    1000
+                                               Pion momentum (GeV/c)
+
+                                0.1    1.0         10       100       1000                  10 000
+                                              Proton momentum (GeV/c)
+Figure 34.2: Mean energy loss rate in liquid (bubble chamber) hydrogen, gaseous helium, carbon,
+aluminum, iron, tin, and lead. Radiative effects, relevant for muons and pions, are not included.
+These become significant for muons in iron for βγ & 1000, and at lower momenta for muons in
+higher-Z absorbers. See Fig. 34.23.
+
+
+34.2.4 Mean excitation energy
+    “The determination of the mean excitation energy is the principal non-trivial task in the eval-
+uation of the Bethe stopping-power formula” [15]. Recommended values have varied substantially
+with time. Estimates based on experimental stopping-power measurements for protons, deuterons,
+and alpha particles and on oscillator-strength distributions and dielectric-response functions were
+given in ICRU 49 [6]. See also ICRU 37 [12]. These values, shown in Fig. 34.5, have since been
+
+                                                  1st December, 2025
+7                                         34. Passage of Particles Through Matter
+
+
+                                2.5
+                                           H2 gas: 4.10
+                                           H2 liquid: 3.97
+                                                                   2.35 — 0.28 ln(Z)
+       – dE/dx min (MeV g —1cm 2 )
+                                2.0
+
+
+
+
+                                1.5
+
+                                            Solids
+                                            Gases
+                                1.0
+
+
+
+                                      H     He     Li Be B C NO Ne                  Fe   Sn   U
+                                0.5
+                                      1     2               5          10      20        50   100
+                                                                        Z
+Figure 34.3: Mass stopping power at minimum ionization for the chemical elements. The straight
+line is fitted for Z > 6. A simple functional dependence on Z is not to be expected, since dE/dx
+also depends on other variables.
+
+
+
+widely used. Machine-readable versions can also be found [16].
+
+34.2.5 Density effect
+
+    As the particle energy increases, its electric field flattens and extends, so that the distant-
+collision contribution to the logarithmic term in Eq. (34.5) increases as β 2 γ 2 . However, real media
+become polarized, limiting the field extension and effectively truncating this part of the logarithmic
+rise [2, 3, 6, 17, 18]. At very high energies,
+
+
+                                                δ(βγ)/2 → ln(~ωp /I) + ln βγ − 1/2 ,                (34.6)
+
+
+where δ(βγ)/2 is the density effect correction introduced in Eq. (34.5) and ~ωp is the plasma energy
+defined in Table 34.1. A comparison with Eq. (34.5) shows that dE/dx then grows as ln Tmax rather
+than ln β 2 γ 2 Tmax , and that the mean excitation energy I is replaced by the plasma energy ~ωp .
+An example of the ionization stopping power as calculated with and without the density effect
+correction is shown in Fig. 34.1. Since the plasma frequency scales as the square root of the
+electron density, the correction is much larger for a liquid or solid than for a gas, as is illustrated
+in Fig. 34.2.
+
+                                                         1st December, 2025
+8                                               34. Passage of Particles Through Matter
+
+
+                             50000
+
+                             20000                                                                C
+                             10000                                                        Fe
+                              5000                                             Pb
+
+                              2000
+                                                                                                                  H 2 liquid
+    R /M (g cm −2 GeV −1 )
+
+
+
+
+                              1000
+                                                                                                       He gas
+                               500
+
+                               200
+                               100
+                                50
+
+                                20
+                                10
+                                 5
+
+                                 2
+                                 1
+                                     0.1        2            5         1.0           2           5     10.0          2            5     100.0
+                                                                                   βγ = p/Mc
+
+                                           0.02         0.05        0.1            0.2       0.5       1.0        2.0        5.0        10.0
+                                                                   Muon momentum (GeV/c)
+
+                                       0 .0 2         0.05       0.1         0.2          0 .5       1.0      2.0          5.0        10.0
+                                                                   Pion momentum (GeV/c)
+
+                                     0.1        0.2          0.5       1.0          2.0          5.0       10.0     20.0         50.0
+                                                                 Proton momentum (GeV/c)
+Figure 34.4: Range of heavy charged particles in liquid (bubble chamber) hydrogen, helium gas,
+carbon, iron, and lead. For example: For a K + whose momentum is 700 MeV/c, βγ = 1.42. For
+lead we read R/M ≈ 396, and so the range is 195 g cm−2 (17 cm).
+
+
+
+
+                                                                    1st December, 2025
+9                         34. Passage of Particles Through Matter
+
+
+
+
+Figure 34.5: Mean excitation energies (divided by Z) as adopted by the ICRU [12]. Those based
+on experimental measurements are shown by symbols with error flags; the interpolated values are
+simply joined. The grey point is for liquid H2 ; the black point at 19.2 eV is for H2 gas. The
+open circles show more recent determinations by Bichsel [13]. The dash-dotted curve is from the
+approximate formula of Barkas [14] used in early editions of this Review.
+
+
+    The density effect correction is usually computed using Sternheimer’s parameterization [17]:
+                        
+                        
+                        
+                         2(ln 10)x − C                       if   x ≥ x1 ;
+                        
+                        2(ln 10)x − C + a(x − x)k
+                        
+                                                              if   x0 ≤ x < x1 ;
+                                            1
+                δ(βγ) =                                                                        (34.7)
+                        0
+                        
+                                                             if   x < x0 (nonconductors);
+                        
+                        
+                              2(x−x0 )
+                           δ0 10                              if   x < x0 (conductors)
+
+Here x = log10 βγ = log10 (p/M c). C (the negative of the C used in Ref. [17]) is obtained by equating
+the high-energy case of Eq. (34.7) with the limit given in Eq. (34.6). The other parameters are
+adjusted to give a best fit to the results of detailed calculations for momenta below M c exp(x1 ).
+For nonconductors the correction is 0 below βγ = 10x0 , corresponding to 100–200 MeV for pions
+and 1–2 GeV for protons. For conductors it decreases rapidly below this point. Parameters for the
+elements and nearly 200 compounds and mixtures of interest are published in a variety of places,
+notably in Ref. [18]. A recipe for finding the coefficients for nontabulated materials is given by
+Sternheimer and Peierls [19] and is summarized in Ref. [7].
+    The remaining relativistic rise comes from the β 2 γ growth of Wmax , which in turn is due to
+(rare) large energy transfers to a few electrons. When these events are excluded, the energy deposit
+in an absorbing layer approaches a constant value, the Fermi plateau (see Sec. 34.2.8 below). At
+
+                                         1st December, 2025
+10                        34. Passage of Particles Through Matter
+
+
+even higher energies (e.g., > 332 GeV for muons in iron, and at a considerably higher energy for
+protons in iron), radiative effects are more important than ionization losses. These are especially
+relevant for high-energy muons, as discussed in Sec. 34.6.
+34.2.6 Energy loss at low energies
+    The theory of energy loss by ionization and excitation as given by Bethe is based on a first-order
+Born approximation. It assumes free electrons, and should be valid when the projectile’s speed is
+large compared to that of the atomic electrons. This presents a problem at low energies, where
+Wmax is less than the K shell binding energy. However, Mott showed that the Born approximation
+can be applied at energies much smaller than atomic binding energies [20]; the incident particle
+can be treated by classical mechanics since its wavelength is shorter than atomic dimensions. The
+Born method is actually better justified when its speed is not large compared to the K electron
+speed [5].
+    Higher-order corrections must still be made to extend the Bethe equation (Eq. (34.5)) to low
+energies. An improved approximation for the terms in the square brackets of Eq. (34.5) at low
+energies is obtained with
+
+                                              C(β)
+                            L(β) = La (β) −        + zL1 (β) + z 2 L2 (β) .                    (34.8)
+                                               Z
+Here La is the square-bracketed terms of Eq. (34.5), C/Z is the sum of shell corrections and zL1 and
+z 2 L2 are Barkas and Bloch correction terms [6, 21]. With these corrections, the Bethe treatment is
+accurate to about 1% down to β ≈ 0.05, or about 1 MeV for protons (0.13 MeV for muons). Values
+of La , C/Z, L1 , and L2 in the range T = 0.3–30 MeV for a proton traversing aluminum can be
+found in Table I of Ref. [21].
+     Shell correction −C/Z. As the speed of the projectile decreases, the contribution to the stopping
+power from K shell electrons decreases, and at even lower velocities contributions from L and higher
+shells further reduce it. The correction (C K + C L + . . .)/Z is should be included in the square
+brackets of Eq. (34.5). It is calculated and tabulated (for a few common materials) in a number of
+places; Refs. [6,12,21] are especially useful. As an example, the shell correction for a 30 MeV proton
+traversing aluminum is 0.6%, increasing to 9.9% as the proton’s energy decreases to 0.3 MeV.
+     Barkas correction zL1 . Qualitatively, one might imagine an atom’s electron cloud slightly
+recoiling at the approach of a negative projectile and being attracted toward an approaching positive
+projectile. Hence the stopping power for negative particles should be slightly smaller than the
+stopping power for positive particles. In a 1956 paper, Barkas et al. noted that negative pions
+possibly had a longer range than positive pions [8]. The effect has been measured for a number
+of negative/positive particle pairs, and more recently in detailed studies with antiprotons at the
+CERN LEAR facility [22]. Since no complete theory exists, an empirical approach is necessary. A
+1972 harmonic-oscillator model by Ashley et al. [23] is often used; it has two parameters determined
+by experimental data. For protons in aluminum, L1 /La is less than 0.1% at 30 MeV, but increases
+to 17% as T decreases to 0.3 MeV. This correction is indicated in Fig. 34.1.
+     Bloch correction z 2 L2 . Bloch’s extension of Bethe’s theory introduced a low-energy correction
+that takes account of perturbations of the atomic wave functions. The form obtained by Lindhard
+and Sørensen [11] is used e.g. in Refs. [6, 21]. For protons in aluminum,−L2 /L| is less than 0.3%
+at 3.0 MeV, but rises to 7% when the energy has fallen to 0.3 MeV.
+     For the interval 0.01 < β < 0.05 there is no satisfactory theory. For protons, one usually relies
+on the phenomenological fitting formulae developed by Andersen and Ziegler [6, 24]. As tabulated
+in ICRU 49 [6], the nuclear plus electronic proton stopping power in copper is 113 MeV cm2 g−1 at
+T = 10 keV (βγ = 0.005), rises to a maximum of 210 MeV cm2 g−1 at T ≈ 120 keV (βγ = 0.016),
+
+                                         1st December, 2025
+11                            34. Passage of Particles Through Matter
+
+
+then falls to 118 MeV cm2 g−1 at T = 1 MeV (βγ = 0.046). Above 0.5–1.0 MeV the corrected Bethe
+theory is adequate.
+    For particles moving more slowly than ≈ 0.01c (more or less the speed of the outer atomic
+electrons), Lindhard has been quite successful in describing electronic stopping power, which is
+proportional to β [25]. Finally, we note that at even lower energies, e.g., for protons of less than
+several hundred eV, non-ionizing nuclear recoil energy loss dominates the total energy loss [6,25,26].
+34.2.7 Energetic knock-on electrons (δ rays)
+   The distribution of secondary electrons with kinetic energies T  I is [2]
+                                        d2 N    1        Z 1 F (T )
+                                              = Kz 2                                               (34.9)
+                                       dT dx    2        A β2 T 2
+for I  T ≤ Wmax , where Wmax is given by Eq. (34.4). Here β is the speed of the primary
+particle. The factor F is spin-dependent, but is about unity for T  Wmax . For spin-0 particles
+F (T ) = (1 − β 2 T /Wmax ); forms for spins 1/2 and 1 are also given by Rossi [2] (Sec. 2.3, Eqs. 7 and
+8). Additional formulae are given in [27]. Equation Eq. (34.9) is inaccurate for T close to I [28].
+    δ rays of even modest energy are rare. For a β ≈ 1 particle, for example, on average only one
+collision with Te > 10 keV will occur along a path length of 90 cm of argon gas [1].
+    A δ ray with kinetic energy Te and corresponding momentum pe is produced at an angle θ given
+by
+                                      cos θ = (Te /pe )(pmax /Wmax ) ,                           (34.10)
+where pmax is the momentum of an electron with the maximum possible energy transfer Wmax .
+34.2.8 Restricted energy loss rates for relativistic ionizing particles
+   Further insight can be obtained by examining the mean energy deposit by an ionizing particle
+when energy transfers are restricted to T ≤ Wcut ≤ Wmax . The restricted energy loss rate is
+
+                  dE              1 1 2me c2 β 2 γ 2 Wcut β 2
+                                   2Z                            Wcut                          δ
+                                                                                             
+                −           = Kz   2
+                                      ln       2
+                                                         −    1+                             −   .         (34.11)
+                  dx    T <Wcut  Aβ 2        I             2     Wmax                          2
+This form approaches the normal Bethe function (Eq. (34.5)) as WRcut → Wmax . It can be verified
+                                                                       Wmax
+that the difference between Eq. (34.5) and Eq. (34.11) is equal to W    cut
+                                                                            T (d2 N/dT dx)dT , where
+d2 N/dT dx is given by Eq. (34.9).
+    Since Wcut replaces Wmax in the argument of the logarithmic term of Eq. (34.5), the βγ term
+producing the relativistic rise in the close-collision part of dE/dx is replaced by a constant, and
+|dE/dx|T <Wcut approaches the constant “Fermi plateau.” (The density effect correction δ eliminates
+the explicit βγ dependence produced by the distant-collision contribution.) This behavior is illus-
+trated in Fig. 34.6, where restricted loss rates for two examples of Wcut are shown in comparison
+with the full Bethe dE/dx and the Landau-Vavilov most probable energy loss (to be discussed in
+Sec. 34.2.9 below).
+    “Restricted energy loss” is cut at the total mean energy, not the single-collision energy above
+Wcut It is of limited use. The most probable energy loss, discussed in the next Section, is far more
+useful in situations where single-particle energy loss is observed.
+34.2.9 Fluctuations in energy loss
+    For detectors of moderate thickness x (e.g. scintillators or LAr cells),3 the energy loss probability
+distribution f (∆; βγ, x) is adequately described by the highly-skewed Landau (or Landau-Vavilov)
+distribution [29, 30].
+     3
+     “Moderate thickness” means G . 0.05–0.1, where G is given by Rossi Ref. [2], Eq. 2.7(10). It is Vavilov’s
+κ [29]. G is proportional to the absorber’s thickness, and as such parameterizes the constants describing the Landau
+distribution. These are fairly insensitive to thickness for G . 0.1, the case for most detectors.
+
+                                               1st December, 2025
+12                                                  34. Passage of Particles Through Matter
+
+
+                                          3.0
+
+                                                   Silicon
+         MeV g−1 cm2 (Electonic loses only)
+                                          2.5
+                                                                                                     Bethe
+
+
+                                          2.0                                          Restricted energy loss for :
+                                                                                               Tcut = 10 dE/dx|min
+                                                                                               Tcut = 2 dE/dx|min
+                                          1.5                                Landau/Vavilov/Bichsel Δp /x for:
+                                                                                          x/ρ = 1600 μm
+                                                                                                 320 μm
+                                                                                                  80 μm
+                                          1.0
+
+
+                                          0.5
+                                             0.1              1.0                 10.0                 100.0          1000.0
+                                                                    Muon kinetic energy (GeV)
+Figure 34.6: Bethe dE/dx, two examples of restricted energy loss, and the Landau most probable
+energy per unit thickness in silicon. The change of ∆p /x with thickness x illustrates its a ln x + b
+dependence. Minimum ionization (dE/dx|min ) is 1.664 MeV g−1 cm2 . Radiative losses are excluded.
+The incident particles are muons.
+
+     The most probable energy loss is [31]4
+                                                          "                                              #
+                                                             2me c2 β 2 γ 2     ξ
+                                                   ∆p = ξ ln                + ln + j − β 2 − δ(βγ)           ,                 (34.12)
+                                                                  I             I
+
+where ξ = (K/2) hZ/Ai z 2 (x/β 2 ) MeV for a detector with a thickness x in g cm−2 , and j = 0.200
+[31].5 While dE/dx is independent of thickness, ∆p /x scales as a ln x + b. The density correction
+δ(βγ) was not included in Landau’s or Vavilov’s work, but it was later included by Bichsel [31].
+The high-energy behavior of δ(βγ) (Eq. (34.6)) is such that
+                                                                            "                #
+                                                                          2me c2 ξ
+                                                               ∆p −→ ξ ln          +j            .                             (34.13)
+                                                                 βγ&100   (~ωp )2
+Thus the Landau-Vavilov most probable energy loss, like the restricted energy loss, reaches a Fermi
+plateau. The Bethe dE/dx and Landau-Vavilov-Bichsel ∆p /x in silicon are shown as a function
+of muon energy in Fig. 34.6. The energy deposit in the 1600 µm case is roughly the same as in a
+3 mm thick plastic scintillator.
+    The distribution function for the energy deposit by a 10 GeV muon going through a detector of
+about this thickness is shown in Fig. 34.7. In this case the most probable energy loss is 62% of the
+     4
+      Practical calculations can be expedited by using the tables of δ and β from the text versions of the muon energy
+loss tables to be found at pdg.lbl.gov/curremt/AtomicNuclearProperties.
+    5
+      Rossi [2], Talman [32], and others give somewhat different values for j. The most probable loss is not sensitive
+to its value.
+
+
+                                                                      1st December, 2025
+13                                    34. Passage of Particles Through Matter
+
+
+                                                      Energy loss [MeV cm2/g]
+                                    1.2         1.4      1.6       1.8        2.0     2.2         2.4
+                                                                                                          1.0
+                                                      10 GeV muon
+                                                                          M 0(Δ)/M 0(∞)
+                           150                        1.7 mm Si
+                                                                                                          0.8
+
+
+
+
+                                                                                                                 Mj (Δ)/Mj (∞)
+            f(Δ) [MeV−1]
+
+
+
+
+                                                                          Μ 1(Δ)/Μ 1(∞)                   0.6
+                           100
+                                                fwhm
+                                                                     Landau-Vavilov                       0.4
+                                                                     Bichsel (Bethe-Fano theory)
+                           50
+                                                                                                          0.2
+                                                Δp                                   <Δ >
+                             0                                                                             0.0
+                              0.4         0.5          0.6        0.7          0.8          0.9         1.0
+                                                 Electronic energy loss Δ [MeV]
+Figure 34.7: Electronic energy deposit distribution for a 10 GeV muon traversing 1.7 mm of silicon,
+the stopping power equivalent of about 0.3 cm of PVT-based scintillator [1, 13, 33]. The Landau-
+Vavilov function (dot-dashed) uses a Rutherford cross section without atomic binding corrections
+but with a kinetic energy transfer limit of Wmax . The solid curve was calculated using Bethe-Fano
+theory. M0 (∆) and M1 (∆) are the cumulative 0th moment (mean number of collisions) and 1st
+moment (mean energy loss) in crossing the silicon. (See Sec. 34.2.1). The fwhm of the Landau-
+Vavilov function is about 4ξ for detectors of moderate thickness. ∆p is the most probable energy
+loss, and h∆i divided by the thickness is the Bethe dE/dx.
+
+
+mean (M1 (h∆i)/M1 (∞)). Folding in experimental resolution displaces the peak of the distribution,
+usually toward a higher value. 90% of the collisions (M1 (h∆i)/M1 (∞)) contribute to energy deposits
+below the mean. It is the very rare high-energy-transfer collisions, extending to Wmax at several
+GeV, that drives the mean into the tail of the distribution. The large weight of these rare events
+makes the mean of an experimental distribution consisting of a few hundred events subject to
+large fluctuations and sensitive to cuts. The mean of the energy loss given by the Bethe equation,
+Eq. (34.5), is thus ill-defined experimentally and is not useful for describing energy loss by single
+particles.6 It rises as ln γ because Wmax increases as γ at high energies. The most probable energy
+loss should be used.
+    A practical example: For muons traversing 0.25 inches (0.64 cm) of PVT (polyvinyltolulene)
+based plastic scintillator, the ratio of the most probable E loss rate to the mean loss rate via the
+Bethe equation is [0.69, 0.57, 0.49, 0.42, 0.38] for Tµ = [0.01, 0.1, 1, 10, 100] GeV. Radiative losses
+add less than 0.5% to the total mean energy deposit at 10 GeV, but add 7% at 100 GeV. The
+most probable E loss rate rises slightly beyond the minimum ionization energy, then is essentially
+constant.
+    The Landau distribution fails to describe energy loss in thin absorbers such as gas TPC cells [1]
+     6
+         It does find application in dosimetry, where only bulk deposit is relevant.
+
+
+                                                         1st December, 2025
+14                         34. Passage of Particles Through Matter
+
+
+                                              ∆ /x         (MeV g −1 cm 2 )
+                  0.50             1.00                     1.50                       2.00            2.50
+
+              1.0                                               500 MeV pion in silicon
+                                                                                 640   μ m (149 mg/cm2 )
+              0.8                                                                320   μ m (74.7 mg/cm 2 )
+                                                                                 160   μ m (37.4 mg/cm 2 )
+                                                                                  80   μ m (18.7 mg/cm 2 )
+      f (∆ /x )
+
+
+
+
+              0.6
+                                                     w
+              0.4
+                                                                                 Mean energy
+                                          ∆ p /x                                  loss rate
+              0.2
+
+
+              0.0
+                100          200                   300                   400                  500            600
+                                                   ∆ /x         (eV/μm)
+Figure 34.8: Straggling functions in silicon for 500 MeV pions, normalized to unity at the most
+probable value ∆p /x. The width w is the full width at half maximum.
+
+
+and Si detectors [31], as can be seen e.g. in Fig. 1 of Ref. [1] for an argon-filled TPC cell. Also
+see Talman [32]. While ∆p /x may be calculated adequately with Eq. (34.12), the distributions are
+significantly wider than the Landau width w = 4ξ Ref. [31], Fig. 15. Examples for 500 MeV pions
+incident on thin silicon detectors are shown in Fig. 34.8. For very thick absorbers the distribution
+is less skewed but never approaches a Gaussian.
+     The most probable energy loss, scaled to the mean loss at minimum ionization, is shown in
+Fig. 34.9 for several silicon detector thicknesses.
+34.2.10 Energy loss in mixtures and compounds
+    A mixture or compound can be thought of as made up of thin layers of pure elements in the
+right proportion (Bragg additivity). In this case,
+
+                                              dE                        dE
+                                                         X                
+                                                       =       wj                ,                                 (34.14)
+                                              dx                        dx   j
+
+where dE/dx|j is the mean rate of energy loss (in MeV g−1 cm2 ) in the jth element. Eq. (34.5)
+can be inserted into Eq. (34.14) to find expressions for hZ/Ai, hI i, and hδi; for example, hZ/Ai =
+   wj Zj /Aj = nj Zj / nj Aj . However, hI i as defined this way is an underestimate, because in
+P              P         P
+
+a compound electrons are more tightly bound than in the free elements, and hδi as calculated this
+way has little relevance, because it is the electron density that matters. If possible, one uses the
+tables given in Refs. [18,34], or the recipes given in [19] (repeated in Ref. [7]), that include effective
+
+                                              1st December, 2025
+15                                34. Passage of Particles Through Matter
+
+                       1.00
+                       0.95
+
+                       0.90
+
+                       0.85
+     (∆ p /x) / dE/dx min
+
+
+
+                       0.80                                                                 2)
+                                                                     x = 640 µ m (149 mg/cm 2
+                       0.75                                                                   )
+                                                                         320 µ m (74.7 mg/cm
+                                                                                             2)
+                       0.70                                              160 µ m (37.4 mg/cm
+                                                                                             2)
+                                                                           80 µ m (18.7 mg/cm
+                       0.65
+
+                       0.60
+
+                       0.55
+                       0.50
+                           0 .3    1       3           10           30      100       300     1000
+                                                      βγ (= p/m )
+Figure 34.9: Most probable energy loss in silicon, scaled to the mean loss of a minimum ionizing
+particle, 388 eV/µm (1.66 MeV g−1 cm2 ).
+
+
+excitation energies and interpolation coefficients for calculating the density effect correction for the
+chemical elements and nearly 200 mixtures and compounds. Otherwise, use the recipe for δ given
+in Refs. [7, 19], and calculate hIi following the discussion in Ref. [15]. (Note the “13%” rule!)
+34.2.11 Ionization yields
+    The Bethe equation describes energy loss via excitation and ionization. Many gaseous detectors
+(proportional counters or TPCs) or liquid ionization detectors count the number of electrons or
+positive ions from ionization, rather than the ionization energy. As a further complication, the elec-
+tron liberated in the initial ionization often has enough energy to ionize other atoms or molecules;
+this process can happen several times. The number of electron-ion pairs per unit length is typically
+three or more times the original number. Ion or electron counting is a proxy for a direct dE/dx
+measurement. Calibrations link the number of observed ions to the traversing particle’s dE/dx.
+    The details depend on the gases (or liquids) and the particular detector involved. A useful
+discussion of the physics is provided in Sec.35.6 of this Review.
+34.3 Multiple scattering through small angles
+    A charged particle traversing a medium is deflected by many small-angle scatters. Most of this
+deflection is due to Coulomb scattering from nuclei as described by the Rutherford cross section.
+(However, for hadronic projectiles, the strong interactions also contribute to multiple scattering.)
+For many small-angle scatters the net scattering and displacement distributions are Gaussian via the
+central limit theorem. Less frequent “hard” scatters produce non-Gaussian tails. These Coulomb
+scattering distributions are well-represented by the theory of Molière [35]. Accessible discussions
+are given by Rossi [2] and Jackson [3], and exhaustive reviews have been published by Scott [36]
+and Motz et al. [37]. Experimental measurements have been published by Bichsel [38] (low energy
+
+                                               1st December, 2025
+16                            34. Passage of Particles Through Matter
+
+
+protons) and by Shen et al. [39] (relativistic pions, kaons, and protons).7
+   If we define
+                                                      1 rms
+                                      θ0 = θ rms
+                                             plane = √ θspace ,                                             (34.15)
+                                                       2
+then it is sufficient for many applications to use a Gaussian approximation for the central 98% of
+the projected angular distribution, with an rms width given by Lynch & Dahl [40]:
+                                                          "                           #
+                                  13.6 MeV            x                    x z2
+                                                  r
+                             θ0 =          z             1 + 0.088 log10 (        )
+                                     βcp              X0                   X0 β 2
+                                                          "                      #
+                                  13.6 MeV            x                x z2
+                                                  r
+                                =          z             1 + 0.038 ln(        )                             (34.16)
+                                     βcp              X0               X0 β 2
+
+Here p, βc, and z are the momentum, speed, and charge number of the incident particle, and x/X0 is
+the thickness of the scattering medium in radiation lengths (defined below). This takes into account
+the p and z dependence quite well at small Z, but for large Z and small x the β-dependence is not
+well represented. Further improvements are discussed in Ref. [40].
+    Eq. (34.16) describes scattering from a single material, while the usual problem involves the
+multiple scattering of a particle traversing many different layers and mixtures. Since it is from a fit
+to a Molière distribution, it is incorrect to add the individual θ0 contributions in quadrature; the
+result is systematically too small. It is much more accurate to apply Eq. (34.16) once, after finding
+x and X0 for the combined scatterer.
+
+
+
+
+                                                    x
+                                  x/2
+
+
+                                                                    Ψplane
+                                                                                          yplane
+                                                    splane
+
+                                                                                                   θplane
+
+
+Figure 34.10: Quantities used to describe multiple Coulomb scattering. The particle is incident
+in the plane of the figure.
+
+    The nonprojected (space) and projected (plane) angular distributions are given approximately
+by [35]                                          2
+                                                 θspace
+                                                        
+                                     1
+                                          exp −
+                                                       
+                                                         dΩ,                             (34.17)
+                                                       
+                                   2π θ02         2θ02
+                                                       
+
+                                                       2
+                                                                
+                                           1         θplane 
+                                                    
+                                        √       exp 
+                                                    −    2 
+                                                              dθplane ,
+                                                             
+                                                                                                            (34.18)
+                                          2π θ0       2θ 0
+                                                             
+     7
+     Shen et al.’s measurements show that Bethe’s simpler methods of including atomic electron effects agrees better
+with experiment than does Scott’s treatment.
+
+
+                                               1st December, 2025
+17                         34. Passage of Particles Through Matter
+
+                                                             2
+where θ is the deflection angle. In this approximation, θspace        2
+                                                                 ≈ (θplane,x    2
+                                                                             + θplane,y ), where the x
+and y axes are orthogonal to the direction of motion, and dΩ ≈ dθplane,x dθplane,y . Deflections into
+θplane,x and θplane,y are independent and identically distributed. Fig. 34.10 shows these and other
+quantities sometimes used to describe multiple Coulomb scattering. They are
+
+                                             1 rms                  1
+                                   ψ rms
+                                     plane = √ θ plane            = √ θ0 ,                       (34.19)
+                                              3                      3
+
+                                             1                      1
+                                  y rms           rms
+                                    plane = √ x θ plane           = √ x θ0 ,                     (34.20)
+                                              3                      3
+
+                                            1             1
+                                  s rms           rms
+                                    plane = √ x θ plane = √ x θ0 .                               (34.21)
+                                           4 3           4 3
+
+    All the quantitative estimates in this section apply only in the limit of small θ rmsplane and in the
+absence of large-angle scatters. The random variables s, ψ, y, and θ in a given plane √ are correlated.
+Obviously, y ≈ xψ. In addition, y and θ have the correlation coefficient ρyθ = 3/2 ≈ 0.87. For
+Monte Carlo generation of a joint (y plane , θplane ) distribution, or for other calculations, it may be
+most convenient to work with independent Gaussian random variables (z1 , z2 ) with mean zero and
+variance one, and then set
+                                                           √                 √
+                           yplane =z1 x θ0 (1 − ρ2yθ )1/2 / 3 + z2 ρyθ x θ0 / 3                 (34.22a)
+                                            √
+                                  =z1 x θ0 / 12 + z2 x θ0 /2;                                   (34.22b)
+                           θplane =z2 θ0 .                                                      (34.22c)
+
+Note that the second term for y plane equals x θplane /2 and represents the displacement that would
+have occurred had the deflection θplane all occurred at the single point x/2.
+   For heavy ions the multiple Coulomb scattering has been measured and compared with various
+theoretical distributions [41].
+34.4 Photon and electron interactions in matter
+    At low energies electrons and positrons primarily lose energy by ionization, although other
+processes (Møller scattering, Bhabha scattering, e+ annihilation) contribute, as shown in Fig. 34.11.
+While ionization loss rates rise logarithmically with energy, bremsstrahlung losses rise nearly linearly
+(fractional loss is nearly independent of energy), and dominates above the critical energy (Sec. 34.4.4
+below), a few tens of MeV in most materials.
+34.4.1 Collision energy losses by e±
+    Stopping power differs somewhat for electrons and positrons, and both differ from stopping
+power for heavy particles because of the kinematics, spin, charge, and the identity of the incident
+electron with the electrons that it ionizes. Complete discussions and tables can be found in Refs. [12,
+15, 34].
+    For electrons, large energy transfers to atomic electrons (taken as free) are described by the
+Møller cross section. From Eq. (34.4), the maximum energy transfer in a single collision should
+be the entire kinetic energy, Wmax = me c2 (γ − 1), but because the particles are identical, the
+maximum is half this, Wmax /2. (The results are the same if the transferred energy is  or if the
+transferred energy is Wmax − . The stopping power is by convention calculated for the faster of
+the two emerging electrons.) The first moment of the Møller cross section [27] (divided by dx) is
+
+                                             1st December, 2025
+18                           34. Passage of Particles Through Matter
+
+
+the stopping power:
+                                              "
+                        dE        1 Z 1     me c2 β 2 γ 2 {me c2 (γ − 1)/2}
+                            
+                      −          = K     ln                                 + (1 − β 2 )
+                        dx        2 A β2                    I2
+                                                                 2         #
+                                   2γ − 1        1         γ−1
+                                                       
+                                 −     2
+                                          ln 2 +                       −δ                            (34.23)
+                                     γ           8          γ
+   The logarithmic term can be compared with the logarithmic term in the Bethe equation
+(Eq. (34.2)) by substituting Wmax = me c2 (γ − 1)/2. Electron-positron scattering is described
+by the fairly complicated Bhabha cross section [27]. There is no identical particle problem, so
+Wmax = me c2 (γ − 1). The first moment of the Bhabha equation yields
+                                                  "
+                            dE        1 Z 1     me c2 β 2 γ 2 {me c2 (γ − 1)}
+                                
+                          −          = K     ln                               + 2 ln 2
+                            dx        2 A β2                   2I 2
+                                                                                         #
+                                       β2       14      10          4
+                                                                               
+                                     −    23 +      +        2
+                                                               +                    −δ       .       (34.24)
+                                       12      γ + 1 (γ + 1)     (γ + 1)3
+    Following ICRU 37 [12], the density effect correction δ has been added to Uehling’s equations [27]
+in both cases.
+    For heavy particles, shell corrections were developed assuming that the projectile is equivalent
+to a perturbing potential whose center moves with constant speed. This assumption has no sound
+theoretical basis for electrons. The authors of ICRU 37 [12] estimated the possible error in omitting
+it by assuming the correction was twice as great as for a proton of the same speed. At T = 10 keV,
+the error was estimated to be ≈2% for water, ≈9% for Cu, and ≈21% for Au.
+    As shown in Fig. 34.11, stopping powers for e− , e+ , and heavy particles are not dramatically
+different. In silicon, the minimum value for electrons is 1.50 MeV cm2 /g (at γ = 3.3); for positrons,
+1.46 MeV cm2 /g (at γ = 3.7), and for muons, 1.66 MeV cm2 /g (at γ = 3.58).
+34.4.2 Radiation length
+    High-energy electrons predominantly lose energy in matter by bremsstrahlung, and high-energy
+photons by e+ e− pair production. The characteristic amount of matter traversed for these related
+interactions is called the radiation length X0 , usually measured in g cm−2 . It is the mean distance
+over which a high-energy electron loses all but 1/e of its energy by bremsstrahlung. It is also
+the appropriate scale length for describing high-energy electromagnetic cascades. X0 has been
+calculated and tabulated by Y.S. Tsai [42]:
+                                 1          NA n 2                     o
+                                    = 4αre2     Z Lrad − f (Z) + Z L0rad .
+                                                              
+                                                                                                     (34.25)
+                                 X0         A
+For A = 1 g mol−1 , 4αre2 NA /A = (716.408 g cm−2 )−1 . Lrad and L0rad are given in Table 34.2. The
+function f (Z) is an infinite sum, but for elements up to uranium can be represented to 4-place
+accuracy by
+                                                                                                
+                f (Z) =a2 (1 + a2 )−1 + 0.20206 − 0.0369 a2 + 0.0083 a4 − 0.002 a6 ,                 (34.26)
+
+where a = αZ [43].
+   The radiation length in a mixture or compound may be approximated by
+                                                           X
+                                               1/X0 =          wj /Xj ,                              (34.27)
+where wj and Xj are the fraction by weight and the radiation length for the jth element.
+
+                                                  1st December, 2025
+19                            34. Passage of Particles Through Matter
+
+
+              Table 34.2: Tsai’s Lrad and L0rad , for use in calculating the radiation
+              length in an element using Eq. (34.25).
+
+                              Element Z            Lrad                L0rad
+                                H     1           5.31                6.144
+                               He     2           4.79                5.621
+                                Li    3           4.74                5.805
+                               Be     4           4.71                5.924
+                              Others > 4     ln(184.15 Z −1/3 )   ln(1194 Z −2/3 )
+
+
+
+
+Figure 34.11: Fractional energy loss per radiation length in lead as a function of electron or
+positron energy. Electron (positron) scattering is considered as ionization when the energy loss
+per collision is below 0.255 MeV, and as Møller (Bhabha) scattering when it is above. Adapted
+from Fig. 3.2 from Messel and Crawford, Electron-Photon Shower Distribution Function Tables
+for Lead, Copper, and Air Absorbers, Pergamon Press, 1970. Messel and Crawford use X0 (Pb) =
+5.82 g/cm2 , but we have modified the figures to reflect the value given in the Table of Atomic and
+Nuclear Properties of Materials (X0 (Pb) = 6.37 g/cm2 ).
+
+
+34.4.3 Bremsstrahlung energy loss by e±
+    At very high energies and except at the high-energy tip of the bremsstrahlung spectrum, the
+cross section can be approximated in the “complete screening case” as [42]
+
+     dσ/dk = (1/k)4αre2 ( 43 − 34 y + y 2 )[Z 2 (Lrad − f (Z)) + Z L0rad ] + 19 (1 − y)(Z 2 + Z) ,
+                          
+                                                                                                     (34.28)
+
+where y = k/E is the fraction of the electron’s energy transferred to the radiated photon. At small
+y (the “infrared limit”) the term on the second line ranges from 1.7% (low Z) to 2.5% (high Z) of
+
+                                             1st December, 2025
+20                                          34. Passage of Particles Through Matter
+
+
+the total. If it is ignored and the first line simplified with the definition of X0 given in Eq. (34.25),
+we have
+                                     dσ         A    
+                                                       4   4
+                                                                    
+                                                                   2 .
+                                         =               −   y + y                                (34.29)
+                                     dk      X0 NA k 3 3
+This cross section (times k) is shown by the top curve in Fig. 34.12.
+
+
+                                             10 GeV
+                              1.2                                               Bremsstrahlung
+       ( X0 NA/A) ydσLPM/dy
+
+
+
+
+                                        100 GeV
+                                            1 TeV
+
+                              0.8
+                                                      10 TeV
+
+
+
+                              0.4                                     100 TeV
+
+                                                                                  1 PeV
+                                                                                     10 PeV
+                               0
+                                    0               0.25                 0.5           0.75      1
+                                                                     y = k/E
+Figure 34.12: The normalized bremsstrahlung cross section k dσLP M /dk in lead versus the frac-
+tional photon energy y = k/E. The vertical axis has units of photons per radiation length.
+
+   This formula is accurate except near y = 1, where screening may become incomplete, and near
+y = 0, where the infrared divergence is removed by the interference of bremsstrahlung amplitudes
+from nearby scattering centers (the LPM effect) [44, 45] and dielectric suppression [46, 47]. These
+and other suppression effects in bulk media are discussed in Sec. 34.4.6.
+   With decreasing energy (E . 10 GeV) the high-y cross section drops and the curves become
+rounded as y → 1. Curves of this familar shape can be seen in Rossi [2] (Figs. 2.11.2,3); see also
+the review by Koch & Motz [48].
+   Except at these extremes, and still in the complete-screening approximation, the number of
+photons with energies between kmin and kmax emitted by an electron travelling a distance d  X0
+is                           "                                               #
+                          d 4
+                                    
+                                      kmax
+                                                                 2
+                                               4(kmax − kmin ) kmax       2
+                                                                      − kmin
+                   Nγ =          ln          −                +                .             (34.30)
+                          X0 3        kmin          3E              2E 2
+
+34.4.4 Critical energy
+    An electron loses energy by bremsstrahlung at a rate nearly proportional to its energy, while
+the ionization loss rate varies only logarithmically with the electron energy. The critical energy Ec
+is sometimes defined as the energy at which the two loss rates are equal [49]. Among alternate
+definitions is that of Rossi [2], who defines the critical energy as the energy at which the ionization
+loss per radiation length is equal to the electron energy. Equivalently, it is the same as the first
+definition with the approximation |dE/dx|brems ≈ E/X0 . This form has been found to describe
+
+                                                           1st December, 2025
+21                                        34. Passage of Particles Through Matter
+
+
+                      200
+
+                                         Copper
+                                         X 0 = 12.86 g cm−2
+                      100                E c = 19.63 MeV
+       d E /dx × X 0 (MeV)
+
+
+                             70                                                         al
+
+
+
+
+                                                                                                g
+                                                                                       t
+
+
+
+
+                                                                                                lun
+                                                                                    To
+
+
+
+
+                                                                                             rah
+                             50               Rossi:
+
+
+
+
+                                                                                         sst
+                                              Ionization per X 0
+
+
+
+
+                                                                                      rem
+                             40               = electron energy
+
+
+
+
+                                                                               E
+                                                                                       b
+                                                                              s≈
+
+                                                                                    ct
+                             30
+
+
+
+
+                                                                              em
+
+                                                                                  a
+                                                                               Ex
+                                                                         Br
+                                                                                       Ionization
+                             20
+
+                                                                                   Brems = ionization
+
+                             10
+                                  2              5        10       20       50                 100      200
+                                                        Electron energy (MeV)
+                                      Figure 34.13: Two definitions of the critical energy Ec .
+
+
+
+transverse electromagnetic shower development more accurately (see below). These definitions are
+illustrated in the case of copper in Fig. 34.13.
+   The accuracy of approximate forms for Ec has been limited by the failure to distinguish between
+gases and solid or liquids, where there is a substantial difference in ionization at the relevant energy
+because of the density effect. We distinguish these two cases in Fig. 34.14. Fits were also made with
+functions of the form a/(Z + b)α , but α was found to be essentially unity. Since Ec also depends
+on A, I, and other factors, such forms are at best approximate.
+   Values of Ec for both electrons and positrons in more than 300 materials at
+pdg.lbl.gov/current/AtomicNuclearProperties.
+34.4.5 Energy loss by photons
+    Contributions to the photon cross section in a light element (carbon) and a heavy element
+(lead) are shown in Fig. 34.15. At low energies it is seen that the photoelectric effect dominates,
+although Compton scattering, Rayleigh scattering, and photonuclear absorption also contribute.
+The photoelectric cross section is characterized by discontinuities (absorption edges) as thresholds
+for photoionization of various atomic levels are reached. Photon attenuation lengths for a variety
+of elements are shown in Fig. 34.16, and data for 30 eV< k <100 GeV for all elements are available
+from the web pages given in the caption. Here k is the photon energy.
+   The increasing domination of pair production as the energy increases is shown in Fig. 34.17.
+Using approximations similar to those used to obtain Eq. (34.29), Tsai’s formula for the differential
+
+                                                         1st December, 2025
+22                          34. Passage of Particles Through Matter
+
+
+                  400
+
+                  200
+
+                  100
+                                                                     710 MeV
+                                                                     ________
+       Ec (MeV)
+
+
+
+
+                                610 MeV
+                                ________                              Z + 0.92
+                   50            Z + 1.24
+
+
+                   20                    Solids
+                                         Gases
+
+                   10
+                        H    He     Li Be B C N O Ne                 Fe        Sn
+                    5
+                        1       2           5         10        20             50        100
+                                                       Z
+Figure 34.14: Electron critical energy for the chemical elements, using Rossi’s definition [2]. The
+fits shown are for solids and liquids (solid line) and gases (dashed line). The rms deviation is 2.2%
+for the solids and 4.0% for the gases.
+
+
+cross section [42] reduces to
+                                    dσ    A h                 i
+                                       =       1 − 34 x(1 − x)                                 (34.31)
+                                    dx   X0 NA
+in the complete-screening limit valid at high energies. Here x = E/k is the fractional energy transfer
+to the pair-produced electron (or positron), and k is the incident photon energy. The cross section
+is very closely related to that for bremsstrahlung, since the Feynman diagrams are variants of one
+another. The cross section is of necessity symmetric between x and 1 − x, as can be seen by the
+solid curve in Fig. 34.18. See the review by Motz, Olsen, & Koch for a more detailed treatment [54].
+Eq. (34.31) may be integrated to find the high-energy limit for the total e+ e− pair-production cross
+section:
+                                           σ = 97 (A/X0 NA ).                                  (34.32)
+Equation Eq. (34.32) is accurate to within a few percent down to energies as low as 1 GeV, partic-
+ularly for high-Z materials.
+34.4.6 Bremsstrahlung and pair production at very high energies
+    At ultrahigh energies, Eqns. 34.28–34.32 will fail because of quantum mechanical interference
+between amplitudes from different scattering centers. Since the longitudinal momentum transfer to
+a given center is small (∝ k/E(E − k), in the case of bremsstrahlung), the interaction is spread over
+a comparatively long distance called the formation length (∝ E(E − k)/k) via the uncertainty prin-
+ciple. In alternate language, the formation length is the distance over which the highly relativistic
+
+                                         1st December, 2025
+23                                                  34. Passage of Particles Through Matter
+
+
+
+                                                                                    (a) Carbon ( Z = 6)
+                                                   1 Mb                                - experimental σtot
+
+
+
+
+                      Cross section (barns/atom)
+                                                            σp.e.
+
+
+                                                   1 kb
+
+
+                                                          σRayleigh
+
+
+
+                                                    1b
+
+                                                                                                          κ nuc
+                                                                    σCompton                                      κe
+                                        10 mb
+
+
+
+                                                                                    (b) Lead ( Z = 82)
+                                                                                       - experimental σtot
+                                                   1 Mb    σp.e.
+                      Cross section (barns/atom)
+
+
+
+
+                                                          σRayleigh
+
+                                                   1 kb
+
+
+
+                                                                                                               κ nuc
+                                                                                                     σg.d.r.
+                                                    1b
+                                                                     σCompton                                  κe
+
+
+                                          10 mb
+                                              10 eV                1 keV             1 MeV               1 GeV         100 GeV
+                                                                                 Photon Energy
+
+Figure 34.15: Photon total cross sections as a function of energy in carbon and lead, showing the
+contributions of different processes [50]:
+      σp.e. = Atomic photoelectric effect (electron ejection, photon absorption)
+  σRayleigh = Rayleigh (coherent) scattering–atom neither ionized nor excited
+ σCompton = Incoherent scattering (Compton scattering off an electron)
+      κnuc = Pair production, nuclear field
+        κe = Pair production, electron field
+    σg.d.r. = Photonuclear interactions, most notably the Giant Dipole Resonance [51]. In these
+              interactions, the target nucleus is usually broken up.
+Original figures through the courtesy of John H. Hubbell (NIST).
+
+
+
+electron and the photon “split apart.” The interference is usually destructive. Calculations of the
+
+                                                                           1st December, 2025
+24                                                  34. Passage of Particles Through Matter
+
+                              100
+
+
+                                  10
+
+                                                                                Sn
+                                   1
+         λ (g/ cm 2 )
+
+
+
+                                                                           Fe   Pb
+                                                                     Si
+                               0.1
+                                                    H       C
+         Absorption length
+
+
+
+
+                              0.01
+
+
+                             0.001
+
+                                  –4
+                             10
+
+                                  –5
+                             10
+
+                                  –6
+                             10
+                                   10 eV   100 eV   1 keV   10 keV        100 keV     1 MeV     10 MeV   100 MeV   1 GeV   10 GeV   100 GeV
+                                                                                     Photon energy
+
+Figure 34.16: The photon mass attenuation length (or mean free path) λ = 1/(µ/ρ) for various
+elemental absorbers as a function of photon energy. The mass attenuation coefficient is µ/ρ, where
+ρ is the density. The intensity I remaining after traversal of thickness t (in mass/unit area) is
+given by I = I0 exp(−t/λ). The accuracy is a few percent. For a chemical compound or mixture,
+1/λeff ≈ elements wZ /λZ , where wZ is the proportion by weight of the element with atomic number
+         P
+
+Z. The processes responsible for attenuation are given in Fig. 34.11. Since coherent processes are
+included, not all these processes result in energy deposition. The data for 30 eV < E < 1 keV are
+from Ref. [52], those for 1 keV < E < 100 GeV from Ref. [53].
+
+
+“Landau-Pomeranchuk-Migdal” (LPM) effect may be made semi-classically based on the average
+multiple scattering, or more rigorously using a quantum transport approach [44, 45].
+   In amorphous media, bremsstrahlung is suppressed if the photon energy k is less than E 2 /(E +
+ELP M ) [45], where8
+                                              X0                    X0
+                         ELP M = (me c2 )2 α       = (7.7 TeV/cm) ×    .                  (34.33)
+                                             4π~cρ                  ρ
+Since physical distances are involved, X0 /ρ, in cm, appears. The energy-weighted bremsstrahlung
+spectrum for lead, k dσLP M /dk, is shown in Fig. 34.12. With appropriate scaling by X0 /ρ, other
+materials behave similarly.
+    For photons, pair production is reduced for E(k − E) > k ELP M . The pair-production cross
+sections for different photon energies are shown in Fig. 34.18.
+    If k  E, several additional mechanisms can also produce suppression. When the formation
+length is long, even weak factors can perturb the interaction. For example, the emitted photon can
+coherently forward scatter off of the electrons in the media. Because of this, for k < ωp E/me ∼
+10−4 , bremsstrahlung is suppressed by a factor (kme /ωp E)2 [47]. Magnetic fields can also suppress
+bremsstrahlung.
+    In crystalline media, the situation is more complicated, with coherent enhancement or sup-
+pression possible. The cross section depends on the electron and photon energies and the angles
+between the particle direction and the crystalline axes [56].
+     8
+     This definition differs from that of Ref. [55] by a factor of two. ELP M scales as the 4th power of the mass of the
+incident particle, so that ELP M = (1.4 × 1010 TeV/cm) × X0 /ρ for a muon.
+
+
+                                                                          1st December, 2025
+25                          34. Passage of Particles Through Matter
+
+
+
+
+              Probability
+
+
+
+
+                                         Photon energy (MeV)
+Figure 34.17: Probability P that a photon interaction will result in conversion to an e+ e−
+pair. Except for a few-percent contribution from photonuclear absorption around 10 or 20 MeV,
+essentially all other interactions in this energy range result in Compton scattering off an atomic
+electron. For a photon attenuation length λ (Fig. 34.16), the probability that a given photon will
+produce an electron pair (without first Compton scattering) in thickness t of absorber is P [1 −
+exp(−t/λ)].
+
+
+34.4.7 Photonuclear and electronuclear interactions at still higher energies
+    At still higher photon and electron energies, where the bremsstrahlung and pair production
+cross-sections are heavily suppressed by the LPM effect, photonuclear and electronuclear interac-
+tions predominate over electromagnetic interactions.
+    At photon energies above about 1020 eV, for example, photons usually interact hadronically.
+The exact cross-over energy depends on the model used for the photonuclear interactions. These
+processes are illustrated in Fig. 34.19. At still higher energies (& 1023 eV), photonuclear interactions
+can become coherent, with the photon interaction spread over multiple nuclei. Essentially, the
+photon coherently converts to a ρ0 , in a process that is somewhat similar to kaon regeneration [57].
+    Similar processes occur for electrons. As electron energies increase and the LPM effect sup-
+presses bremsstrahlung, electronuclear interactions become more important. At energies above
+1021 eV, these electronuclear interactions dominate electron energy loss [57].
+
+
+
+
+                                          1st December, 2025
+26                                                     34. Passage of Particles Through Matter
+
+
+
+                                         1.00
+                                                                                           Pair production
+       ( X0 NA/A) dσLPM/dx
+
+                                         0.75
+                                                                                  1 TeV
+                                                                                 10 TeV
+                                         0.50
+                                                                                100 TeV
+                                                                                                          1 EeV
+                                         0.25
+                                                                                 1 PeV
+                                                     100 PeV                     10 PeV
+                                             0
+                                                 0             0.25                  0.5           0.75                1
+                                                                                x = E/k
+Figure 34.18: The normalized pair production cross section dσLP M /dx, versus fractional electron
+energy x = E/k.
+
+
+                                         5
+                                                       σBH
+       log 10 (Interaction Length) [m]
+
+
+
+
+                                         4             σMig
+                                                       σγA
+                                         3             σMig + σγA
+
+                                         2
+
+                                         1
+
+
+                                         0
+
+
+                                −1
+                                          10         12     14        16        18         20    22       24      26
+                                                                           log 10 k [eV]
+Figure 34.19: Interaction length for a photon in ice as a function of photon energy for the Bethe-
+Heitler (BH), LPM (Mig) and photonuclear (γA) cross sections [57]. The Bethe-Heitler interaction
+length is 9X0 /7, and X0 is 0.393 m in ice.
+
+                                                                      1st December, 2025
+27                                 34. Passage of Particles Through Matter
+
+
+34.5 Electromagnetic cascades
+    When a high-energy electron or photon is incident on a thick absorber, it initiates an electro-
+magnetic cascade as pair production and bremsstrahlung generate more electrons and photons with
+lower energy. The longitudinal development is governed by the high-energy part of the cascade,
+and therefore scales as the radiation length in the material. Electron energies eventually fall below
+the critical energy, and then dissipate their energy by ionization and excitation rather than by the
+generation of more shower particles. In describing shower behavior, it is therefore convenient to
+introduce the scale variables
+                                    t = x/X0 ,         y = E/Ec ,                             (34.34)
+so that distance is measured in units of radiation length and energy in units of critical energy.
+
+                       0.125                                                           100
+
+                                                               30 GeV electron
+                       0.100                                   incident on iron        80
+
+
+
+
+                                                                                            Number crossing plane
+                       0.075                                                           60
+      (1/E 0 ) dE/dt
+
+
+
+
+                                              Energy
+                       0.050                                                           40
+                                              Photons
+                                              × 1/ 6.8
+                       0.025                                                           20
+                                             Electrons
+
+                       0.000                                                           0
+                               0          5            10            15           20
+                                       t = depth in radiation lengths
+Figure 34.20: An EGS4 simulation of a 30 GeV electron-induced cascade in iron. The histogram
+shows fractional energy deposition per radiation length, and the curve is a gamma-function fit to
+the distribution. Circles indicate the number of electrons with total energy greater than 1.5 MeV
+crossing planes at X0 /2 intervals (scale on right) and the squares the number of photons with
+E ≥ 1.5 MeV crossing the planes (scaled down to have same area as the electron distribution).
+
+    Longitudinal profiles from an EGS4 [58] simulation of a 30 GeV electron-induced cascade in
+iron are shown in Fig. 34.20. The number of particles crossing a plane (very close to Rossi’s Π
+function [2]) is sensitive to the cutoff energy, here chosen as a total energy of 1.5 MeV for both
+electrons and photons. The electron number falls off more quickly than energy deposition. This
+is because, with increasing depth, a larger fraction of the cascade energy is carried by photons.
+Exactly what a calorimeter measures depends on the device, but it is not likely to be exactly
+any of the profiles shown. In gas counters it may be very close to the electron number, but in
+glass Cherenkov detectors and other devices with “thick” sensitive regions it is closer to the energy
+deposition (total track length). In such detectors the signal is proportional to the “detectable” track
+length Td , which is in general less than the total track length T . Practical devices are sensitive to
+
+                                               1st December, 2025
+28                        34. Passage of Particles Through Matter
+
+
+electrons with energy above some detection threshold Ed , and Td = T F (Ed /Ec ). An analytic form
+for F (Ed /Ec ) obtained by Rossi [2] is given by Fabjan in Ref. [59]; see also Amaldi [60].
+    The mean longitudinal profile of the energy deposition in an electromagnetic cascade is reason-
+ably well described by a gamma distribution [61]:
+
+                                        dE        (bt)a−1 e−bt
+                                           = E0 b                                               (34.35)
+                                        dt           Γ (a)
+The maximum tmax occurs at (a − 1)/b. We have made fits to shower profiles in elements ranging
+from carbon to uranium, at energies from 1 GeV to 100 GeV. The energy deposition profiles are
+well described by Eq. (34.35) with
+
+                         tmax = (a − 1)/b = 1.0 × (ln y + Cj ),      j = e, γ,                  (34.36)
+
+where Ce = −0.5 for electron-induced cascades and Cγ = +0.5 for photon-induced cascades. To use
+Eq. (34.35), one finds (a − 1)/b from Eq. (34.36) and Eq. (34.34), then finds a either by assuming
+b ≈ 0.5 or by finding a more accurate value from Fig. 34.21. The results are very similar for
+the electron number profiles, but there is some dependence on the atomic number of the medium.
+A similar form for the electron number maximum was obtained by Rossi in the context of his
+“Approximation B,” [2] (see Fabjan’s review in Ref. [59]), but with Ce = −1.0 and Cγ = −0.5; we
+regard this as superseded by the EGS4 result.
+    The “shower length” Xs = X0 /b is less conveniently parameterized, since b depends upon both
+Z and incident energy, as shown in Fig. 34.21. As a corollary of this Z dependence, the number
+of electrons crossing a plane near shower maximum is underestimated using Rossi’s approximation
+for carbon and seriously overestimated for uranium. Essentially the same b values are obtained for
+incident electrons and photons. For many purposes it is sufficient to take b ≈ 0.5.
+    The length of showers initiated by ultra-high energy photons and electrons is somewhat greater
+than at lower energies since the first or first few interaction lengths are increased via the mechanisms
+discussed above.
+    The gamma function distribution is very flat near the origin, while the EGS4 cascade (or a real
+cascade) increases more rapidly. As a result Eq. (34.35) fails badly for about the first two radiation
+lengths; it was necessary to exclude this region in making fits.
+    Because fluctuations are important, Eq. (34.35) should be used only in applications where
+average behavior is adequate. Grindhammer et al. have developed fast simulation algorithms in
+which the variance and correlation of a and b are obtained by fitting Eq. (34.35) to individually
+simulated cascades, then generating profiles for cascades using a and b chosen from the correlated
+distributions [62].
+    The transverse development of electromagnetic showers in different materials scales fairly accu-
+rately with the Molière radius RM , given by [63, 64]
+
+                                          RM = X0 Es /Ec ,                                      (34.37)
+
+where Es ≈ 21 MeV (Table 34.1), and the Rossi definition of Ec is used.
+    In a material containing a weight fraction wj of the element with critical energy Ecj and radiation
+length Xj , the Molière radius is given by
+                                        1   1 X wj Ecj
+                                          =            .                                        (34.38)
+                                       RM   Es   Xj
+   Measurements of the lateral distribution in electromagnetic cascades are shown in Refs. [63,64].
+On the average, only 10% of the energy lies outside the cylinder with radius RM . About 99% is
+
+                                          1st December, 2025
+29                       34. Passage of Particles Through Matter
+
+
+         0.8
+
+
+         0.7           Carbon
+
+
+         0.6         Aluminum
+     b                                                              Iron
+         0.5
+                                                                           Uranium
+
+         0.4
+
+
+         0.3
+                 10                     100                    1000                  10 000
+                                               y = E/Ec
+Figure 34.21: Fitted values of the scale factor b for energy deposition profiles obtained with EGS4
+for a variety of elements for incident electrons with 1 ≤ E0 ≤ 100 GeV. Values obtained for incident
+photons are essentially the same.
+
+
+contained inside of 3.5RM , but at this radius and beyond composition effects become important
+and the scaling with RM fails. The distributions are characterized by a narrow core, and broaden
+as the shower develops. They are often represented as the sum of two Gaussians.
+   At high enough energies, the LPM effect (Sec. 34.4.6) reduces the cross sections for bremsstrahlung
+and pair production, and hence can cause significant elongation of electromagnetic cascades [45].
+
+34.6 Muon energy loss at high energy
+    At sufficiently high energies, radiative processes become more important than ionization for all
+charged particles. For muons and pions in materials such as iron, this “critical energy” occurs at
+several hundred GeV. (There is no simple scaling with particle mass, but for protons the “critical
+energy” is much, much higher.) Radiative effects dominate the energy loss of energetic muons
+found in cosmic rays or produced at the newest accelerators. These processes are characterized
+by small cross sections, hard spectra, large energy fluctuations, and the associated generation
+of electromagnetic and (in the case of photonuclear interactions) hadronic showers [65–73] As a
+consequence, at these energies the treatment of energy loss as a uniform and continuous process is
+for many purposes inadequate.
+
+                                        1st December, 2025
+     30                                 34. Passage of Particles Through Matter
+
+
+                  It is convenient to write the average rate of muon energy loss as [74]
+
+                                                  h−dE/dxi = a(E) + b(E) E.                         (34.39)
+
+     Here a(E) is the ionization energy loss given by Eq. (34.5), and b(E) is the sum of e+ e− pair
+     production, bremsstrahlung, and photonuclear contributions. To the approximation that these
+     slowly-varying functions are constant, the mean range x0 of a muon with initial energy E0 is given
+     by
+                                         x0 ≈ (1/b) ln(1 + E0 /Eµc ),                           (34.40)
+
+     where Eµc = a/b.
+        Fig. 34.22 shows contributions to b(E) for iron. Since a(E) ≈ 0.002 GeV g−1 cm2 , b(E)E
+     dominates the energy loss above several hundred GeV, where b(E) is nearly constant. The rates of
+     energy loss for muons in hydrogen, uranium, and iron are shown in Fig. 34.23 [7].
+
+                          9
+                          8
+                                 Iron
+                          7                                                 b total
+10 6 b(E ) (g −1 cm 2 )
+
+
+
+
+                          6
+
+                          5
+                          4
+                                                                            b pair
+                          3
+                                                                            b bremsstrahlung
+                          2
+                          1                                                 b nuclear
+                          0
+                           1           10             10 2       10 3                      10 4       10 5
+                                                    Muon energy (GeV)
+     Figure 34.22: Contributions to the fractional energy loss by muons in iron due to e+ e− pair pro-
+     duction, bremsstrahlung, and photonuclear interactions, as obtained from Groom et al. [7] except
+     for post-Born corrections to the cross section for direct pair production from atomic electrons.
+
+         The “muon critical energy” Eµc can be defined more exactly as the energy at which radiative
+     and ionization losses are equal, and can be found by solving Eµc = a(Eµc )/b(Eµc ). This definition
+     corresponds to the solid-line intersection in Fig. 34.13, and is different from the Rossi definition we
+
+                                                       1st December, 2025
+31                        34. Passage of Particles Through Matter
+
+
+
+
+                           H2 (gas) total
+
+
+
+
+Figure 34.23: The average energy loss of a muon in hydrogen, iron, and uranium as a function of
+muon energy. Contributions to dE/dx in iron from ionization and pair production, bremsstrahlung
+and photonuclear interactions are also shown.
+
+
+used for electrons. It serves the same function: below Eµc ionization losses dominate, and above
+Eµc radiative effects dominate. The dependence of Eµc on atomic number Z is shown in Fig. 34.24.
+    The radiative cross sections are expressed as functions of the fractional energy loss ν. The
+bremsstrahlung cross section goes roughly as 1/ν over most of the range, while for the pair pro-
+duction case the distribution goes as ν −3 to ν −2 [75]. “Hard” losses are therefore more probable
+in bremsstrahlung, and in fact energy losses due to pair production may very nearly be treated
+as continuous. The simulated momentum distribution of an incident 1 TeV/c muon beam after it
+crosses 3 m of iron is shown in Fig. 34.25 [7]. The most probable loss is 8 GeV, or 3.4 MeV g−1 cm2 .
+The full width at half maximum is 9 GeV/c, or 0.9%. The radiative tail is almost entirely due
+to bremsstrahlung, although most of the events in which more than 10% of the incident energy
+lost experienced relatively hard photonuclear interactions. The latter can exceed detector resolu-
+tion [76], necessitating the reconstruction of lost energy. Tables in Ref. [7] list the stopping power
+as 9.82 MeV g−1 cm2 for a 1 TeV muon, so that the mean loss should be 23 GeV (≈ 23 GeV/c),
+for a final momentum of 977 GeV/c, far below the peak. This agrees with the indicated mean
+calculated from the simulation. Electromagnetic and hadronic cascades in detector materials can
+obscure muon tracks in detector planes and reduce tracking efficiency [77].
+
+
+                                         1st December, 2025
+32                                              34. Passage of Particles Through Matter
+
+                  4000
+
+                                                                                7980 GeV
+                  2000                                                        (Z + 2.03) 0.879
+
+
+                  1000
+           E µc (GeV)
+
+
+                          700                      5700 GeV
+                                                 (Z + 1.47) 0.838
+                          400
+
+                                                    Gases
+                          200                       Solids
+
+                                          H         He     Li Be B C N O Ne                      Fe         Sn
+                          100
+                                          1          2              5            10         20               50     100
+                                                                                  Z
+Figure 34.24: Muon critical energy for the chemical elements, defined as the energy at which
+radiative and ionization energy loss rates are equal [7]. The equality comes at a higher energy for
+gases than for solids or liquids with the same atomic number because of a smaller density effect
+reduction of the ionization losses. The fits shown in the figure exclude hydrogen. Alkali metals fall
+3–4% above the fitted function, while most other solids are within 2% of the function. Among the
+gases the worst fit is for radon (2.7% high).
+
+                                       0.10
+                                                                                            Median
+                                                 1 TeV muons                                987 GeV/c
+                                       0.08        on 3 m Fe
+                   dN/dp [1/(GeV/c)]
+
+
+
+
+                                       0.06
+
+                                                                                Mean
+                                       0.04                                   977 GeV/c
+                                                                                                  FWHM
+                                                                                                  9 GeV/c
+                                       0.02
+
+
+                                       0.00
+                                          950            960            970           980             990         1000
+                                                               Final momentum p [GeV/c]
+Figure 34.25: The momentum distribution of 1 TeV/c muons after traversing 3 m of iron as
+calculated by S.I. Striganov [7].
+
+
+
+
+                                                                 1st December, 2025
+33                        34. Passage of Particles Through Matter
+
+
+34.7 Cherenkov and transition radiation [3, 78, 79]
+    A charged particle radiates if its speed is greater than the local phase speed of light (Cherenkov
+radiation) or if it crosses suddenly from one medium to another with different optical properties
+(transition radiation). Neither process is important for energy loss, but both are used in high-energy
+and cosmic-ray physics detectors.
+34.7.1 Optical Cherenkov radiation
+    The angle θc of Cherenkov radiation, relative to the particle’s direction, for a particle with speed
+βc in a medium with index of refraction n is
+
+                              cos θc = (1/nβ)
+                                         q
+                         or   tan θc =       β 2 n2 − 1
+                                  q
+                              ≈       2(1 − 1/nβ)         for small θc , e.g. in gases.         (34.41)
+
+The threshold speed βt is 1/n, and γt = 1/(1 − βt2 )1/2 . Therefore, βt γt = 1/(2δ + δ 2 )1/2 , where
+δ = n − 1. Values of δ for various commonly used gases are given as a function of pressure and
+wavelength in Ref. [80]. See its Table 6.1 for values at atmospheric pressure. Data for other
+commonly used materials are given in Ref. [81].
+
+
+
+
+                                                          γc
+
+                                                     Ch
+                                                            er
+                                                               en
+                                                                    ko
+                                                                      v
+                          vg
+
+
+
+
+                                                                          wa
+                    v=
+
+
+
+
+                                                                            ve
+                                                                               fro
+                                   θc                            η                 nt
+
+                              Particle velocity v = βc
+Figure 34.26: Cherenkov light emission and wavefront angles. In a dispersive medium, θc + η 6=
+900 .
+
+   Practical Cherenkov radiator materials are dispersive. Let ω be the photon’s frequency, and let
+k = 2π/λ be its wavenumber. The photons propage at the group speed vg = dω/dk = c/[n(ω) +
+ω(dn/dω)]. In a non-dispersive medium, this simplies to vg = c/n.
+   In his classical paper, Tamm [82] showed that for dispersive media the radiation is concentrated
+
+                                             1st December, 2025
+34                        34. Passage of Particles Through Matter
+
+
+in a thin conical shell whose vertex is at the moving charge, and whose opening half-angle η is
+                                     d
+                                                    
+                             cot η =    (ω tan θc )
+                                     dω                ω0
+                                                              dn
+                                                                         
+                                   = tan θc + β 2 ω n(ω)         cot θc        ,              (34.42)
+                                                              dω          ω0
+
+where ω0 is the central value of the small frequency range under consideration. (See Fig. 34.26.)
+This cone has a opening half-angle η, and, unless the medium is non-dispersive (dn/dω = 0),
+θc + η 6= 900 . The Cherenkov wavefront ‘sideslips’ along with the particle [83]. This effect has
+timing implications for ring imaging Cherenkov counters [84], but it is probably unimportant for
+most applications.
+    The number of photons produced per unit path length of a particle with charge ze and per unit
+energy interval of the photons is
+
+                           d2 N   αz 2             α2 z 2       1
+                                                                                  
+                                =      sin2 θc =          1− 2 2
+                          dEdx     ~c            re me c2   β n (E)
+                                ≈ 370 sin2 θc (E) eV−1 cm−1   (z = 1) ,                       (34.43)
+
+or, equivalently,
+
+                                 d2 N   2παz 2              1
+                                                                    
+                                      =                1− 2 2             .                   (34.44)
+                                 dxdλ     λ2             β n (λ)
+The index of refraction n is a function of photon energy E = ~ω, as is the sensitivity of the
+transducer used to detect the light. For practical use, Eq. (34.43) must be multiplied by the the
+transducer response function and integrated over the region for which β n(ω) > 1. Further details
+are given in the discussion of Cherenkov detectors in the Particle Detectors section (Sec. 35.5 of
+this Review).
+    When two particles are close together (lateral separation . 1 wavelength), the electromagnetic
+fields from the particles may add coherently, affecting the Cherenkov radiation. Because of their
+opposite charges, the radiation from an e+ e− pair at close separation is suppressed compared to
+two independent leptons [85].
+34.7.2 Coherent radio Cherenkov radiation
+    Coherent Cherenkov radiation is produced by many charged particles with a non-zero net charge
+moving through matter on an approximately common “wavefront”—for example, the electrons and
+positrons in a high-energy electromagnetic cascade. The signals can be visible for energies above
+1016 eV; see Sec. 36.3.3 for more details. The phenomenon is called the Askaryan effect [86]. Near
+the end of a shower, when typical particle energies are below Ec (but still relativistic), a charge
+imbalance develops. Photons can Compton-scatter atomic electrons, and positrons can annihilate
+with atomic electrons to contribute even more photons which can in turn Compton scatter. These
+processes result in a roughly 20% excess of electrons over positrons in a shower. The net negative
+charge leads to coherent radio Cherenkov emission. The radiation includes a component from
+the decelerating charges (as in bremsstrahlung). Because the emission is coherent, the electric
+field strength is proportional to the shower energy, and the signal power increases as its square.
+The electric field strength also increases linearly with frequency, up to a maximum frequency
+determined by the lateral spread of the shower. This cutoff occurs at about 1 GHz in ice, and
+scales inversely with the Moliere radius. At low frequencies, the radiation is roughly isotropic, but,
+as the frequency rises toward the cutoff frequency, the radiation becomes increasingly peaked around
+
+                                         1st December, 2025
+35                                                                            34. Passage of Particles Through Matter
+
+
+the Cherenkov angle. The radiation is linearly polarized in the plane containing the shower axis
+and the photon direction. A measurement of the signal polarization can be used to help determine
+the shower direction. The characteristics of this radiation have been nicely demonstrated in a series
+of experiments at SLAC [87]. A detailed discussion of the radiation can be found in Ref. [88].
+34.7.3 Transition radiation
+   The energy radiated when a particle with charge ze crosses the boundary between vacuum and
+a medium with plasma frequency ωp is
+                                                                                             I = αz 2 γ~ωp /3,                                    (34.45)
+where                                                                         q                      q
+                                                                      ~ωp =    4πNe re3 me c2 /α =       ρ (in g/cm3 ) hZ/Ai × 28.81 eV.          (34.46)
+     For styrene and similar materials, ~ωp ≈ 20 eV; for air it is 0.7 eV.
+
+                                                                                  Without absorption
+                                                                                                                  25 μm Mylar/1.5 mm air
+                                                                                                                  γ = 2 ×104
+                                                           10−2
+        dS/d( ω), differential yield per interface (keV/keV)
+
+
+
+
+                                                                                                                        Single interface
+
+
+                                                                              200 foils
+                                                           10−3
+
+
+                                                                                          With absorption
+
+
+
+                                                           10−4
+
+
+
+
+                                                           10−5
+                                                                  1                        10                 100                          1000
+                                                                                             x-ray energy ω (keV)
+Figure 34.27: X-ray photon energy spectra for a radiator consisting of 200 25 µm thick foils of
+Mylar with 1.5 mm spacing in air (solid lines) and for a single surface (dashed line). Curves are
+shown with and without absorption. Adapted from Ref. [89].
+
+    The number spectrum dNγ /d(~ω diverges logarithmically at low energies and decreases rapidly
+for ~ω/γ~ωp > 1. About half the energy is emitted in the range 0.1 ≤ ~ω/γ~ωp ≤ 1. Inevitable
+
+                                                                                            1st December, 2025
+36                        34. Passage of Particles Through Matter
+
+
+absorption in a practical detector removes the divergence. For a particle with γ = 103 , the radiated
+photons are in the soft x-ray range 2 to 40 keV. The γ dependence of the emitted energy thus comes
+from the hardening of the spectrum rather than from an increased quantum yield.
+   The number of photons with energy ~ω > ~ω0 is given by the answer to problem 13.15 in
+Ref. [3],                                         "                   #
+                                                              2
+                                              αz 2     γ~ωp         π2
+                            Nγ (~ω > ~ω0 ) =        ln      −1 +         ,                    (34.47)
+                                              π         ~ω0         12
+
+within corrections of order (~ω0 /γ~ωp )2 . The number of photons above a fixed energy ~ω0  γ~ωp
+thus grows as (ln γ)2 , but the number above a fixed fraction of γ~ωp (as in the example above) is
+constant. For example, for ~ω > γ~ωp /10, Nγ = 2.519 αz 2 /π = 0.59% × z 2 .
+    The particle stays “in phase” with the x ray over a distance called the formation length, d(ω) =
+(2c/ω)(1/γ 2 + θ2 + ωp2 /ω 2 )−1 . Most of the radiation is produced in this distance. Here θ is the
+x-ray emission
+        √          √ characteristically 1/γ. For θ = 1/γ the formation length has a maximum at
+                angle,
+d(γωp / 2) = γc/ 2 ωp . In practical situations it is tens of µm.
+    Since the useful x-ray yield from a single interface is low, in practical detectors it is enhanced
+by using a stack of N foil radiators—foils L thick, where L is typically several formation lengths—
+separated by gas-filled gaps. The amplitudes at successive interfaces interfere to cause oscillations
+about the single-interface spectrum. At increasing frequencies above the position of the last inter-
+ference maximum (L/d(w) = π/2), the formation zones, which have opposite phase, overlap more
+and more and the spectrum saturates, dI/dω approaching zero as L/d(ω) → 0. This is illustrated
+in Fig. 34.27 for a realistic detector configuration.
+    For regular spacing of the layers fairly complicated analytic solutions for the intensity have been
+obtained [89, 90]. Although one might expect the intensity of coherent radiation from the stack of
+foils to be proportional to N 2 , the angular dependence of the formation length conspires to make
+the intensity ∝ N .
+References
+ [1] H. Bichsel, Nucl. Instrum. Meth. A562, 154 (2006).
+ [2] B. Rossi, High Energy Particles, Prentice-Hall, Inc., Englewood Cliffs, NJ, 1952.
+ [3] J.D. Jackson, Classical Electrodynamics, 3rd edition, (John Wiley and Sons, New York, 1998).
+ [4] H.A. Bethe, Zur Theorie des Durchgangs schneller Korpuskularstrahlen durch Materie, H.
+     Bethe, Ann. Phys. 5, 325 (1930).
+ [5] M. S. Livingston and H. A. Bethe, Rev. Mod. Phys. 9, 245 (1937).
+ [6] “Stopping Powers and Ranges for Protons and Alpha Particles,” ICRU Report No. 49 (1993);
+     Tables and graphs are available at
+     physics.nist.gov/PhysRefData/Star/Text/PSTAR.html and
+     physics.nist.gov/PhysRefData/Star/Text/ASTAR.html.
+ [7] D.E. Groom, N.V. Mokhov, and S.I. Striganov, “Muon stopping-power and range tables: 10
+     MeV–100 TeV,” Atomic Data and Nuclear Data Tables 78, 183–356 (2001). Since submission
+     of this paper it has become likely that post-Born corrections to the direct pair production
+     cross section should be made. Code used to make Figs. 34.22–34.24 included these corrections
+     [D.Yu. Ivanov et al., Phys. Lett. B442, 453 (1998)]. The effect is negligible except at high Z.
+     (It is less than 1% for iron.); The introductory text of the paper can be found at
+     pdg.lbl.gov/current/AtomicNuclearProperties/adndt.pdf
+     Extensive printable and machine-readable tables for muons are given at
+     pdg.lbl.gov/current/AtomicNuclearProperties/.
+
+                                         1st December, 2025
+37                       34. Passage of Particles Through Matter
+
+
+ [8] W. H. Barkas, W. Birnbaum and F. M. Smith, Phys. Rev. 101, 778 (1956).
+ [9] U. Fano, Ann. Rev. Nucl. Part. Sci. 13, 1 (1963).
+[10] J. D. Jackson, Phys. Rev. D59, 017301 (1999).
+[11] J. Lindhard and A. H. Sørensen, Phys. Rev. A53, 2443 (1996).
+[12] “Stopping Powers for Electrons and Positrons,” ICRU Report No. 37 (1984); Tables and graphs
+     are available at
+     physics.nist.gov/PhysRefData/Star/Text/ESTAR.html .
+[13] H. Bichsel, Phys. Rev. A46, 5761 (1992).
+[14] W.H. Barkas and M.J. Berger, Tables of Energy Losses and Ranges of Heavy Charged Particles,
+     NASA-SP-3013 (1964).
+[15] S.M. Seltzer and M.J. Berger, Int. J. of Applied Rad. 33, 1189 (1982).
+[16] physics.nist.gov/PhysRefData/XrayMassCoef/tab1.html.
+[17] R. M. Sternheimer, Phys. Rev. 88, 851 (1952).
+[18] R. M. Sternheimer, M. J. Berger and S. M. Seltzer, Atom. Data Nucl. Data Tabl. 30, 261
+     (1984); Minor errors are corrected in Ref. 5. Chemical composition for the tabulated materials
+     is given in Ref. 10.
+[19] R. M. Sternheimer and R. F. Peierls, Phys. Rev. B3, 3681 (1971).
+[20] N. F. Mott, Proceedings of the Cambridge Philosophical Society 27, 553 (1931).
+[21] H. Bichsel, Phys. Rev. A65, 5, 052709 (2002).
+[22] S. P. Møller et al., Phys. Rev. A56, 4, 2930 (1997).
+[23] J. C. Ashley, R. H. Ritchie and W. Brandt, Phys. Rev. B 5, 2393 (1972).
+[24] H.H. Andersen and J.F. Ziegler, Hydrogen: Stopping Powers and Ranges in All Elements.
+     Vol. 3 of The Stopping and Ranges of Ions in Matter (Pergamon Press 1977).
+[25] J. Lindhard, Kgl. Danske Videnskab. Selskab, Mat.-Fys. Medd. 28, No. 8 (1954); J. Lindhard,
+     M. Scharff, and H.E. Schiøtt, Kgl. Danske Videnskab. Selskab, Mat.-Fys. Medd. 33, No. 14
+     (1963).
+[26] J.F. Ziegler, J.F. Biersac, and U. Littmark, The Stopping and Range of Ions in Solids, Perga-
+     mon Press 1985.
+[27] E.A. Uehling, Ann. Rev. Nucl. Sci. 4, 315 (1954) (For heavy particles with unit charge, but
+     e± cross sections and stopping powers are also given).
+[28] N.F. Mott and H.S.W. Massey, The Theory of Atomic Collisions, Oxford Press, London, 1965.
+[29] P. V. Vavilov, Sov. Phys. JETP 5, 749 (1957), [Zh. Eksp. Teor. Fiz.32,920(1957)].
+[30] L.D. Landau, J. Exp. Phys. (USSR) 8, 201 (1944).
+[31] H. Bichsel, Rev. Mod. Phys. 60, 663 (1988).
+[32] R. Talman, Nucl. Instrum. Meth. 159, 189 (1979).
+[33] H. Bichsel, Ch. 87 in the Atomic, Molecular and Optical Physics Handbook, G.W.F. Drake,
+     editor (Am. Inst. Phys. Press, Woodbury NY, 1996).
+[34] S.M. Seltzer and M.J. Berger, Int. J. of Applied Rad. 35, 665 (1984). This paper corrects and
+     extends the results of Ref. [15].
+[35] H. A. Bethe, Phys. Rev. 89, 1256 (1953).
+[36] W. T. Scott, Rev. Mod. Phys. 35, 231 (1963).
+
+                                        1st December, 2025
+38                       34. Passage of Particles Through Matter
+
+
+[37] J. W. Motz, H. Olsen and H. W. Koch, Rev. Mod. Phys. 36, 881 (1964).
+[38] H. Bichsel, Phys. Rev. 112, 182 (1958).
+[39] G. Shen et al., Phys. Rev. D20, 1584 (1979).
+[40] G. R. Lynch and O. I. Dahl, Nucl. Instrum. Meth. B58, 6 (1991).
+[41] M. Wong et al., Med. Phys. 17, 163 (1990).
+[42] Y.-S. Tsai, Rev. Mod. Phys. 46, 815 (1974), [Erratum: Rev. Mod. Phys.49,521(1977)].
+[43] H. Davies, H. A. Bethe and L. C. Maximon, Phys. Rev. 93, 788 (1954).
+[44] L. D. Landau and I. Pomeranchuk, Dokl. Akad. Nauk Ser. Fiz. 92, 535 (1953); 92, 735 (1953).
+     These papers are available in English in L. Landau, The Collected Papers of L.D. Landau,
+     Pergamon Press, 1965; A. B. Migdal, Phys. Rev. 103, 1811 (1956).
+[45] S. Klein, Rev. Mod. Phys. 71, 1501 (1999).
+[46] M.L. Ter-Mikaelian, SSSR 94, 1033 (1954); M.L. Ter-Mikaelian, High Energy Electromagnetic
+     Processes in Condensed Media (John Wiley and Sons, New York, 1972).
+[47] P. L. Anthony et al., Phys. Rev. Lett. 76, 3550 (1996).
+[48] H. W. Koch and J. W. Motz, Rev. Mod. Phys. 31, 920 (1959).
+[49] M.J. Berger and S.M. Seltzer, “Tables of Energy Losses and Ranges of Electrons and
+     Positrons,” National Aeronautics and Space Administration Report NASA-SP-3012 (Wash-
+     ington DC 1964).
+[50] Curves for these and other elements, compounds, and mixtures may be obtained from
+     nist.gov/pml/xcom-photon-cross-sections-database.
+     The photon total cross section is approximately flat for at least two decades beyond the energy
+     range shown.
+[51] B. L. Berman and S. C. Fultz, Rev. Mod. Phys. 47, 713 (1975).
+[52] www.cxro.lbl.gov/optical_constants/pert_form.html.
+[53] physics.nist.gov/PhysRefData/XrayMassCoef/tab3.html.
+[54] J. W. Motz, H. A. Olsen and H. W. Koch, Rev. Mod. Phys. 41, 581 (1969).
+[55] P. L. Anthony et al., Phys. Rev. Lett. 75, 1949 (1995).
+[56] U. I. Uggerhøj, Rev. Mod. Phys. 77, 1131 (2005).
+[57] L. Gerhardt and S. R. Klein, Phys. Rev. D82, 074017 (2010).
+[58] W.R. Nelson, H. Hirayama, and D.W.O. Rogers, “The EGS4 Code System,” SLAC-265, Stan-
+     ford Linear Accelerator Center (Dec. 1985).
+[59] Experimental Techniques in High Energy Physics, ed. T. Ferbel (Addison-Wesley, Menlo Park
+     CA 1987).
+[60] U. Amaldi, Phys. Scripta 23, 409 (1981).
+[61] E. Longo and I. Sestili, Nucl. Instrum. Meth. 128, 283 (1975), [Erratum: Nucl. Instrum.
+     Meth.135,587(1976)].
+[62] G. Grindhammer et al., in Proceedings of the 1988 Summer Study on High Energy Physics in
+     the 1990’s, Snowmass, CO, June 27 – July 15, 1990, edited by F.J. Gilman and S. Jensen,
+     (World Scientific, Teaneck, NJ, 1989) p. 151.
+[63] W. R. Nelson et al., Phys. Rev. 149, 201 (1966).
+[64] G. Bathow et al., Nucl. Phys. B20, 592 (1970).
+
+                                        1st December, 2025
+39                       34. Passage of Particles Through Matter
+
+
+[65] H. Bethe and W. Heitler, Proc. Roy. Soc. Lond. A146, 83 (1934); H.A. Bethe, Proc. Cambridge
+     Phil. Soc. 30, 542 (1934).
+[66] A.A. Petrukhin and V.V. Shestakov, Can. J. Phys. 46, S377 (1968).
+[67] V.M. Galitskii and S.R. Kel’ner, Sov. Phys. JETP 25, 948 (1967).
+[68] S.R. Kel’ner and Yu.D. Kotov, Sov. J. Nucl. Phys. 7, 237 (1968).
+[69] R.P. Kokoulin and A.A. Petrukhin, in Proceedings of the International Conference on Cosmic
+     Rays, Hobart, Australia, August 16–25, 1971, Vol. 4, p. 2436 .
+[70] A. I. Nikishov, Sov. J. Nucl. Phys. 27, 677 (1978), [Yad. Fiz.27,1281(1978)].
+[71] Yu. M. Andreev, L. B. Bezrukov and E. V. Bugaev, Phys. Atom. Nucl. 57, 2066 (1994), [Yad.
+     Fiz.57,2146(1994)].
+[72] L. B. Bezrukov and E. V. Bugaev, Yad. Fiz. 33, 1195 (1981), [Sov. J. Nucl. Phys.33,635(1981)].
+[73] N.V. Mokhov and C.C. James, The MARS Code System User’s Guide, Fermilab-FN-1058-APC
+     (2018), mars.fnal.gov/; N. Mokhov et al., Prog. Nucl. Sci. Tech. 4, 496 (2014).
+[74] P. H. Barrett et al., Rev. Mod. Phys. 24, 3, 133 (1952).
+[75] A. Van Ginneken, Nucl. Instrum. Meth. A251, 21 (1986).
+[76] U. Becker et al., Nucl. Instrum. Meth. A253, 15 (1986).
+[77] J.J. Eastman and S.C. Loken, in Proceedings of the Workshop on Experiments, Detectors, and
+     Experimental Areas for the Supercollider, Berkeley, CA, July 7–17, 1987, edited by R. Donald-
+     son and M.G.D. Gilchriese (World Scientific, Singapore, 1988), p. 542.
+[78] Methods of Experimental Physics, L.C.L. Yuan and C.-S. Wu, editors, Academic Press, 1961,
+     Vol. 5A, p. 163.
+[79] W.W.M. Allison and P.R.S. Wright, “The Physics of Charged Particle Identification: dE/dx,
+     Cherenkov Radiation, and Transition Radiation,” p. 371 in Experimental Techniques in High
+     Energy Physics, T. Ferbel, editor, (Addison-Wesley 1987).
+[80] E.R. Hayes, R.A. Schluter, and A. Tamosaitis, “Index and Dispersion of Some Cherenkov
+     Counter Gases,” ANL-6916 (1964).
+[81] T. Ypsilantis, in “Proceedings of the Symposium on Particle Identification at High Luminosity
+     Hadron Colliders, Apr 5-7, 1989 Batavia, Ill.”, 0661–676 (1989).
+[82] I. Tamm, J. Phys. U.S.S.R., 1, 439 (1939).
+[83] H. Motz and L.I. Schiff, Am. J. Phys. 21, 258 (1953).
+[84] B. N. Ratcliff, Nucl. Instrum. Meth. A502, 211 (2003).
+[85] S. K. Mandal, S. R. Klein and J. D. Jackson, Phys. Rev. D72, 093003 (2005).
+[86] G. A. Askar’yan, Sov. Phys. JETP 14, 2, 441 (1962), [Zh. Eksp. Teor. Fiz.41,616(1961)].
+[87] P. W. Gorham et al., Phys. Rev. D72, 023002 (2005).
+[88] E. Zas, F. Halzen and T. Stanev, Phys. Rev. D45, 362 (1992).
+[89] M. L. Cherry et al., Phys. Rev. D10, 3594 (1974); M. L. Cherry, Phys. Rev. D17, 2245 (1978).
+[90] B. Dolgoshein, Nucl. Instrum. Meth. A326, 434 (1993).
+
+
+
+
+                                        1st December, 2025
+

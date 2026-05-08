@@ -1,0 +1,49 @@
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Python tooling
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# Local/private overrides (not for the public repo)
+.claude.local.md
+.env
+BUILD_LOG.md
+
+# CMake / build artifacts (canonical build dir is ~/.geant4_claude/build,
+# outside the repo; these patterns are defensive against in-tree builds)
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.o
+*.so
+*.dylib
+
+# Apptainer cache (normally outside the repo; defensive)
+*.sif
+
+# Demo outputs if someone runs the smoke test at the repo root
+runs/
+*.root
+*.png
+
+# Logs
+*.log
+
+# Geant4 source (wiki raw input — large, not tracked)
+wiki/raw/geant4-src/
+
+# Per-user Claude Code local settings (personal allowlist, not for the public repo)
+.claude/settings.local.json
+
+# Scratch chunked outputs from PDG-chapter ingest (regenerable from the source PDF)
+wiki/raw/pdg-reviews/parts/

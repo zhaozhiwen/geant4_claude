@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# g4run — the only bridge between geant4_claude and the Geant4/ROOT runtime.
+# Every Geant4, ROOT, CMake, or g++ invocation in commands and skills must
+# pass through here. Image tag and entrypoint are pinned in this file alone.
+
+set -euo pipefail
+
+# --- pinned runtime (single source of truth) ---------------------------------
+IMAGE_TAG="ghcr.io/gemc/g4install:11.4.0-almalinux-9.4"
+IMAGE_URI="docker://${IMAGE_TAG}"
+ENTRYPOINT="/usr/local/bin/docker-entrypoint.sh"
+
+# --- paths -------------------------------------------------------------------
+CACHE_DIR="${GEANT4_CLAUDE_CACHE:-$HOME/.geant4_claude}"
+SIF_DIR="${CACHE_DIR}/sif"
+BUILD_DIR="${CACHE_DIR}/build"
+SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
+SIF_PATH="${SIF_DIR}/${SIF_NAME}"
+
+PLUGIN_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+SRC_DIR="${PLUGIN_ROOT}/src"
+
+# --- helpers -----------------------------------------------------------------
+log()  { printf '[g4run] %s\n' "$*" >&2; }
+die()  { printf '[g4run] error: %s\n' "$*" >&2; exit 1; }
+
+require_apptainer() {
+  command -v apptainer >/dev/null 2>&1 || die "apptainer not found on PATH. Install apptainer first (https://apptainer.org)."
+}
+
+ensure_sif() {
+  require_apptainer
+  if [[ -f "${SIF_PATH}" ]]; then return 0; fi
+  mkdir -p "${SIF_DIR}"
+  log "pulling ${IMAGE_URI} -> ${SIF_PATH}"
+  apptainer pull "${SIF_PATH}" "${IMAGE_URI}"
+}
+
+# Run a shell command inside the container, with the entrypoint sourced and
+# the current working directory plus the cache bind-mounted.
+in_container() {
+  ensure_sif
+  local cmd="$1"
+  apptainer exec \
+    --bind "$(pwd)" \
+    --bind "${CACHE_DIR}" \
+    "${SIF_PATH}" \
+    bash -lc "source ${ENTRYPOINT} && ${cmd}"
+}
+
+# --- subcommands -------------------------------------------------------------
+cmd_info() {
+  echo "image:    ${IMAGE_TAG}"
+  echo "sif:      ${SIF_PATH} $([[ -f ${SIF_PATH} ]] && echo '[present]' || echo '[not pulled]')"
+  echo "cache:    ${CACHE_DIR}"
+  echo "build:    ${BUILD_DIR} $([[ -x ${BUILD_DIR}/geant4_claude_main ]] && echo '[built]' || echo '[not built]')"
+  echo "plugin:   ${PLUGIN_ROOT}"
+  command -v apptainer >/dev/null 2>&1 \
+    && echo "apptainer: $(apptainer --version)" \
+    || echo "apptainer: NOT FOUND"
+}
+
+cmd_pull() {
+  ensure_sif
+  log "image ready at ${SIF_PATH}"
+}
+
+cmd_shell() {
+  ensure_sif
+  log "entering container ($(basename "${SIF_PATH}")). Type 'exit' to leave."
+  apptainer exec \
+    --bind "$(pwd)" \
+    --bind "${CACHE_DIR}" \
+    "${SIF_PATH}" \
+    bash -lc "source ${ENTRYPOINT} && exec bash"
+}
+
+cmd_root() {
+  ensure_sif
+  # The container entrypoint ends in `exec "$@"` and would otherwise clobber
+  # forwarded positional args; DOCKER_ENTRYPOINT_SOURCE_ONLY=1 suppresses it.
+  apptainer exec \
+    --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
+    --bind "$(pwd)" \
+    --bind "${CACHE_DIR}" \
+    "${SIF_PATH}" \
+    bash -lc 'source "$0" && root -l -b -q "$@"' "${ENTRYPOINT}" "$@"
+}
+
+cmd_build() {
+  if [[ ! -f "${SRC_DIR}/CMakeLists.txt" ]]; then
+    die "src/CMakeLists.txt not present (Phase 2 deliverable). Skipping build."
+  fi
+  mkdir -p "${BUILD_DIR}"
+  in_container "cd '${BUILD_DIR}' && cmake -S '${SRC_DIR}' -B '${BUILD_DIR}' && cmake --build '${BUILD_DIR}' -j"
+  log "built ${BUILD_DIR}/geant4_claude_main"
+}
+
+cmd_sim() {
+  local gdml="${1:-}" mac="${2:-}" out="${3:-}"
+  [[ -n "${gdml}" && -n "${mac}" && -n "${out}" ]] \
+    || die "usage: g4run sim <geometry.gdml> <run.mac> <output.root>"
+  [[ -x "${BUILD_DIR}/geant4_claude_main" ]] \
+    || die "geant4_claude_main not built. Run 'g4run build' first (requires Phase 2)."
+  in_container "${BUILD_DIR}/geant4_claude_main '${gdml}' '${mac}' '${out}'"
+}
+
+cmd_validate_gdml() {
+  local gdml="${1:-}"
+  [[ -n "${gdml}" ]] || die "usage: g4run validate-gdml <file.gdml>"
+  in_container "xmllint --noout '${gdml}'"
+  log "GDML well-formed: ${gdml}"
+}
+
+usage() {
+  cat <<EOF
+g4run — apptainer wrapper for geant4_claude
+
+Usage: g4run <subcommand> [args]
+
+Subcommands:
+  pull                          Pull and cache the pinned container image.
+  info                          Show image, cache, and build status.
+  shell                         Open an interactive shell inside the container.
+  build                         Build src/geant4_claude_main (Phase 2).
+  sim <gdml> <mac> <out.root>   Run a simulation (Phase 2).
+  root <args...>                Run ROOT inside the container.
+  validate-gdml <file>          xmllint a GDML file inside the container.
+
+Image: ${IMAGE_TAG}
+Cache: ${CACHE_DIR}  (override with GEANT4_CLAUDE_CACHE)
+EOF
+}
+
+# --- dispatch ----------------------------------------------------------------
+sub="${1:-}"; shift || true
+case "${sub}" in
+  pull)           cmd_pull "$@" ;;
+  info)           cmd_info "$@" ;;
+  shell)          cmd_shell "$@" ;;
+  build)          cmd_build "$@" ;;
+  sim)            cmd_sim "$@" ;;
+  root)           cmd_root "$@" ;;
+  validate-gdml)  cmd_validate_gdml "$@" ;;
+  ""|-h|--help|help) usage ;;
+  *)              usage; die "unknown subcommand: ${sub}" ;;
+esac
