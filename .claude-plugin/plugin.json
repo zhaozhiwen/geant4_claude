@@ -16,9 +16,9 @@
     "uproot",
     "claude-code-plugin"
   ],
-  "homepage": "https://github.com/zhiwenzhao/geant4_claude",
+  "homepage": "https://github.com/zhaozhiwen/geant4_claude",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zhiwenzhao/geant4_claude.git"
+    "url": "https://github.com/zhaozhiwen/geant4_claude.git"
   }
 }

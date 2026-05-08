@@ -42,6 +42,9 @@ runs/
 # Geant4 source (wiki raw input — large, not tracked)
 wiki/raw/geant4-src/
 
+# Per-user Obsidian vault config (workspace state, plugins, themes)
+wiki/.obsidian/
+
 # Per-user Claude Code local settings (personal allowlist, not for the public repo)
 .claude/settings.local.json
 

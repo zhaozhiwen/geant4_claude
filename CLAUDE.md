@@ -31,7 +31,7 @@ will clone it on a fresh machine.
    expects ROOT on the user's host.
 4. **Fresh-clone reproducibility.** Every command must work after `git clone`
    on a machine with apptainer and Python; nothing may rely on cached state in
-   the maintainer's home directory or absolute paths under `/home/zwzhao`.
+   the maintainer's home directory or absolute paths under `/home/$USER`.
 5. **Generated artifacts are gitignored at the source.** Templates the plugin
    writes into a user workspace (`runs/`, `*.root`, `build/`, `__pycache__/`)
    must come with a `.gitignore` that excludes them. Don't rely on the user
@@ -118,8 +118,8 @@ If any step fails on a fresh machine, that's a bug, not a user error.
 
 Before tagging a release or pushing the public branch:
 
-- `grep -RIn "/home/zwzhao\|jlab\.org\|jefflab" .` returns nothing in tracked
-  files.
+- `grep -RIn "/home/$USER\|jlab\.org\|jefflab" .` returns nothing in tracked
+  files (run with the maintainer's actual `$USER` expanded).
 - `grep -RIn "TODO\|FIXME\|XXX" .` is reviewed; nothing critical left.
 - `bin/g4run` tag matches `.claude-plugin/plugin.json` version expectations
   (image tag may lag plugin version, but bumping the image bumps minor).

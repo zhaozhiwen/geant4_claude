@@ -24,11 +24,11 @@ is pinned in [`bin/g4run`](bin/g4run).
 ## Install
 
 ```bash
-git clone https://github.com/zhiwenzhao/geant4_claude.git ~/.claude/plugins/geant4_claude
+git clone https://github.com/zhaozhiwen/geant4_claude.git ~/.claude/plugins/geant4_claude
 # then enable it in Claude Code's plugin manager
 ```
 
-> Replace `zhiwenzhao` with the owner of whatever fork you cloned from. The plugin manifest is at `.claude-plugin/plugin.json`.
+> Replace `zhaozhiwen` with the owner of whatever fork you cloned from. The plugin manifest is at `.claude-plugin/plugin.json`.
 
 ## What happens when you enable the plugin
 
@@ -39,6 +39,8 @@ Two things install automatically the first time Claude Code loads the plugin —
 2. **`pdg` Python package** auto-installs into a managed venv at `~/.claude/plugins/data/<plugin-id>/venv/` via a `SessionStart` hook (`hooks/install-deps.sh`). First session takes ~10–30 s while pip pulls `pdg` + `sqlalchemy` (~50 MB on disk); later sessions are a 3 ms diff/no-op. Claude Code may ask you to approve the hook running `pip install` on your machine. The venv lives outside this repo, survives plugin updates, and is deleted automatically when you uninstall the plugin. Used by the plugin to look up PDG particle data on demand. See [docs/DESIGN.md](docs/DESIGN.md) §"Python deps via SessionStart hook".
 
 If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the four-command demo to work.
+
+The first `/geant4-init` you run will additionally **ask once** whether to shallow-clone the Geant4 source tree (matching the pinned container's version, ~150 MB) into `<plugin>/wiki/raw/geant4-src/`. This is optional — say *Skip* and the four-command demo still works. Saying *Yes* is what lets Claude verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run `/geant4-init` later to be asked again.
 
 ## Quickstart (the four-command demo)
 
