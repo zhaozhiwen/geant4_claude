@@ -142,7 +142,7 @@ the provenance record.
 
 | Command | One-line purpose |
 |--------|------------------|
-| `/geant4-init` | Scaffold workspace, pull image, build generic main. |
+| `/geant4-init` | Scaffold workspace, pull image, build generic main. On first run, also offers (one prompt, plugin-wide) to shallow-clone the Geant4 source tree to `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/` for offline citation verification. |
 | `/geant4-detector` | Translate a natural-language detector spec into a validated GDML file. |
 | `/geant4-run` | Run a simulation and produce a fresh `runs/<id>/`. |
 | `/geant4-analyze` | Read `runs/<id>/hits.root`, produce plots + summary. |
@@ -362,3 +362,9 @@ Verify any path with `claude mcp list` — expect `deepwiki: https://mcp.deepwik
 | `mcp__deepwiki__ask_question` | Ask a free-form question against a repo (or up to 10 repos). LLM-grounded, returns prose + a search-permalink. |
 
 **Usage rule (echoed in `wiki/CLAUDE.md`):** treat deepwiki answers as **hypotheses to verify** against `wiki/raw/geant4-src/` before citing them in a wiki synthesis page. Citation discipline is weaker than direct grep — in our smoke test the tool gave the correct optical-photon PDG = −22 but did not name `G4OpticalPhoton.cc:67` even when asked. If a deepwiki claim survives a `grep` in the local source tree, it earns a place in a synthesis page — citing the `.cc` file, not deepwiki.
+
+### Distribution: marketplace + optional source-tree clone
+
+**Self-hosted marketplace.** The plugin repo doubles as a single-plugin Claude Code marketplace via `.claude-plugin/marketplace.json` (alongside `plugin.json`). The marketplace entry points back at the same repo with `"source": "./"` so `/plugin marketplace add zhaozhiwen/geant4_claude` + `/plugin install geant4-claude@geant4-marketplace` is the supported install path; manual `git clone` still works as a fallback. Marketplace name (`geant4-marketplace`) is set there once — keep stable across releases or you'll break user install commands.
+
+**Optional Geant4 source clone.** The wiki's `sources/geant4-code/synthesis/` pages cite `.cc:line` ranges. Those citations are only verifiable if the Geant4 source tree is locally present at `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src/`. To keep fresh-clone size small, the tree is **gitignored** and not shipped. `/geant4-init` step 6 detects whether the tree is already there and, if missing, asks the user once whether to shallow-clone it. The tag is derived from `bin/g4run`'s pinned image (single source of truth) so a container bump automatically asks for a matching source bump. Idempotent: subsequent `/geant4-init` calls in other workspaces detect the existing tree and skip the prompt.
