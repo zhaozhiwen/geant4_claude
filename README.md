@@ -23,12 +23,27 @@ is pinned in [`bin/g4run`](bin/g4run).
 
 ## Install
 
+### Option A — via Claude Code marketplace (recommended)
+
+In Claude Code:
+
+```text
+/plugin marketplace add zhaozhiwen/geant4_claude
+/plugin install geant4-claude@geant4-marketplace
+```
+
+The first command registers this repo as a marketplace (it ships
+`.claude-plugin/marketplace.json` alongside the plugin manifest). The
+second installs the plugin from it. `/plugin update` handles upgrades.
+
+### Option B — manual git clone
+
 ```bash
 git clone https://github.com/zhaozhiwen/geant4_claude.git ~/.claude/plugins/geant4_claude
 # then enable it in Claude Code's plugin manager
 ```
 
-> Replace `zhaozhiwen` with the owner of whatever fork you cloned from. The plugin manifest is at `.claude-plugin/plugin.json`.
+> If you cloned a fork, replace `zhaozhiwen` accordingly. The plugin manifest is at `.claude-plugin/plugin.json`.
 
 ## What happens when you enable the plugin
 

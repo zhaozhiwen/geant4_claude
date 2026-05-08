@@ -1,0 +1,13 @@
+{
+  "name": "geant4-marketplace",
+  "owner": {
+    "name": "Zhiwen Zhao"
+  },
+  "plugins": [
+    {
+      "name": "geant4-claude",
+      "source": "./",
+      "description": "Design Geant4 detectors, run simulations, and analyze output through four slash commands. Geant4/ROOT in a pinned apptainer image; analysis on the host with uproot."
+    }
+  ]
+}
