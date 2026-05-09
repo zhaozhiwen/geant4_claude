@@ -7,6 +7,12 @@ the `AskUserQuestion` flow in `/geant4-init`, and namespace lookup.
 
 **Run this before tagging any release.** ~10 minutes.
 
+> **See also:** `tests/clean-install-test.sh` automates this checklist
+> via tmux + sandboxed Claude Code. Use the script to re-run a known
+> flow quickly; use this manual checklist when a release may have
+> introduced a new prompt that an auto-clicked script shouldn't blindly
+> approve.
+
 ## Prerequisites
 
 - A host with `apptainer` installed and on PATH.

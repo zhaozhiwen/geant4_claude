@@ -100,15 +100,20 @@ Naming:
 
 ## Testing the plugin (dogfooding)
 
-Two layers, both run before tagging a release:
+Three layers, in order of cost.
 
-### `tests/clean-smoke.sh` — automated plumbing test
+### 1. `tests/clean-smoke.sh` — fast plumbing test (~30 s — 3 min)
 
-Exercises `bin/g4run` + the workspace/example templates end-to-end against a
-sandboxed `CLAUDE_PLUGIN_DATA`. Runs in ~30 s with a reused `.sif`,
-~2–3 min on a fresh pull. Catches regressions in the wrapper, templates,
-build, run, schema-detection, idempotency, and the no-fallback cache
-resolution.
+**Use:** every commit that touches `bin/g4run`, `templates/`, the
+example main, or any `commands/*.md`.
+
+Exercises `bin/g4run` + the workspace/example templates end-to-end
+against a sandboxed `CLAUDE_PLUGIN_DATA`. Doesn't go through Claude
+Code, so it doesn't catch slash-dispatch / SessionStart / MCP /
+AskUserQuestion regressions — those need layer 2 or 3. Catches
+everything else (wrapper plumbing, build, run, schema-detection,
+idempotency, the no-fallback cache resolution, the `/home/$USER`
+leakage scan).
 
 ```bash
 # Reuse an existing .sif (fast):
@@ -119,18 +124,37 @@ G4C_REUSE_SIF=~/.claude/plugins/data/geant4-claude-geant4-claude/cache/sif/g4ins
 tests/clean-smoke.sh
 ```
 
-Run on every commit that touches `bin/g4run`, `templates/`, or any
-`commands/*.md`.
+### 2. `tests/clean-install-test.sh` — automated clean-install (~5 min)
 
-### `tests/CLEAN-INSTALL-CHECKLIST.md` — manual Claude Code flow
+**Use:** before pushing a release tag, when the prompt-flow hasn't
+changed since the last manual checklist pass. **Don't use** as the
+first run after landing a change that may add or alter a prompt — an
+auto-clicked unknown prompt is exactly what you don't want.
 
-Covers what the automated test cannot touch: `/plugin marketplace add`
-+ `/plugin install`, the `SessionStart` hook, the deepwiki MCP approval
-prompt, the `AskUserQuestion` flow in `/geant4-init`, and slash-command
-namespace lookup. ~10 minutes of operator time. Run before tagging any
-public release.
+Spawns a sandboxed Claude Code in tmux (HOME-overridden so the real
+`~/.claude` is untouched), drives `/plugin marketplace add` →
+`/plugin install` → exit/relaunch (to fire the SessionStart hook) →
+`/geant4-claude:geant4-init` → `…example` → `…build` → `…run` →
+`…analyze`, and verifies on-disk post-conditions at each gate.
+Symlinks the host's `.sif` and (if present) `geant4-src` and `venv`
+into the sandbox to skip downloads.
 
-If either flow fails on a fresh machine, that's a bug, not a user error.
+```bash
+tests/clean-install-test.sh
+```
+
+### 3. `tests/CLEAN-INSTALL-CHECKLIST.md` — manual checklist (~10 min)
+
+**Use:** the first time you run after a release that may have
+introduced a new prompt, or when you want a human review of every
+step. The definitive pre-publish gate.
+
+Covers what layer 2 also covers, plus phase 5 (custom flow with an
+operator-written `src/main.cc`) and phase 6 (idempotency edge cases).
+
+---
+
+If any layer fails on a fresh machine, that's a bug, not a user error.
 
 ## Pre-publish checks
 

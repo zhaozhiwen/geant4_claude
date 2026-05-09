@@ -1,11 +1,24 @@
 #!/usr/bin/env bash
-# tests/phase-b-drive.sh — drive Phase B (clean Claude Code install) via tmux.
+# tests/clean-install-test.sh — automated clean-install test via tmux.
 #
-# Spawns a sandboxed Claude Code in a tmux session and types the slash
-# commands from tests/CLEAN-INSTALL-CHECKLIST.md, then verifies post-
-# conditions with Bash assertions. Symlinks the .sif and (if present) the
-# Geant4 source tree from the operator's real plugin data dir into the
-# sandbox so we don't re-download ~600 MB.
+# Drives the same flow as tests/CLEAN-INSTALL-CHECKLIST.md, but
+# automated: spawns a sandboxed Claude Code in a tmux session, types
+# the slash commands, and verifies post-conditions with Bash assertions.
+# Symlinks the .sif and (if present) the Geant4 source tree from the
+# operator's real plugin data dir into the sandbox so we don't
+# re-download ~600 MB.
+#
+# When to use which:
+#   - tests/clean-smoke.sh          → run on every commit. Plumbing only;
+#                                     no Claude Code involved.
+#   - this script                   → automate the clean-install flow
+#                                     when you've validated it manually
+#                                     once and the prompts are stable.
+#   - tests/CLEAN-INSTALL-CHECKLIST.md → drive manually when first
+#                                     running after a release that may
+#                                     have introduced new prompts (an
+#                                     auto-clicked unknown prompt is
+#                                     exactly what you don't want).
 #
 # Scope (what this script automates):
 #   - Sandbox isolation (HOME= override; real credentials symlinked,
@@ -25,24 +38,25 @@
 # because we copy the operator's ~/.claude.json into the sandbox, which
 # already records the approval. If you wipe ~/.claude.json before running,
 # expect a y/n prompt that the script does not currently handle — drive
-# Phase B manually via CLEAN-INSTALL-CHECKLIST.md in that case.
+# manually via CLEAN-INSTALL-CHECKLIST.md in that case.
 #
-# What this script does NOT do (run manually if needed):
-#   - Phase 5 (custom flow) — needs operator-written src/main.cc.
-#   - Phase 6 (idempotency) — re-running for cache invariants is better
-#     covered by tests/clean-smoke.sh.
+# What this script does NOT cover (run manually if needed):
+#   - The "custom flow" (operator-written src/main.cc with a different
+#     output schema) — phase 5 in CLEAN-INSTALL-CHECKLIST.md.
+#   - Idempotency (re-running for cache invariants is better covered by
+#     tests/clean-smoke.sh).
 #
 # Honest caveat:
 #   This script auto-clicks through the deepwiki MCP approval and the
 #   /geant4-init AskUserQuestion. That's safe for re-running known flows,
-#   but on the *first* run after a release lands an unexpected prompt,
-#   you should drive Phase B manually following CLEAN-INSTALL-CHECKLIST.md
-#   so a human reviews what's being approved.
+#   but on the *first* run after a release introduces a new prompt, drive
+#   manually via CLEAN-INSTALL-CHECKLIST.md so a human reviews what's
+#   being approved.
 #
 # Usage:
-#   tests/phase-b-drive.sh [SESSION_NAME]
+#   tests/clean-install-test.sh [SESSION_NAME]
 #
-#   SESSION_NAME defaults to "g4c_phase_b". The sandbox lives at
+#   SESSION_NAME defaults to "g4c_clean_install". The sandbox lives at
 #   /tmp/${SESSION_NAME}/ and is removed on success (preserved on failure
 #   for inspection).
 #
@@ -53,7 +67,7 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SESSION="${1:-g4c_phase_b}"
+SESSION="${1:-g4c_clean_install}"
 SANDBOX="/tmp/${SESSION}"
 SANDBOX_CLAUDE="${SANDBOX}/.claude"
 PLUGIN_DATA_SANDBOX="${SANDBOX_CLAUDE}/plugins/data/geant4-claude-geant4-claude"
@@ -332,5 +346,5 @@ send "/exit"
 sleep 3
 tmux kill-session -t "${SESSION}" 2>/dev/null || true
 
-log "✓ Phase B passed"
+log "✓ clean-install test passed"
 note "Sandbox at ${SANDBOX} can be removed:  rm -rf '${SANDBOX}'"
