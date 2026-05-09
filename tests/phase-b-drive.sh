@@ -8,15 +8,24 @@
 # sandbox so we don't re-download ~600 MB.
 #
 # Scope (what this script automates):
-#   - Sandbox isolation (CLAUDE_CONFIG_DIR override; real credentials
-#     preserved via symlink so no re-login is needed).
-#   - Plugin install via /plugin marketplace add + /plugin install.
-#   - The deepwiki MCP approval prompt (sends `y`).
+#   - Sandbox isolation (HOME= override; real credentials symlinked,
+#     ~/.claude.json copied so no re-login or first-run setup).
+#   - Plugin install via /plugin marketplace add + /plugin install
+#     (handles the user-scope confirmation prompt).
+#   - Exit + relaunch claude after install so the SessionStart hook fires
+#     and the plugin's pdg venv gets created.
 #   - /geant4-claude:geant4-init, including the AskUserQuestion source-
 #     clone prompt (picks "Yes" — but with the symlink in place, it
 #     detects the existing tree and no-ops).
 #   - /geant4-claude:geant4-example, geant4-build, geant4-run, geant4-analyze.
-#   - On-disk post-condition checks at each gate.
+#   - On-disk post-condition checks at each gate (workspace skeleton,
+#     binary, run outputs, generic config.json schema, edep plot).
+#
+# MCP approval: in this script the deepwiki MCP approval doesn't fire
+# because we copy the operator's ~/.claude.json into the sandbox, which
+# already records the approval. If you wipe ~/.claude.json before running,
+# expect a y/n prompt that the script does not currently handle — drive
+# Phase B manually via CLEAN-INSTALL-CHECKLIST.md in that case.
 #
 # What this script does NOT do (run manually if needed):
 #   - Phase 5 (custom flow) — needs operator-written src/main.cc.
@@ -163,46 +172,70 @@ else
 fi
 
 # --- tmux launch ------------------------------------------------------------
+# Helper: launch claude in the sandbox, tolerantly handle the
+# workspace-trust dialog (fires only on first launch in a path), and
+# wait for the welcome card before returning.
+launch_claude() {
+  tmux send-keys -t "${SESSION}" \
+    "cd '${WS}' && HOME='${SANDBOX}' claude" Enter
+  local i pane
+  for ((i=0; i<15; i++)); do
+    pane=$(tmux capture-pane -t "${SESSION}" -p)
+    if printf '%s' "${pane}" | grep -qF "trust this folder"; then
+      key Enter   # default option 1: trust
+    fi
+    if printf '%s' "${pane}" | grep -qF "Welcome"; then
+      return 0
+    fi
+    sleep 1
+  done
+  pane_tail 30
+  fail "claude TUI didn't reach welcome state within 15 s"
+}
+
 log "tmux: starting session ${SESSION}"
 tmux kill-session -t "${SESSION}" 2>/dev/null || true
 tmux new-session -d -s "${SESSION}" -x 200 -y 50
 
-# Launch Claude Code with HOME redirected, in the workspace dir.
-tmux send-keys -t "${SESSION}" \
-  "cd '${WS}' && HOME='${SANDBOX}' claude" Enter
-
-# Phase 0: wait for the workspace-trust dialog (fires for any new path),
-# auto-trust it, then wait for the welcome card.
-log "phase 0: wait for trust dialog → auto-trust → wait for welcome"
-wait_for "trust this folder" 30
-key Enter   # default option 1: "Yes, I trust this folder"
-wait_for "Welcome" 30
+log "phase 0: launch claude (first time in sandbox; trust dialog fires)"
+launch_claude
 note "✓ TUI ready in sandbox"
 
 # --- phase 1: plugin install ------------------------------------------------
 log "phase 1: install plugin via marketplace"
 send "/plugin marketplace add zhaozhiwen/geant4_claude"
-wait_for "marketplace" 60
+wait_for "Successfully added marketplace" 60
 
 send "/plugin install geant4-claude@geant4-claude"
-wait_for "installed" 120
+# /plugin install pauses on a scope-confirmation prompt. Default option
+# (user scope) is right for solo testing.
+wait_for "user scope" 30
+key Enter
+wait_for "Installed geant4-claude" 120
 
-# Verify on disk
 [ -f "${SANDBOX_CLAUDE}/plugins/installed_plugins.json" ] \
   || fail "installed_plugins.json missing"
 grep -q "geant4-claude" "${SANDBOX_CLAUDE}/plugins/installed_plugins.json" \
   || fail "geant4-claude not in installed_plugins.json"
 note "✓ plugin recorded in installed_plugins.json"
 
-# --- phase 2: SessionStart hook + MCP approval ------------------------------
-log "phase 2: deepwiki MCP approval (auto-y) and SessionStart hook"
-# The deepwiki MCP approval prompt should appear soon after install.
-# Try sending "y" preemptively in case the prompt scrolled past.
-sleep 5
-send "y" || true   # safe: "y" alone is a no-op outside of the y/n prompt
-sleep 10
+# --- phase 2: SessionStart hook (requires exit + restart) -----------------
+# /reload-plugins picks up the new commands but does NOT fire SessionStart
+# hooks. The hook only fires on a fresh `claude` invocation. So: exit and
+# relaunch.
+#
+# MCP approval: on first install of a new MCP, Claude Code shows an
+# approve-once prompt. In our flow it doesn't fire because the operator's
+# .claude.json (which we copied into the sandbox) already has the deepwiki
+# MCP approval cached. If you re-run after wiping .claude.json, expect a
+# y/n prompt and adapt accordingly.
+log "phase 2: exit + relaunch claude → SessionStart hook → venv creation"
+send "/exit"
+sleep 4
+launch_claude
+# Give the hook 30 s to finish pip-installing pdg.
+sleep 30
 
-# Verify SessionStart hook ran (venv has pdg)
 if [ -d "${PLUGIN_DATA_SANDBOX}/venv/bin" ]; then
   "${PLUGIN_DATA_SANDBOX}/venv/bin/python" -c "import pdg" 2>/dev/null \
     && note "✓ pdg installed in sandbox venv" \
@@ -282,9 +315,13 @@ print('config.json schema ok')
 
 # --- phase 4d: /geant4-claude:geant4-analyze -------------------------------
 log "phase 4d: /geant4-claude:geant4-analyze (fast-path on Hits TTree)"
+# Note: if the host python lacks uproot+numpy+matplotlib, the analyze
+# command may auto-install them into the plugin's venv (~120 MB, ~60–90 s).
+# That's the documented behavior since v0.0.2 — bumping the timeout here
+# to accommodate.
 RUN_ID="${RUN_DIR##*/}"
 send "/geant4-claude:geant4-analyze runs/${RUN_ID}"
-wait_for "edep_hist" 120 || wait_for "MeV" 120
+wait_for "edep_hist" 240 || wait_for "MeV" 240
 
 [ -f "${RUN_DIR}/edep_hist.png" ] || fail "edep_hist.png not produced"
 note "✓ analyze produced ${RUN_DIR}/edep_hist.png"

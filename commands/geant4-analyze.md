@@ -48,17 +48,38 @@ optional reusable scripts dropped in `analysis/`.
    test -s "${RF}" || { echo "${RF}: empty"; exit 1; }
    ```
 
-2. **Verify host has uproot.**
+2. **Pick a python with uproot+numpy+matplotlib.** Try in priority order:
+
    ```bash
-   python3 -c "import uproot, numpy, matplotlib" 2>/dev/null \
-     || { echo "missing Python deps; install: pip install --user uproot numpy matplotlib"; exit 1; }
+   # (a) host python (no install needed)
+   if python3 -c "import uproot, numpy, matplotlib" 2>/dev/null; then
+     PY="$(command -v python3)"
+
+   # (b) plugin's managed venv (no install needed if previously seeded)
+   elif "${CLAUDE_PLUGIN_DATA}/venv/bin/python" \
+        -c "import uproot, numpy, matplotlib" 2>/dev/null; then
+     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+
+   # (c) install into the plugin venv (preferred — survives plugin updates,
+   #     isolated from system site-packages, cleaned with the plugin)
+   else
+     "${CLAUDE_PLUGIN_DATA}/venv/bin/pip" install -q uproot numpy matplotlib
+     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+   fi
    ```
-   Stop if missing; do not auto-install.
+
+   Auto-installing into the **plugin venv** is the recommended fallback:
+   the venv is per-user, plugin-scoped, and removed when the plugin is
+   uninstalled. Do **not** silently `pip install --user` into the host's
+   site-packages — that pollutes the user's global environment without
+   their consent. If the plugin venv is unavailable for some reason
+   (network down, etc.), stop and tell the user the install line.
 
 3. **Inspect the schema** (Python one-liner; preserves the exact branch
-   types and dtypes for later codegen):
+   types and dtypes for later codegen). Use the `${PY}` resolved in
+   step 2:
    ```bash
-   python3 - "${RF}" <<'PY'
+   "${PY}" - "${RF}" <<'PY'
 import sys, uproot
 with uproot.open(sys.argv[1]) as f:
     for k, t in f.items():
@@ -87,9 +108,10 @@ PY
 
    Use the `geant4-analysis` skill for the uproot recipes.
 
-5. **Run the script.**
+5. **Run the script.** Use the resolved `${PY}` so the script picks up
+   the venv that has `uproot`:
    ```bash
-   python3 "${SCRIPT}" "${RUN_DIR}"
+   "${PY}" "${SCRIPT}" "${RUN_DIR}"
    ```
 
 6. **Show the user:**
@@ -111,7 +133,7 @@ PY
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `ModuleNotFoundError: uproot` | Host Python missing the analysis stack. | `pip install --user uproot numpy matplotlib`. |
+| `ModuleNotFoundError: uproot` (after step 2's auto-install path) | Network blocked, or the plugin venv is missing/broken. | Inspect `${CLAUDE_PLUGIN_DATA}/venv/`; recreate by uninstalling and reinstalling the plugin. As a one-off, the user can run `pip install --user uproot numpy matplotlib` in a shell. |
 | `no .root file in runs/<id>` | Binary didn't produce a ROOT file (or wrote elsewhere). | Inspect `runs/<id>/log.txt`; check the binary's args / `RUN_DIR` handling. |
 | `KeyError: 'Hits'` (custom schema) | The fast-path script was forced on a non-`Hits` file. | Don't pass `--script`; let the command auto-detect, or pass a script that matches your schema. |
 | Empty histogram | All entries zero, or selected branch is wrong. | Check the schema dump; explicitly pick the branch via a custom script. |
