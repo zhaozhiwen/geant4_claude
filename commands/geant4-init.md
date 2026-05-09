@@ -53,7 +53,8 @@ Optional argument: `--force` (overwrite existing workspace files).
 4. **Pull the runtime image** through the wrapper. This is the *only* sanctioned
    way to invoke the Geant4 runtime; all later commands also go through it:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" pull
+   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
+     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" pull
    ```
    First-run downloads ~1–2 GB into `${CLAUDE_PLUGIN_DATA}/cache/sif/`
    (override with `GEANT4_CLAUDE_CACHE`). Reruns no-op.
@@ -147,7 +148,8 @@ Optional argument: `--force` (overwrite existing workspace files).
 
 6. **Report status:**
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" info
+   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
+     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" info
    ```
    Then summarize for the user, in this order:
    - workspace files written,

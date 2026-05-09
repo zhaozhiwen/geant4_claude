@@ -79,7 +79,8 @@ applications that ignore it.
 
 4. **Validate.**
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml geometries/<name>.gdml
+   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
+     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml geometries/<name>.gdml
    ```
    If `xmllint` reports an error, fix the file and re-run validation. Do
    not declare success until validation passes.

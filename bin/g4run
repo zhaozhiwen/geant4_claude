@@ -11,55 +11,42 @@ IMAGE_URI="docker://${IMAGE_TAG}"
 ENTRYPOINT="/usr/local/bin/docker-entrypoint.sh"
 
 # --- paths -------------------------------------------------------------------
-# Cache resolution order (highest priority first):
-#   1. $GEANT4_CLAUDE_CACHE                — explicit user override.
-#   2. $CLAUDE_PLUGIN_DATA/cache           — plugin-scoped, the new default
-#                                            when invoked through Claude Code.
-#   3. $HOME/.geant4_claude                — legacy default; final fallback
-#                                            for bare-shell / CI use.
-LEGACY_CACHE_DIR="${HOME}/.geant4_claude"
-resolve_cache_dir() {
-  if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
-    printf '%s\n' "${GEANT4_CLAUDE_CACHE}"
-  elif [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]]; then
-    printf '%s\n' "${CLAUDE_PLUGIN_DATA}/cache"
-  else
-    printf '%s\n' "${LEGACY_CACHE_DIR}"
-  fi
-}
-CACHE_DIR="$(resolve_cache_dir)"
-SIF_DIR="${CACHE_DIR}/sif"
-SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
-SIF_PATH="${SIF_DIR}/${SIF_NAME}"
-
 PLUGIN_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 
 # --- helpers -----------------------------------------------------------------
 log()  { printf '[g4run] %s\n' "$*" >&2; }
 die()  { printf '[g4run] error: %s\n' "$*" >&2; exit 1; }
 
+# Cache resolution: explicit env wins, else CLAUDE_PLUGIN_DATA/cache, else
+# error. There is intentionally no $HOME/.geant4_claude fallback — silent
+# fallback to a non-plugin path leads to phantom re-pulls when the plugin's
+# own .sif already exists at $CLAUDE_PLUGIN_DATA/cache/sif/. If you're
+# invoking g4run outside a Claude Code plugin context, set
+# GEANT4_CLAUDE_CACHE explicitly. Resolution is lazy so `g4run help` works
+# without any env vars set.
+SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
+CACHE_DIR=""
+SIF_DIR=""
+SIF_PATH=""
+resolve_cache_dir() {
+  [[ -n "${CACHE_DIR}" ]] && return 0
+  if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
+    CACHE_DIR="${GEANT4_CLAUDE_CACHE}"
+  elif [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]]; then
+    CACHE_DIR="${CLAUDE_PLUGIN_DATA}/cache"
+  else
+    die "no cache path: set GEANT4_CLAUDE_CACHE or invoke from a plugin context that exports CLAUDE_PLUGIN_DATA. Slash commands should prefix every g4run call with GEANT4_CLAUDE_CACHE=\"\${CLAUDE_PLUGIN_DATA}/cache\"."
+  fi
+  SIF_DIR="${CACHE_DIR}/sif"
+  SIF_PATH="${SIF_DIR}/${SIF_NAME}"
+}
+
 require_apptainer() {
   command -v apptainer >/dev/null 2>&1 || die "apptainer not found on PATH. Install apptainer first (https://apptainer.org)."
 }
 
-# One-time migration: when the resolved cache differs from the legacy
-# ~/.geant4_claude path and the legacy path holds real content, move it to the
-# resolved location. Only runs when the destination is empty (no merge), so
-# repeated invocations are no-ops. Same-filesystem mv is atomic and cheap.
-maybe_migrate_legacy_cache() {
-  [[ "${CACHE_DIR}" != "${LEGACY_CACHE_DIR}" ]] || return 0
-  [[ -d "${LEGACY_CACHE_DIR}" ]] || return 0
-  if [[ -e "${CACHE_DIR}" ]] && [[ -n "$(ls -A "${CACHE_DIR}" 2>/dev/null)" ]]; then
-    log "note: legacy cache at ${LEGACY_CACHE_DIR} exists alongside ${CACHE_DIR}; skipping auto-migration. Set GEANT4_CLAUDE_CACHE=${LEGACY_CACHE_DIR} to keep using the legacy path, or remove one of them."
-    return 0
-  fi
-  mkdir -p "$(dirname "${CACHE_DIR}")"
-  if [[ -e "${CACHE_DIR}" ]]; then rmdir "${CACHE_DIR}" 2>/dev/null || true; fi
-  log "migrating cache: ${LEGACY_CACHE_DIR} -> ${CACHE_DIR}"
-  mv "${LEGACY_CACHE_DIR}" "${CACHE_DIR}"
-}
-
 ensure_sif() {
+  resolve_cache_dir
   require_apptainer
   if [[ -f "${SIF_PATH}" ]]; then return 0; fi
   mkdir -p "${SIF_DIR}"
@@ -92,24 +79,16 @@ in_container() {
 
 # --- subcommands -------------------------------------------------------------
 cmd_info() {
+  resolve_cache_dir
   local cache_src
   if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
     cache_src="GEANT4_CLAUDE_CACHE override"
-  elif [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]]; then
-    cache_src="CLAUDE_PLUGIN_DATA (plugin default)"
   else
-    cache_src="legacy default (\$HOME/.geant4_claude)"
+    cache_src="CLAUDE_PLUGIN_DATA (plugin default)"
   fi
   echo "image:    ${IMAGE_TAG}"
   echo "sif:      ${SIF_PATH} $([[ -f ${SIF_PATH} ]] && echo '[present]' || echo '[not pulled]')"
   echo "cache:    ${CACHE_DIR}  [${cache_src}]"
-  if [[ "${CACHE_DIR}" != "${LEGACY_CACHE_DIR}" && -d "${LEGACY_CACHE_DIR}" ]]; then
-    if [[ -e "${CACHE_DIR}" ]] && [[ -n "$(ls -A "${CACHE_DIR}" 2>/dev/null)" ]]; then
-      echo "legacy:   ${LEGACY_CACHE_DIR}  [present — auto-migration skipped, destination not empty]"
-    else
-      echo "legacy:   ${LEGACY_CACHE_DIR}  [present — will auto-migrate on next runtime call]"
-    fi
-  fi
   echo "plugin:   ${PLUGIN_ROOT}"
   command -v apptainer >/dev/null 2>&1 \
     && echo "apptainer: $(apptainer --version)" \
@@ -247,11 +226,10 @@ Subcommands:
   validate-gdml <file>          xmllint a GDML file inside the container.
 
 Image: ${IMAGE_TAG}
-Cache: ${CACHE_DIR}
 Cache resolution order:
-  1. \$GEANT4_CLAUDE_CACHE              (explicit override)
-  2. \$CLAUDE_PLUGIN_DATA/cache         (default when invoked via Claude Code)
-  3. \$HOME/.geant4_claude              (legacy fallback)
+  1. \$GEANT4_CLAUDE_CACHE              (explicit override; required outside plugin context)
+  2. \$CLAUDE_PLUGIN_DATA/cache         (auto-set when invoked via Claude Code)
+Run \`g4run info\` to see the resolved cache path.
 EOF
 }
 
@@ -260,7 +238,6 @@ sub="${1:-}"; shift || true
 case "${sub}" in
   ""|-h|--help|help) usage; exit 0 ;;
 esac
-maybe_migrate_legacy_cache
 case "${sub}" in
   pull)           cmd_pull "$@" ;;
   info)           cmd_info "$@" ;;

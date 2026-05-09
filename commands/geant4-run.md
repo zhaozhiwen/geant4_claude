@@ -79,6 +79,7 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
    ```bash
    START=$(date +%s)
    ( export RUN_DIR RUN_ID
+     export GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"
      "${CLAUDE_PLUGIN_ROOT}/bin/g4run" exec "${EXE}" "${resolved_args[@]}"
    ) 2>&1 | tee "${RUN_DIR}/log.txt"
    STATUS=${PIPESTATUS[0]}

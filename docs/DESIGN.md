@@ -105,11 +105,13 @@ container.
 Internally each subcommand:
 
 1. ensures the `.sif` for the pinned tag exists at `<cache>/sif/…`, pulling
-   on first use. The cache resolves in this order: `$GEANT4_CLAUDE_CACHE`
-   override → `$CLAUDE_PLUGIN_DATA/cache` (the default when invoked through
-   Claude Code) → `$HOME/.geant4_claude` (legacy fallback). On the first call
-   after this contract change, an existing `$HOME/.geant4_claude` is
-   auto-migrated into the new default if the destination is empty;
+   on first use. The cache resolves to `$GEANT4_CLAUDE_CACHE` (explicit
+   override) or `$CLAUDE_PLUGIN_DATA/cache` (auto-set by Claude Code when
+   the plugin is installed) — both unset is a fatal error rather than a
+   silent fallback to `$HOME`. To insulate against `CLAUDE_PLUGIN_DATA`
+   not being propagated into Bash subshells in some Claude Code
+   configurations, every slash command prepends
+   `GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"` to its g4run call;
 2. invokes `apptainer exec --bind <project>,<cache> <sif> bash -lc
    'source /usr/local/bin/docker-entrypoint.sh && <cmd>'`.
 

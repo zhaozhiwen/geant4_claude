@@ -13,6 +13,24 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ### Breaking
 
+- **Removed `$HOME/.geant4_claude` legacy fallback in `bin/g4run`.** The
+  cache resolution is now strictly `$GEANT4_CLAUDE_CACHE` (override) or
+  `$CLAUDE_PLUGIN_DATA/cache` (default); both unset is a fatal error
+  with a clear remediation message. Reason: in some Claude Code
+  configurations `CLAUDE_PLUGIN_DATA` isn't propagated into the Bash
+  tool's environment, so g4run was silently falling back to
+  `$HOME/.geant4_claude` and re-pulling a 4 GB image even when the .sif
+  was already present at the correct plugin-data path. Loud failure
+  beats silent waste. **Belt-and-suspenders mitigation:** every slash
+  command now prepends `GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"`
+  to its g4run invocation, so the cache path lands in the subshell env
+  via Claude Code's variable substitution regardless of whether
+  `CLAUDE_PLUGIN_DATA` itself made it across.
+- **Auto-migration helper (`maybe_migrate_legacy_cache`) deleted along
+  with the legacy path.** Users with content at `$HOME/.geant4_claude`
+  from earlier `[Unreleased]` builds can manually
+  `mv $HOME/.geant4_claude/* "$CLAUDE_PLUGIN_DATA/cache/"` once.
+
 - **Command surface generalized from "demo" to "toolchain".** The four
   core commands (`/geant4-init`, `/geant4-build`, `/geant4-run`,
   `/geant4-analyze`) now operate on **the user's own Geant4 simulation**
@@ -104,20 +122,14 @@ release. A breaking change to the `Hits` TTree schema or to the
   the next `/geant4-init` run (when the destination is empty). Affects only
   early `[Unreleased]` adopters whose tree was at the legacy location; the
   v0.0.1 release never shipped the source-clone feature.
-- **Runtime cache default moved into the plugin.** `bin/g4run` now resolves the
-  cache directory in this order: `$GEANT4_CLAUDE_CACHE` (explicit override) →
-  `$CLAUDE_PLUGIN_DATA/cache` (the new default when invoked through Claude
-  Code) → `$HOME/.geant4_claude` (legacy fallback for bare-shell / CI use).
-  Existing `$HOME/.geant4_claude` content is auto-migrated into the new
-  default on the first runtime call when the destination is empty (atomic
-  `mv` on the same filesystem); if both exist with content, migration is
-  skipped and a one-line note tells the user how to keep the legacy path
-  with `GEANT4_CLAUDE_CACHE=$HOME/.geant4_claude`. `g4run info` now prints
-  the resolution source and any present legacy directory. **User impact:**
-  the `.sif` and build outputs now live alongside the plugin's other
-  per-user state under `~/.claude/plugins/data/<plugin-id>/cache/` and are
-  cleaned up when the plugin is uninstalled. Trade-off: if a user uninstalls
-  and reinstalls the plugin, the multi-GB image must be re-pulled — set
+- **Runtime cache lives under the plugin's data dir.** `bin/g4run`
+  resolves the cache directory to `$GEANT4_CLAUDE_CACHE` (explicit
+  override) or `$CLAUDE_PLUGIN_DATA/cache` (auto-set by Claude Code).
+  `g4run info` prints the resolution source. **User impact:** the `.sif`
+  and build outputs live alongside the plugin's other per-user state
+  under `~/.claude/plugins/data/<plugin-id>/cache/` and are cleaned up
+  when the plugin is uninstalled. Trade-off: if a user uninstalls and
+  reinstalls the plugin, the multi-GB image must be re-pulled — set
   `GEANT4_CLAUDE_CACHE` to a stable path to avoid that.
 - **`DESIGN.md` moved to `docs/DESIGN.md`.** All references in `README.md`,
   `CLAUDE.md`, and `wiki/CLAUDE.md` updated. The file now also contains the

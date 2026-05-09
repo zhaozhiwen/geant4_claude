@@ -57,7 +57,8 @@ like) and rebuild with `/geant4-claude:geant4-build`.
 
 4. **Validate the GDML** to confirm everything copied cleanly:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml geometries/example.gdml
+   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
+     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml geometries/example.gdml
    ```
 
 5. **Tell the user the next three commands**, in order:

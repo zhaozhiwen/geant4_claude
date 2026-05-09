@@ -43,7 +43,8 @@ directly.
    `cmake -S <src> -B <build> && cmake --build <build> -j` inside the
    container:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/bin/g4run" build "${SRC}" "${BUILD}"
+   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
+     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" build "${SRC}" "${BUILD}"
    ```
    Both paths are passed to apptainer as canonical (symlink-resolved)
    paths and bound automatically — CWD-relative paths work.
