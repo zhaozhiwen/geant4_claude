@@ -5,7 +5,7 @@ Geant4 simulation** through five slash commands plus an opt-in working
 example. Geant4 and ROOT live in a pinned apptainer image; analysis runs
 on the host with [`uproot`](https://github.com/scikit-hep/uproot5).
 
-> Status: **v0.1.0**. The four core commands (`init`, `build`, `run`,
+> Status: **v0.0.2**. The four core commands (`init`, `build`, `run`,
 > `analyze`) are content-neutral — they work with any user `main.cc` and
 > any output schema. `/geant4-detector` writes standalone GDML that any
 > Geant4 application can load; `/geant4-example` drops in a ready-to-build
