@@ -100,36 +100,35 @@ Naming:
 
 ## Testing the plugin (dogfooding)
 
-Two smoke tests, both run in scratch directories on a host with apptainer:
+Two layers, both run before tagging a release:
 
-### Demo flow (the example)
+### `tests/clean-smoke.sh` — automated plumbing test
 
-1. Install the plugin locally (link this repo into Claude's plugin path).
-2. `mkdir /tmp/g4c_demo && cd /tmp/g4c_demo`.
-3. `/geant4-claude:geant4-init` — verify the empty workspace skeleton appears and the image
-   pulls.
-4. `/geant4-claude:geant4-example` — verify `src/`, `geometries/example.gdml`,
-   `macros/run.mac`, `analysis/example.py` materialize and `validate-gdml`
-   passes.
-5. `/geant4-claude:geant4-build` — verify `build/geant4_claude_main` is produced.
-6. `/geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root`
-   — verify `runs/<id>/{hits.root, log.txt, config.json}` and `log.txt`
-   shows no Geant4 errors.
-7. `/geant4-claude:geant4-analyze runs/<id>` — verify `edep_hist.png` and the printed
-   summary.
+Exercises `bin/g4run` + the workspace/example templates end-to-end against a
+sandboxed `CLAUDE_PLUGIN_DATA`. Runs in ~30 s with a reused `.sif`,
+~2–3 min on a fresh pull. Catches regressions in the wrapper, templates,
+build, run, schema-detection, idempotency, and the no-fallback cache
+resolution.
 
-### Custom flow (generic toolchain)
+```bash
+# Reuse an existing .sif (fast):
+G4C_REUSE_SIF=~/.claude/plugins/data/geant4-claude-geant4-claude/cache/sif/g4install_*.sif \
+  tests/clean-smoke.sh
 
-1. `mkdir /tmp/g4c_custom && cd /tmp/g4c_custom`.
-2. `/geant4-claude:geant4-init`.
-3. Hand-write a 30-line `src/main.cc` + `src/CMakeLists.txt` that produces
-   any output schema (e.g. a `Tracks` TTree, or a JSON summary). Use
-   `/geant4-claude:geant4-detector` if you want a quick GDML.
-4. `/geant4-claude:geant4-build` — verify the binary lands under `build/`.
-5. `/geant4-claude:geant4-run --exe build/<your-binary> -- <your args> {run_dir}/<your-output>`.
-6. `/geant4-claude:geant4-analyze runs/<id>` — verify the schema-aware fast-path skips
-   (no `Hits` TTree) and the custom-path generates an analysis script in
-   `analysis/<run_id>.py`.
+# Or fresh pull:
+tests/clean-smoke.sh
+```
+
+Run on every commit that touches `bin/g4run`, `templates/`, or any
+`commands/*.md`.
+
+### `tests/CLEAN-INSTALL-CHECKLIST.md` — manual Claude Code flow
+
+Covers what the automated test cannot touch: `/plugin marketplace add`
++ `/plugin install`, the `SessionStart` hook, the deepwiki MCP approval
+prompt, the `AskUserQuestion` flow in `/geant4-init`, and slash-command
+namespace lookup. ~10 minutes of operator time. Run before tagging any
+public release.
 
 If either flow fails on a fresh machine, that's a bug, not a user error.
 
