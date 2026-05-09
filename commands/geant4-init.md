@@ -10,9 +10,13 @@ allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 Set up a fresh Geant4 simulation workspace in the user's current working
 directory, and pre-pull the pinned apptainer image so later commands run
 without surprise downloads. The workspace is **generic** — it has empty
-`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` directories ready
-for your own simulation. Run `/geant4-claude:geant4-example` afterwards if you want a
-ready-to-build sample dropped in.
+`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` directories. From
+here, the default flow is `/geant4-claude:geant4-detector` (describe a
+detector → standalone GDML) followed by `/geant4-claude:geant4-example`
+(drops in a GDML-loading `main.cc` + macro + analysis script). The
+alternative is to bring your own `src/main.cc` + `src/CMakeLists.txt`
+when you need hard-coded geometry, custom physics, or a non-`Hits`
+output schema.
 
 ## Inputs
 
@@ -158,10 +162,16 @@ Optional argument: `--force` (overwrite existing workspace files).
    Then summarize for the user, in this order:
    - workspace files written,
    - image cached at,
-   - what to do next: either drop in your own `src/main.cc` +
-     `src/CMakeLists.txt` and run `/geant4-claude:geant4-build`, or run
-     `/geant4-claude:geant4-example` to populate the workspace with a working sample
-     (GDML detector + macro + main + analysis script).
+   - what to do next. Recommend the **default flow** first:
+     `/geant4-claude:geant4-detector` to describe a detector → standalone
+     GDML, then `/geant4-claude:geant4-example` to drop in the GDML-loading
+     `main.cc` + macro + analysis (the example main consumes any GDML,
+     including the one you just produced), then
+     `/geant4-claude:geant4-build` → `/geant4-claude:geant4-run` →
+     `/geant4-claude:geant4-analyze`. Mention the **alternative** as a
+     second sentence: bring your own `src/main.cc` + `src/CMakeLists.txt`
+     instead, if you need hard-coded geometry, custom physics, or a
+     non-`Hits` output schema, then `/geant4-claude:geant4-build`.
 
 ## Outputs
 

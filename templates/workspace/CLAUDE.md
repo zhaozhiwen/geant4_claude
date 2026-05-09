@@ -5,15 +5,13 @@ Rules for Claude when working in this Geant4 simulation workspace. The
 commands (`/geant4-claude:geant4-build`, `/geant4-claude:geant4-run`, `/geant4-claude:geant4-analyze`,
 `/geant4-claude:geant4-detector`) operate on the layout below.
 
-This workspace can hold either:
-
-- **Your own simulation** — your `src/main.cc` (or whatever you name it)
-  with whatever physics list, geometry strategy, and output schema you
-  choose; or
-- **The plugin's example** — drop it in with `/geant4-claude:geant4-example` to get a
-  ready-to-build GDML-driven simulation that uses an `Hits` TTree.
-
-The four runtime commands work the same in both cases.
+The default flow uses `/geant4-claude:geant4-detector` to turn a
+natural-language detector description into standalone GDML, paired with
+the GDML-loading `main.cc` from `/geant4-claude:geant4-example`. No C++
+edits required to change the geometry — describe a new detector, run
+again. The alternative is to bring your own `src/main.cc` (with
+hard-coded geometry, custom physics, or a non-`Hits` output schema);
+the four runtime commands work the same in both cases.
 
 ## Layout
 
@@ -52,16 +50,30 @@ The four runtime commands work the same in both cases.
    pick up where they left off; treat them as load-bearing, not
    decorative.
 
-## Typical loop
+## Typical loop (default — NL detector + example main)
 
-1. Edit `src/main.cc` (and any helpers) for your simulation logic; or
-   `geometries/<name>.gdml` if you load geometry at runtime
-   (use `/geant4-claude:geant4-detector` for natural-language → GDML).
-2. `/geant4-claude:geant4-build` — compiles `src/` into `./build/<target>`.
-3. Edit `macros/<name>.mac` for primary particle, energy, event count.
-4. `/geant4-claude:geant4-run --exe build/<target> -- macros/<name>.mac [your args]`.
-5. `/geant4-claude:geant4-analyze runs/<id>` — auto-detects the output schema and
+1. `/geant4-claude:geant4-detector` — describe the detector; writes
+   `geometries/<name>.gdml` (validated).
+2. `/geant4-claude:geant4-example` (once per workspace) — drops in the
+   GDML-loading `src/geant4_claude_main.cc` + `CMakeLists.txt` + a
+   sample `macros/run.mac` you can edit.
+3. `/geant4-claude:geant4-build` — compiles `src/` into `./build/geant4_claude_main`.
+4. Edit `macros/<name>.mac` for primary particle, energy, event count.
+5. `/geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/<name>.gdml macros/<name>.mac {run_dir}/hits.root`.
+6. `/geant4-claude:geant4-analyze runs/<id>` — auto-detects the output schema and
    plots; or write your own script in `analysis/`.
+
+To iterate on geometry, repeat step 1 — no rebuild needed because the
+example main loads GDML at runtime.
+
+## Alternative loop (bring your own `main.cc`)
+
+1. Edit `src/main.cc` (and `src/CMakeLists.txt`) for whatever physics
+   list, geometry strategy, and output schema you want.
+2. `/geant4-claude:geant4-build` — compiles `src/` into `./build/<target>`.
+3. Edit `macros/<name>.mac`.
+4. `/geant4-claude:geant4-run --exe build/<target> -- [your args] {run_dir}/<output>.root`.
+5. `/geant4-claude:geant4-analyze runs/<id>`.
 
 ## When something fails
 

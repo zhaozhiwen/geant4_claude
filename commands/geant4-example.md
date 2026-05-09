@@ -1,5 +1,5 @@
 ---
-description: Drop a ready-to-build Geant4 example (GDML detector + macro + main + analysis) into the workspace.
+description: Drop the GDML-loading main + sample geometry/macro/analysis into the workspace (default consumer for /geant4-claude:geant4-detector output).
 allowed-tools: Bash, Read, Write, Glob
 ---
 
@@ -7,16 +7,20 @@ allowed-tools: Bash, Read, Write, Glob
 
 ## Purpose
 
-Populate the workspace with a complete, runnable demo so the user can
-exercise the build → run → analyze pipeline before writing any of their
-own code. The example uses a generic GDML-driven main
-(`geant4_claude_main.cc`) that auto-attaches a sensitive detector to any
-volume tagged `<auxiliary auxtype="sensitive" auxvalue="true"/>` and
-writes a flat `Hits` TTree.
+Populate the workspace with the **default binary** for the NL-detector
+flow: a generic GDML-driven main (`geant4_claude_main.cc`) that loads
+any `.gdml` you point it at, auto-attaches a sensitive detector to
+volumes tagged `<auxiliary auxtype="sensitive" auxvalue="true"/>`, and
+writes a flat `Hits` TTree. The companion `geometries/example.gdml` /
+`macros/run.mac` / `analysis/example.py` give the workspace a working
+end-to-end pipeline out of the box, but the main is designed to consume
+arbitrary GDML — including whatever `/geant4-claude:geant4-detector`
+just wrote.
 
-This command is for **learning** and **smoke-testing**. Once you're
-ready to write your own simulation, edit `src/main.cc` (rename if you
-like) and rebuild with `/geant4-claude:geant4-build`.
+Run this once per workspace as part of the default flow. The
+**alternative** is to skip this command and bring your own `src/main.cc`
++ `src/CMakeLists.txt` — useful when you need hard-coded geometry,
+custom physics, or an output schema that isn't `Hits`.
 
 ## Inputs
 
@@ -87,9 +91,11 @@ untouched.
 
 ## Notes
 
-- The example is a **starting point**, not a contract. Once the smoke
-  test passes, treat the copied files as your own — rename, edit, delete
-  as needed.
+- The example main is the default binary for the NL-detector flow; in
+  most cases you don't need to edit it — point it at any GDML
+  (yours or `/geant4-claude:geant4-detector`'s output). Treat the
+  copied files as your own to rename, edit, or delete when you outgrow
+  them.
 - The `geant4_claude_main.cc` in this template is intentionally
   minimal: GDML loader, FTFP_BERT physics list, generic SD,
   `Hits` TTree. For non-standard physics (HP neutrons, optical photons,
