@@ -10,7 +10,7 @@ physics, or a custom output schema. Geant4 and ROOT live in a pinned
 apptainer image; analysis runs on the host with
 [`uproot`](https://github.com/scikit-hep/uproot5).
 
-> Status: **v0.0.2**. The four core commands (`init`, `build`, `run`,
+> Status: **v0.0.3**. The four core commands (`init`, `build`, `run`,
 > `analyze`) are content-neutral — they work equally well with the
 > example's GDML-loading main and with any user-supplied `main.cc`.
 

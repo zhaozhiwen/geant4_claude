@@ -9,6 +9,81 @@ A bump of the pinned container image tag is at minimum a **minor**
 release. A breaking change to the `Hits` TTree schema or to the
 `runs/<id>/config.json` provenance contract is a **major** release.
 
+## [0.0.3] - 2026-05-09
+
+### Added
+
+- **`geant4` orchestrator skill** (`skills/geant4/SKILL.md`) — the
+  highlighted entry point. Auto-loads on natural-language simulation
+  requests ("simulate / build / run a Geant4 …"); gap-checks the user's
+  spec across six required fields (physics goal, geometry, beam,
+  sensitive surfaces, output, analysis); presents a brief plan; on
+  approval drives `init → detector → build → run → analyze` end-to-end
+  with stop-on-failure post-condition checks at each step. Routes onto
+  the BYO-`main.cc` path automatically when the spec needs optical
+  photons, HP neutrons, polarization, or a non-`Hits` output schema.
+  This is the only skill in the plugin that drives a workflow rather
+  than describing one — a deliberate single carve-out of the "skills
+  are reference, not workflows" maintainer rule.
+- **`templates/workspace/log.md` and `templates/workspace/result.md`** —
+  handoff documents now ship in the workspace skeleton.
+  - `log.md` is a chronological work log; each entry has the four
+    sections **Request** (verbatim user ask), **Plan** (six-field spec
+    + step list), **Decision** (approved / edited / plan-only), and
+    **Outcome** (run id, status, one-line summary).
+  - `result.md` is the per-run findings document (key numbers + plot
+    paths).
+  - `templates/workspace/CLAUDE.md` non-negotiable #6 broadened: every
+    simulation effort — orchestrator-driven *or* manual command flow —
+    prepends a dated `log.md` entry, so manual users get the same
+    logging discipline as orchestrator-driven ones.
+
+### Changed
+
+- **NL-detector flow promoted to default; BYO-`main.cc` reframed as
+  alternative.** README, `docs/DESIGN.md`, `commands/geant4-init.md`,
+  `commands/geant4-example.md`, and `templates/workspace/CLAUDE.md`
+  rewritten so the headlined path is `geant4-detector` (natural
+  language → standalone GDML) paired with `geant4-example`'s
+  GDML-loading `main.cc` — a no-C++ default loop. Bringing your own
+  `main.cc` is explicit alternative for hard-coded geometry, custom
+  physics, or non-`Hits` output schemas. Behavioral surface unchanged;
+  this is a positioning change.
+- **`/geant4-claude:geant4-example` repositioned.** Previously framed
+  as an opt-in demo / starting point; now framed as the **default
+  binary** for the NL-detector flow (the shipped main consumes any
+  GDML, including `/geant4-claude:geant4-detector` output).
+- **Workspace `CLAUDE.md` "Typical loop" split into two named loops** —
+  default (orchestrator / NL-detector + example main) and alternative
+  (BYO main.cc) — so the doc surfaces both paths explicitly.
+
+### Fixed
+
+- **Slash commands now correctly cross-referenced as
+  `/geant4-claude:<verb>`** (commit `9ed511e`). Previously bare
+  `/geant4-init` etc. appeared in commands, skills, and docs; on a
+  clean install Claude Code requires the namespaced form, so the
+  bare references were misleading.
+- **Workspace skeleton's `runs/.gitkeep` placeholder now ships**
+  (commit `b26275e`). The repo's top-level `.gitignore` had unanchored
+  `runs/`, which silently dropped the placeholder during
+  `cp -r templates/workspace/.`. Anchored to `/runs/` so the ignore
+  applies only to the repo root.
+- **`/geant4-claude:geant4-analyze` may now auto-install
+  `uproot/numpy/matplotlib` into the plugin-managed venv at
+  `${CLAUDE_PLUGIN_DATA}/venv/`** (commit `8daf15b`). Previously it
+  refused, leaving the user to run `pip install` themselves.
+
+### Documentation
+
+- README leads with an **"Easiest entry point — just describe what
+  you want to simulate"** section above the two manual flows,
+  showing the orchestrator skill's invocation pattern with a
+  worked Cherenkov example.
+- `docs/DESIGN.md` skill-split table documents the orchestrator
+  carve-out and the rationale (skills auto-load on natural language
+  triggers; commands don't).
+
 ## [0.0.2] - 2026-05-08
 
 ### Breaking
