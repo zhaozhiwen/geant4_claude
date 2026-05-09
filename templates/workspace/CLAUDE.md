@@ -42,13 +42,19 @@ the four runtime commands work the same in both cases.
 5. **Geometry vs. rebuild.** If you use GDML loaded at runtime, geometry
    edits don't require a rebuild — change the file, run again. If you
    hard-code geometry in C++, every change needs `/geant4-claude:geant4-build`.
-6. **Maintain `log.md` and `result.md`.** After every successful
-   `/geant4-claude:geant4-run`, append a one-line entry to the top of
-   `log.md` (run id + one-line description). After a `/geant4-claude:geant4-analyze`
-   that produced a noteworthy result, add or update a section in
-   `result.md` with key numbers + plot paths. The user reads these to
-   pick up where they left off; treat them as load-bearing, not
-   decorative.
+6. **Maintain `log.md` and `result.md`.** Every simulation effort —
+   orchestrator-driven *or* manual command invocation — leaves a
+   record. Prepend a new dated section to `log.md` capturing four
+   things: the user's **original request** (verbatim, in their own
+   words), the **plan** Claude drew up (spec + step list), the user's
+   **decision** (approved, edited the spec, or stop-and-just-write-the-
+   plan), and the **outcome** (run id, exit status, one-line summary
+   of what happened). After a `/geant4-claude:geant4-analyze` that
+   produced a noteworthy result, add or update a section in `result.md`
+   with key numbers + plot paths. Both files are load-bearing handoff
+   documents — the user reads them to pick up where they left off, and
+   future Claude sessions read them to understand context. Treat them
+   as part of the deliverable, not as decoration.
 
 ## Typical loop (default — NL detector + example main)
 

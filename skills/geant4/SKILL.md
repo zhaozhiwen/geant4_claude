@@ -173,13 +173,24 @@ Only after the user picks "Approve and run". For each step:
    proceed. Do not silently retry, do not paper over the error, do not
    move to the next step.
 
-Maintain the workspace's handoff documents as part of the flow, not as
-an afterthought:
+Maintain the workspace's handoff documents per the rule in
+`templates/workspace/CLAUDE.md` non-negotiable #6 — that file is the
+authoritative spec; this skill just reminds you to apply it. The
+orchestrator-flavored slice of that rule:
 
-- After `/geant4-claude:geant4-run` succeeds, prepend one line to
-  `log.md`: `## <UTC timestamp>\n- <run id> — <one-line description>`.
-- After `/geant4-claude:geant4-analyze` succeeds, add or update a
-  section in `result.md` with the key numbers and the plot paths.
+- Capture the user's **original request verbatim** (don't paraphrase —
+  future readers need to tell what was asked vs. what was inferred).
+- Capture the **plan** you presented (the same six-field spec + step
+  list shown in step 2 above).
+- Capture the user's **decision** (approved as-is, edited spec to …,
+  or plan-only).
+- Capture the **outcome** (run id, status, one or two lines on what
+  happened).
+
+Prepend all four as a single dated section at the top of `log.md`
+before reporting back to the user. Update `result.md` with the key
+numbers and plot paths after analysis. Use the template that ships in
+`log.md`.
 
 ## Step 4 — Final report
 
