@@ -23,8 +23,10 @@ The four runtime commands work the same in both cases.
 | `build/`      | CMake build output. **Gitignored.** Re-create with `/geant4-claude:geant4-build`. |
 | `geometries/` | GDML files (if you use GDML). Versioned. Optional. |
 | `macros/`     | Geant4 macro files (`*.mac`). Versioned. |
-| `runs/`       | One sub-directory per `/geant4-claude:geant4-run`. **Gitignored.** |
+| `runs/`       | One sub-directory per `/geant4-claude:geant4-run`. **Gitignored** (only the placeholder is kept). |
 | `analysis/`   | Python scripts that read `runs/<id>/*.root`. |
+| `log.md`      | Chronological work log — append at the top after each session. |
+| `result.md`   | Per-run findings, with paths to `runs/<id>/` and `analysis/`. |
 
 ## Non-negotiables
 
@@ -42,6 +44,13 @@ The four runtime commands work the same in both cases.
 5. **Geometry vs. rebuild.** If you use GDML loaded at runtime, geometry
    edits don't require a rebuild — change the file, run again. If you
    hard-code geometry in C++, every change needs `/geant4-claude:geant4-build`.
+6. **Maintain `log.md` and `result.md`.** After every successful
+   `/geant4-claude:geant4-run`, append a one-line entry to the top of
+   `log.md` (run id + one-line description). After a `/geant4-claude:geant4-analyze`
+   that produced a noteworthy result, add or update a section in
+   `result.md` with key numbers + plot paths. The user reads these to
+   pick up where they left off; treat them as load-bearing, not
+   decorative.
 
 ## Typical loop
 

@@ -67,7 +67,7 @@ In a fresh project directory:
 
 ```text
 > /geant4-claude:geant4-init
-✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md)
+✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
 ✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
 
 > /geant4-claude:geant4-example
@@ -141,6 +141,8 @@ The plugin ships a curated knowledge base on Geant4 mechanics and the physics it
 my-project/
 ├── CLAUDE.md          rules for Claude inside this workspace
 ├── .gitignore         excludes runs/, *.root, build/, __pycache__/
+├── log.md             chronological work log (Claude appends after each run)
+├── result.md          per-run findings (Claude updates after a noteworthy analyze)
 ├── src/               your main.cc + CMakeLists.txt go here
 ├── geometries/        GDML files (optional; if you load geometry at runtime)
 ├── macros/            Geant4 .mac files
@@ -151,7 +153,8 @@ my-project/
 `/geant4-claude:geant4-example` adds a working demo on top: a generic GDML-driven
 `main.cc`, a sample geometry/macro, and a starter analysis script. The
 directory layout is opinionated — skills and commands assume those
-six directory names.
+names. `log.md` and `result.md` are starter handoff documents Claude
+maintains as the project evolves.
 
 ## Design highlights
 

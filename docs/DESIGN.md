@@ -27,7 +27,7 @@ C++ for the common case. The plugin contributes:
 $ cd ~/projects/my-detector
 $ claude
 > /geant4-claude:geant4-init
-✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md)
+✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
 ✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${CLAUDE_PLUGIN_DATA}/cache/sif)
 
 > /geant4-claude:geant4-example                   # opt-in: drop in a working demo
@@ -171,7 +171,7 @@ demo, and one helper writes GDML.
 
 | Command | One-line purpose |
 |---------|------------------|
-| `/geant4-claude:geant4-init` | Scaffold an empty workspace skeleton (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md` and `.gitignore`); pull the pinned image. On first run, also offers (one prompt, plugin-wide) to download the Geant4 source tarball from GitHub releases into `${CLAUDE_PLUGIN_DATA}/geant4-src/` for offline citation verification. |
+| `/geant4-claude:geant4-init` | Scaffold an empty workspace skeleton (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md`, `.gitignore`, `log.md`, `result.md`); pull the pinned image. On first run, also offers (one prompt, plugin-wide) to download the Geant4 source tarball from GitHub releases into `${CLAUDE_PLUGIN_DATA}/geant4-src/` for offline citation verification. |
 | `/geant4-claude:geant4-build` | CMake-build the user's source tree (`./src` → `./build` by default) inside the container. |
 | `/geant4-claude:geant4-run` | Execute the user's binary inside the container; allocate `runs/<id>/`; capture generic provenance (executable, args, image, git_sha, duration, exit status). Substitutes `{run_dir}`/`{run_id}` placeholders and exports `RUN_DIR`/`RUN_ID` so the binary can write into the run dir. |
 | `/geant4-claude:geant4-analyze` | Inspect the run's ROOT file. Schema-aware fast-path (canned per-event edep histogram) when a `Hits` TTree matching the example schema is found; otherwise generates a custom analysis script tailored to the actual branches. |
@@ -199,6 +199,8 @@ in commands.
 my-project/
 ├── CLAUDE.md            # rules for Claude inside this workspace
 ├── .gitignore           # excludes runs/, *.root, build/, __pycache__/
+├── log.md               # chronological work log; Claude appends after each run
+├── result.md            # per-run findings; Claude updates after a noteworthy analyze
 ├── src/                 # user's main.cc and CMakeLists.txt go here (or /geant4-claude:geant4-example fills it)
 ├── geometries/          # GDML files, one per detector (optional)
 ├── macros/              # Geant4 macro files

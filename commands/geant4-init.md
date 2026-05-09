@@ -29,7 +29,7 @@ Optional argument: `--force` (overwrite existing workspace files).
 
 2. **Detect collisions.** List existing entries that would be touched:
    ```bash
-   ls -A 2>/dev/null | grep -E '^(CLAUDE\.md|\.gitignore|src|geometries|macros|runs|analysis)$' || true
+   ls -A 2>/dev/null | grep -E '^(CLAUDE\.md|\.gitignore|src|geometries|macros|runs|analysis|log\.md|result\.md)$' || true
    ```
    - If the list is non-empty and `--force` was *not* passed: stop, show the
      user what's already there, and ask whether to re-run with `--force`.
@@ -45,10 +45,14 @@ Optional argument: `--force` (overwrite existing workspace files).
    - `.gitignore` — excludes `runs/`, `*.root`, `build/`, `__pycache__/`.
    - `src/.gitkeep` — empty source directory (your `main.cc` and
      `CMakeLists.txt` go here, or `/geant4-claude:geant4-example` will populate it).
-   - `geometries/.gitkeep`, `macros/.gitkeep`, `analysis/.gitkeep` —
-     empty directories with the conventional names that the rest of the
-     plugin's commands expect.
-   - `runs/.gitkeep`.
+   - `geometries/.gitkeep`, `macros/.gitkeep`, `analysis/.gitkeep`,
+     `runs/.gitkeep` — empty directories with the conventional names
+     the rest of the plugin's commands expect.
+   - `log.md` — chronological work log (Claude appends one-line
+     entries to it after each successful `/geant4-claude:geant4-run`).
+   - `result.md` — per-run findings (Claude updates after a noteworthy
+     `/geant4-claude:geant4-analyze`). Treat both as load-bearing
+     handoff documents, not decorative.
 
 4. **Pull the runtime image** through the wrapper. This is the *only* sanctioned
    way to invoke the Geant4 runtime; all later commands also go through it:
@@ -161,9 +165,9 @@ Optional argument: `--force` (overwrite existing workspace files).
 
 ## Outputs
 
-- A populated workspace under `cwd`: `CLAUDE.md`, `.gitignore`, `src/`,
-  `geometries/`, `macros/`, `runs/`, `analysis/` (all empty except
-  `CLAUDE.md` and `.gitignore`).
+- A populated workspace under `cwd`: `CLAUDE.md`, `.gitignore`, `log.md`,
+  `result.md`, `src/`, `geometries/`, `macros/`, `runs/`, `analysis/`
+  (subdirectories empty except for `.gitkeep` placeholders).
 - A cached `.sif` at `${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
   (resolved by `bin/g4run`; override with `GEANT4_CLAUDE_CACHE`).
 - (Optional, on user consent) Geant4 source tree at
