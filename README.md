@@ -1,18 +1,19 @@
 # geant4_claude
 
-A Claude Code plugin that lets you **describe a detector in plain
-English, run it, and analyze the output** without touching C++.
-`/geant4-claude:geant4-detector` writes standalone GDML; the bundled
-example main loads it; `/geant4-claude:geant4-build`, `…run`, and
-`…analyze` finish the loop. Bringing your own `main.cc` is the
-alternative path for users who need hard-coded geometry, custom
-physics, or a custom output schema. Geant4 and ROOT live in a pinned
-apptainer image; analysis runs on the host with
+A Claude Code plugin that lets you **build, run, and analyze your
+own Geant4 simulation** through five slash commands plus a `geant4`
+orchestrator skill that turns a natural-language description of a
+simulation into a planned end-to-end run. Geant4 and ROOT live in a
+pinned apptainer image; analysis runs on the host with
 [`uproot`](https://github.com/scikit-hep/uproot5).
 
 > Status: **v0.0.3**. The four core commands (`init`, `build`, `run`,
-> `analyze`) are content-neutral — they work equally well with the
-> example's GDML-loading main and with any user-supplied `main.cc`.
+> `analyze`) are content-neutral — they accept any user-supplied
+> `main.cc` and any output schema. `/geant4-claude:geant4-detector`
+> writes standalone GDML for use with whatever `main.cc` you bring.
+> `/geant4-claude:geant4-example` is a self-contained smoke test that
+> drops a working demo into the workspace so you can confirm the
+> toolchain works on your machine before writing any of your own code.
 
 ## Requirements
 
@@ -64,7 +65,10 @@ The first `/geant4-claude:geant4-init` you run will additionally **ask once** wh
 
 ## Quickstart
 
-### Easiest entry point — just describe what you want to simulate
+The plugin offers three independent paths to a working simulation —
+pick whichever matches what you're trying to do.
+
+### A. Describe what you want to simulate (recommended)
 
 Tell Claude what you want — the `geant4` skill auto-loads on any
 "simulate / build / run a Geant4 …" request, asks targeted clarifying
@@ -89,68 +93,69 @@ goal**, **geometry**, **beam**, **sensitive surfaces**, **output**, and
 **analysis**. If any of those are missing or ambiguous, the skill asks
 before doing anything destructive.
 
-If you'd rather drive the steps yourself, the two flows below show the
-manual paths.
+### B. Try the shipped example end-to-end (smoke test)
 
-### Default manual flow — describe a detector in plain English, then run it
-
-In a fresh project directory:
+The shortest path to seeing all five commands work. Drops a complete,
+runnable demo (1 × 1 × 10 cm lead block, 1 GeV e⁻ beam, edep
+histogram) into a fresh workspace and runs it as-is. Useful **once**
+on a clean install to confirm apptainer, the cached image, and the
+host-side Python stack all work; not a flow you'd use for your real
+simulation.
 
 ```text
 > /geant4-claude:geant4-init
 ✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
 ✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
 
-> /geant4-claude:geant4-detector
-  describe your detector: a 1×1×10 cm lead block in an air world,
-                          tag the lead as sensitive
-✓ wrote geometries/lead_block.gdml (validated)
-
 > /geant4-claude:geant4-example
 ✓ wrote src/{geant4_claude_main.cc, CMakeLists.txt}, geometries/example.gdml,
   macros/run.mac, analysis/example.py
-  (the main is GDML-driven — point it at any /geant4-claude:geant4-detector output)
 
 > /geant4-claude:geant4-build
 ✓ build/geant4_claude_main
 
-> /geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/lead_block.gdml macros/run.mac {run_dir}/hits.root
+> /geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
 [g4c] attached SD to 1 sensitive volume(s)
 [g4c] run ended: 1000 events written to runs/<run_id>/hits.root
-✓ runs/<run_id>/{hits.root, log.txt, config.json}
 
 > /geant4-claude:geant4-analyze runs/<run_id>
 ✓ runs/<run_id>/edep_hist.png
   events = 1000, total hits = 1.2M, mean edep = 640 MeV/event
 ```
 
-`/geant4-claude:geant4-detector` is natural-language → standalone GDML; the
-example main shipped by `/geant4-claude:geant4-example` loads whatever
-GDML you point it at, so the two compose into a no-C++ default loop.
-Skip `/geant4-claude:geant4-detector` (and run `/geant4-claude:geant4-example` alone) to use
-the bundled `geometries/example.gdml` instead.
+The example files are self-contained — keep them as reference or
+delete them when you start writing your own.
 
-### Alternative — bring your own `main.cc`
+### C. Build your own simulation manually
 
-For users who already have a Geant4 application, want to hard-code geometry
-in C++, or write to a non-`Hits` output schema:
+For your real simulation. Write the `main.cc` that implements your
+physics; let `/geant4-claude:geant4-detector` handle the geometry if
+you want a natural-language detector spec.
 
 ```text
 > /geant4-claude:geant4-init                        # one-time: skeleton + image pull
-# drop your own src/main.cc and src/CMakeLists.txt into the workspace
+
+> /geant4-claude:geant4-detector                    # optional: NL spec → geometries/<name>.gdml
+# write src/main.cc + src/CMakeLists.txt for your simulation
+# (you can ask Claude to draft these from a description of the
+#  physics list, sensitive detectors, and output schema you want)
 
 > /geant4-claude:geant4-build
-> /geant4-claude:geant4-run --exe build/<your-binary> -- <your args> {run_dir}/<your-output>
+> /geant4-claude:geant4-run --exe build/<your-binary> -- <your args> {run_dir}/<output>.root
 > /geant4-claude:geant4-analyze runs/<run_id>
 ```
 
-`/geant4-claude:geant4-run` is content-neutral: it allocates `runs/<id>/`, exports
-`RUN_DIR`/`RUN_ID`, substitutes `{run_dir}` / `{run_id}` placeholders in
-your args, captures provenance, and runs whatever binary you point it at
-inside the pinned container. `/geant4-claude:geant4-analyze` inspects the resulting
-ROOT file's schema; if it matches the example's `Hits` TTree it uses the
-canned plot, otherwise it generates a custom analysis script in
-`analysis/<run_id>.py` based on what it actually found.
+`/geant4-claude:geant4-detector` writes standalone GDML that any
+Geant4 application can load via `G4GDMLParser::Read`.
+`/geant4-claude:geant4-run` is content-neutral: it allocates
+`runs/<id>/`, exports `RUN_DIR`/`RUN_ID`, substitutes `{run_dir}` /
+`{run_id}` placeholders in your args, captures provenance, and runs
+whatever binary you point it at inside the pinned container.
+`/geant4-claude:geant4-analyze` inspects the resulting ROOT file's
+schema and either uses the canned `Hits`-TTree plot (if your `main.cc`
+happens to use that schema) or generates a custom analysis script in
+`analysis/<run_id>.py` tailored to whatever branches it actually
+found.
 
 ## Layout
 
@@ -193,12 +198,13 @@ my-project/
 └── analysis/          uproot scripts
 ```
 
-`/geant4-claude:geant4-example` drops a generic GDML-driven `main.cc` plus a
-sample geometry/macro/analysis on top — the same `main.cc` powers the default
-NL-detector flow above (it loads any GDML you hand it, including the output of
-`/geant4-claude:geant4-detector`). Bring your own `src/main.cc` only when you need
-non-default physics, geometry hard-coded in C++, or an output schema that
-isn't the example's `Hits` TTree.
+`/geant4-claude:geant4-example` is independent of the manual flow
+above. It drops a self-contained demo (GDML + macro + a generic
+GDML-loading `main.cc` + analysis script) into the workspace, useful
+for confirming the toolchain works on your machine before you write
+any of your own code. Treat the dropped files as smoke-test fixtures
+or reference material — when you're ready, write your own
+`src/main.cc` and your own `analysis/*.py`.
 
 The directory layout is opinionated — skills and commands assume those
 names. `log.md` and `result.md` are starter handoff documents Claude
@@ -206,12 +212,16 @@ maintains as the project evolves.
 
 ## Design highlights
 
-- **NL-driven geometry as the default.** `/geant4-claude:geant4-detector`
-  turns a plain-English detector spec into standalone, validated GDML.
-  Combined with the GDML-loading `main.cc` shipped by
-  `/geant4-claude:geant4-example`, you get a no-C++ default loop:
-  describe → run → analyze. Bring your own `main.cc` only when you need
-  hard-coded geometry, custom physics, or a custom output schema.
+- **`geant4` orchestrator skill is the highlighted entry point.** Auto-loads
+  on natural-language simulation requests; gap-checks the user's spec across
+  six fields (goal, geometry, beam, sensitive, output, analysis); presents
+  a brief plan; on approval drives the five commands end-to-end with
+  stop-on-failure post-condition checks at each step.
+- **NL-driven geometry as a first-class step.**
+  `/geant4-claude:geant4-detector` turns a plain-English detector spec
+  into a standalone, validated GDML file that any Geant4 `main.cc` can
+  `G4GDMLParser::Read`. Geometry edits don't trigger a rebuild — change
+  the GDML, re-run.
 - **Single runtime seam.** Every Geant4, ROOT, CMake, or g++ call goes
   through `bin/g4run`. The container tag lives in that script alone.
 - **Content-neutral wrapper.** `bin/g4run` knows nothing about the user's
