@@ -140,3 +140,36 @@ will be re-run by other people who may not have ROOT.
 - Comparing edep to gun energy without accounting for escape. A 1 GeV
   e- in a 1×1×10 cm Pb block deposits ~600 MeV (rest leaks
   transversely); that is *not* a bug.
+
+## See also (wiki)
+
+The plugin ships a 69-page Geant4-and-physics knowledge base under `wiki/`.
+**Use the `Read` tool** to pull these pages into context when their topic
+is load-bearing for the task at hand:
+
+- `wiki/sources/geant4-code/synthesis/analysis-manager.md` —
+  `G4AnalysisManager` API: histogram + ntuple booking, format
+  abstraction (CSV/ROOT/HDF5/XML), MT merging semantics. Read this when
+  the user wants to write the analysis manager output *from* Geant4
+  rather than from `uproot` post-hoc.
+- `wiki/sources/geant4-code/examples/g4-example-analysis-anaex01.md` —
+  worked example: histogram booking, ntuple filling, end-of-run write.
+  Read this when sketching a new analysis surface inside the user's
+  `main.cc`.
+- `wiki/sources/geant4-code/examples/g4-example-analysis-anaex02.md` —
+  direct ROOT `TFile`/`TTree` (no `G4AnalysisManager`), exactly the
+  pattern the plugin's example main uses. Read this when the user wants
+  to extend the `Hits` schema or add a sibling tree.
+- `wiki/sources/geant4-code/synthesis/scoring-styles.md` — the five
+  scoring approaches Geant4 supports (SD, primitive scorer, scoring
+  mesh, stepping-action accumulators, hand-rolled in `EndOfEventAction`).
+  Read this when the user is about to write a custom SD and may not
+  need one.
+- `wiki/sources/geant4-code/synthesis/scoring-mesh.md` —
+  `G4ScoringManager` command-based dose grids. Read this when the
+  question is "show me energy deposit on a 3-D voxel grid", which is
+  *not* what the example's `Hits` TTree gives you.
+- `wiki/sources/physics/passage-particles-matter-summary.md` — PDG
+  Ch. 34 in summary form: dE/dx, multiple scattering, bremsstrahlung,
+  Cherenkov. Read this when interpreting why a deposit distribution
+  looks the way it does (Landau tail, Molière broadening, etc.).

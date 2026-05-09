@@ -159,3 +159,29 @@ the file through a quick simulation (`/geant4-run --events 1`).
   parse error.
 - Putting the aux tag at the wrong nesting level (it must be inside
   `<volume>`, not inside `<structure>` or next to it).
+
+## See also (wiki)
+
+The plugin ships a 69-page Geant4-and-physics knowledge base under `wiki/`.
+**Use the `Read` tool** to pull these pages into context when their topic
+is load-bearing for the task at hand:
+
+- `wiki/sources/geant4-code/synthesis/sensitive-detectors-via-gdml-aux.md`
+  — the full spine of how the example main wires SDs to GDML
+  `<auxiliary>` tags; read this when the user asks "why isn't my volume
+  being scored?"
+- `wiki/sources/geant4-code/synthesis/g4-src-gdml-auxiliary-walk.md` —
+  exact `G4GDMLAuxStructType` API; documents that aux tags do **not**
+  inherit from parent → daughter and that nested aux is ignored. Read
+  this when designing tag conventions for non-trivial detector trees.
+- `wiki/sources/geant4-code/examples/g4-example-persistency-gdml-g01.md`
+  — canonical `G4GDMLParser` reader/writer reference; covers feature
+  matrix and CDATA escapes. Read this when validating an unfamiliar GDML
+  feature.
+- `wiki/sources/geant4-code/examples/g4-example-persistency-gdml-g04.md`
+  — extended example for wiring SDs via `<auxiliary>` (the pattern this
+  plugin's example main implements). Read this when the user wants
+  multiple SDs with different score types.
+- `wiki/sources/geant4-code/examples/g4-example-geometry-transforms.md`
+  — the five Geant4 rotation conventions (active vs passive, etc.); read
+  this when a placed daughter is in the wrong orientation.

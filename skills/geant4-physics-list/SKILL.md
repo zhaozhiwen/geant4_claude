@@ -94,3 +94,31 @@ analysis can tell which physics produced the hits without rerunning.
   https://geant4-userdoc.web.cern.ch/UsersGuides/PhysicsListGuide/
 - A short rule: anything ending in `_HP` adds the high-precision neutron
   treatment and roughly doubles run time for hadronic showers.
+
+## See also (wiki)
+
+The plugin ships a 69-page Geant4-and-physics knowledge base under `wiki/`.
+**Use the `Read` tool** to pull these pages into context when their topic
+is load-bearing for the task at hand:
+
+- `wiki/sources/geant4-code/synthesis/physics-list-factory.md` —
+  `G4PhysListFactory` runtime selection, additive constructors via the
+  `+`/`_` DSL. Read this if the user wants to swap physics lists without
+  forking `main.cc` (the upgrade path mentioned in "How to switch").
+- `wiki/sources/geant4-code/examples/g4-example-physicslists-extensiblefactory.md`
+  — concrete worked example of pick-by-name + composition. Read this
+  alongside `physics-list-factory.md` when sketching the upgrade.
+- `wiki/sources/geant4-code/synthesis/em-processes.md` — photon and e±
+  EM processes, energy-loss straggling, EM constructor options. Read
+  this when the user reports unexpected energy resolution or wants
+  Livermore / Penelope physics.
+- `wiki/sources/geant4-code/synthesis/optical-photon-physics.md` —
+  Cherenkov, scintillation, WLS, boundary processes; PDG = −22; how to
+  add `G4OpticalPhysics` (it is **not** in any default list). Read this
+  the moment optical photons enter the conversation.
+- `wiki/sources/geant4-code/synthesis/g4-src-process-registration-ordering.md`
+  — six process vectors, GPIL reversal, `BuildPhysicsTable` timing. Read
+  this when a custom physics list misbehaves at run time.
+- `wiki/synthesis/passage-particles-matter-geant4-mapping.md` — PDG
+  Ch. 34 sections mapped to specific Geant4 model classes. Read this
+  when the user wants to know "which `G4*Model` implements <effect>?".
