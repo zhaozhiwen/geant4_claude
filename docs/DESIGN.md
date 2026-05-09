@@ -30,26 +30,34 @@ $ claude
 ✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
 ✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${CLAUDE_PLUGIN_DATA}/cache/sif)
 
-> /geant4-claude:geant4-detector            # describe detector → standalone GDML
+> /geant4-claude:geant4-detector            # optional: NL detector spec → standalone GDML
   describe your detector: a 1×1×10 cm lead block in an air world,
                           tag the lead as sensitive
 ✓ wrote geometries/lead_block.gdml (validated)
 
-> /geant4-claude:geant4-example             # drops in the GDML-loading main + macro + analysis
-✓ wrote src/{geant4_claude_main.cc, CMakeLists.txt}, geometries/example.gdml,
-  macros/run.mac, analysis/example.py
-  (the example main consumes any GDML, including geometries/lead_block.gdml)
+# write src/main.cc + src/CMakeLists.txt for your simulation
+# (Claude can draft these from a description of the physics list,
+#  sensitive detectors, and output schema you want)
 
 > /geant4-claude:geant4-build
-✓ built build/geant4_claude_main
+✓ built build/<your-binary>
 
-> /geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/lead_block.gdml macros/run.mac {run_dir}/hits.root
+> /geant4-claude:geant4-run --exe build/<your-binary> -- geometries/lead_block.gdml macros/<your>.mac {run_dir}/<output>.root
 ✓ run 20260508-221045-a3f9c0 finished in 8.2 s
-  → runs/20260508-221045-a3f9c0/{hits.root, log.txt, config.json}
+  → runs/20260508-221045-a3f9c0/{<output>.root, log.txt, config.json}
 
 > /geant4-claude:geant4-analyze runs/20260508-221045-a3f9c0
-✓ edep_hist.png  (1000 events, ~1.2M hits, mean = 312 MeV/event)
+✓ edep_hist.png  (or analysis/<run_id>.py + tailored plot if the
+                   schema isn't `Hits`)
 ```
+
+The user journey above is the **manual** path. The `geant4`
+orchestrator skill collapses these steps behind a single
+natural-language request — see Skill split below. Separately,
+`/geant4-claude:geant4-example` drops a self-contained smoke test
+into the workspace; useful for confirming the toolchain works on
+a fresh install but *not* part of the user's real-simulation
+journey.
 
 ## Architecture
 
@@ -126,18 +134,21 @@ bump for the plugin.
 
 ### Example main (`templates/example/src/geant4_claude_main.cc`)
 
-Shipped as a **template**, not a contract — but it is the **default
-binary** for the NL-detector flow. `/geant4-claude:geant4-detector`
-emits standalone GDML; this main reads any GDML at runtime, attaches
-sensitive detectors to volumes tagged in the GDML, and writes a flat
-`Hits` TTree. Together they form the no-C++ default loop: describe →
-run → analyze, with geometry iterations not requiring a rebuild.
+Shipped as a **smoke-test fixture** and a piece of reference code,
+not as a workflow component. `/geant4-claude:geant4-example` drops
+this main + a sample geometry/macro/analysis into a fresh workspace
+so the user can run `init → build → run → analyze` end-to-end on a
+clean install and confirm the toolchain works. It is **not** the
+default binary for users' real simulations — the manual flow
+expects the user to write their own `main.cc`. The orchestrator skill
+*may* compose this main with `/geant4-claude:geant4-detector` output
+when the spec is simple enough that no custom physics or schema is
+needed; that's an internal optimization of the orchestrator, not a
+documented user-facing path.
 
-Users get it in their workspace by running `/geant4-claude:geant4-example`;
-from that point on it's their copy to edit. The plugin ships no compiled
-code itself — every build is the user's build, in their workspace's
-`./build/`. Users who bring their own `main.cc` skip this template
-entirely.
+Once dropped into the workspace it is the user's copy to keep,
+delete, or edit. The plugin ships no compiled code itself — every
+build is the user's build, in their workspace's `./build/`.
 
 CLI: `geant4_claude_main <geometry.gdml> <run.mac> <output.root>`.
 
@@ -190,7 +201,7 @@ demo, and one helper writes GDML.
 | `/geant4-claude:geant4-run` | Execute the user's binary inside the container; allocate `runs/<id>/`; capture generic provenance (executable, args, image, git_sha, duration, exit status). Substitutes `{run_dir}`/`{run_id}` placeholders and exports `RUN_DIR`/`RUN_ID` so the binary can write into the run dir. |
 | `/geant4-claude:geant4-analyze` | Inspect the run's ROOT file. Schema-aware fast-path (canned per-event edep histogram) when a `Hits` TTree matching the example schema is found; otherwise generates a custom analysis script tailored to the actual branches. |
 | `/geant4-claude:geant4-detector` | Translate a natural-language detector spec into a validated standalone GDML file under `geometries/`. The output is consumable by any `main.cc` that calls `G4GDMLParser::Read(...)`. |
-| `/geant4-claude:geant4-example` | Drop the GDML-loading `main.cc` + `CMakeLists.txt` + a sample geometry/macro/analysis into the workspace. The shipped main is the default consumer for `/geant4-claude:geant4-detector` output, and is also runnable as-is for users who haven't yet described their own detector. Users who bring their own `main.cc` skip this command. |
+| `/geant4-claude:geant4-example` | Drop a self-contained smoke test (GDML + macro + a generic GDML-loading `main.cc` + analysis script) into the workspace. Independent of the manual user flow — used once on a fresh install to confirm the toolchain works, or as reference code when writing your own simulation. The orchestrator skill may compose the example main with detector output for simple-physics specs as an internal shortcut, but the manual flow expects the user to bring their own `main.cc`. |
 
 Each command's full contract lives in its `.md` file under `commands/`.
 
@@ -219,7 +230,7 @@ my-project/
 ├── .gitignore           # excludes runs/, *.root, build/, __pycache__/
 ├── log.md               # chronological work log; Claude appends after each run
 ├── result.md            # per-run findings; Claude updates after a noteworthy analyze
-├── src/                 # /geant4-claude:geant4-example fills this (default), or drop in your own main.cc + CMakeLists.txt
+├── src/                 # your main.cc + CMakeLists.txt go here (or `/geant4-claude:geant4-example` fills it for the smoke test)
 ├── geometries/          # GDML files, one per detector (optional)
 ├── macros/              # Geant4 macro files
 ├── runs/                # one subdir per /geant4-claude:geant4-run invocation (gitignored)
