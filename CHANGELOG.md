@@ -77,11 +77,13 @@ release. A breaking change to the `Hits` TTree schema or to the
   fallback). Idempotent diff/install pattern: ~3 ms no-op on subsequent
   sessions, ~10–30 s on first install, ~50 MB on disk.
 - **Optional Geant4 source checkout offered by `/geant4-init`** — first time
-  the user runs `/geant4-init`, the command asks whether to shallow-clone the
-  Geant4 source tree (tag matched to the pinned container's Geant4 version)
+  the user runs `/geant4-init`, the command asks whether to download the
+  Geant4 source tarball (tag matched to the pinned container's Geant4
+  version) from GitHub releases (`https://github.com/Geant4/geant4/archive/refs/tags/v<VERSION>.tar.gz`)
   into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at
   `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src` so wiki pages keep using the
-  relative `wiki/raw/geant4-src/...` references. The data-dir location means
+  relative `wiki/raw/geant4-src/...` references. Tarball, not `git clone`
+  — no `.git/` history, no extra dependencies. The data-dir location means
   the tree survives plugin version bumps. Plugin-wide and idempotent: later
   `/geant4-init` calls in other projects detect the existing tree and skip
   the prompt. Required only to verify the wiki's source-citing synthesis
