@@ -64,7 +64,35 @@ The first `/geant4-claude:geant4-init` you run will additionally **ask once** wh
 
 ## Quickstart
 
-### Default flow — describe a detector in plain English, then run it
+### Easiest entry point — just describe what you want to simulate
+
+Tell Claude what you want — the `geant4` skill auto-loads on any
+"simulate / build / run a Geant4 …" request, asks targeted clarifying
+questions if the spec is incomplete, shows a brief plan for your
+approval, and then drives `init → detector → build → run → analyze`
+in sequence.
+
+```text
+> Create a Cherenkov simulation: a 1×1×1 m CO2 gas radiator at 1 atm,
+  1 GeV e- beam along the central axis, ideal downstream flux backplate
+  collects photons, ROOT output, then analyze with a 1-D photon-count
+  histogram and a 2-D photon (x, y) distribution.
+
+[Claude reads your request, fills in defaults (FTFP_BERT + optical physics,
+1000 events, 2 m air world), shows a plan, asks for approval, then runs
+the flow end-to-end.]
+```
+
+A clear input is what makes the difference between a working sim and a
+dozen clarifying turns. Six fields the skill needs from you: **physics
+goal**, **geometry**, **beam**, **sensitive surfaces**, **output**, and
+**analysis**. If any of those are missing or ambiguous, the skill asks
+before doing anything destructive.
+
+If you'd rather drive the steps yourself, the two flows below show the
+manual paths.
+
+### Default manual flow — describe a detector in plain English, then run it
 
 In a fresh project directory:
 
@@ -136,7 +164,7 @@ geant4_claude/
 ├── hooks/                        hooks.json + install-deps.sh
 ├── bin/g4run                     the only bridge to apptainer
 ├── commands/                     /geant4-{init, build, run, analyze, detector, example}
-├── skills/                       geant4-geometry, -physics-list, -analysis
+├── skills/                       geant4 (full-flow orchestrator), geant4-geometry, -physics-list, -analysis
 ├── agents/geant4-runner.md       subagent for long sims
 ├── templates/workspace/          empty skeleton /geant4-claude:geant4-init copies in
 ├── templates/example/            opt-in demo /geant4-claude:geant4-example copies in

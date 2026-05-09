@@ -198,12 +198,16 @@ Each command's full contract lives in its `.md` file under `commands/`.
 
 | Skill | Owns |
 |-------|------|
+| `geant4` | **Full-flow orchestrator (the highlighted entry point).** Auto-loads on "simulate / build / run a Geant4 …" requests; gap-checks the user's spec across six fields (goal, geometry, beam, sensitive, output, analysis); presents a brief plan; on approval drives `init → detector → build → run → analyze` in sequence. The only skill in the plugin that drives a workflow rather than describing one. |
 | `geant4-geometry` | GDML structure, units, materials, common shapes, validation, `auxiliary` tags for sensitive detectors. |
 | `geant4-physics-list` | Choosing among FTFP_BERT / QGSP_BIC / etc.; range cuts; what to set for EM-only vs hadronic. |
 | `geant4-analysis` | `uproot` recipes (read `Hits` TTree → numpy), common plots (edep histogram, hit map, per-volume sums). |
 
-A skill never executes the workflow — it's syntax + judgment. Workflow lives
-in commands.
+The reference skills (geometry, physics-list, analysis) are syntax +
+judgment, never workflow — they're loaded on demand by the commands or
+by `geant4` itself when it needs to make a specific decision. The
+orchestrator skill is the one deliberate exception: it sequences
+commands so a single user message can fan out into a planned run.
 
 ## Workspace conventions
 

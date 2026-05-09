@@ -93,9 +93,14 @@ Naming:
    description: <when to load this skill — be specific so triggering is reliable>
    ---
    ```
-2. Skills are *reference material*, not workflows. Procedural steps belong in
-   commands; skills explain *how* to do a piece (e.g., GDML units, picking a
-   physics list, an `uproot` recipe).
+2. Skills are *reference material*, not workflows — with one deliberate
+   exception, `skills/geant4/SKILL.md`, the full-flow orchestrator that
+   sequences `init → detector → build → run → analyze` from a single user
+   request. The orchestrator exists because skills auto-load on natural-
+   language triggers and commands don't; that's the only reason to make a
+   workflow-bearing skill. Don't add a second one without a comparable
+   reason. All other skills explain *how* to do a piece (GDML units,
+   picking a physics list, an `uproot` recipe).
 3. Cross-link from any command that should pull the skill in.
 
 ## Testing the plugin (dogfooding)
