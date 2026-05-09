@@ -108,7 +108,7 @@ Optional argument: `--force` (overwrite existing workspace files).
    ```bash
    G4_VERSION=$(sed -n 's/^IMAGE_TAG=.*g4install:\([0-9.]*\)-.*/\1/p' "${CLAUDE_PLUGIN_ROOT}/bin/g4run")
    TARBALL_URL="https://github.com/Geant4/geant4/archive/refs/tags/v${G4_VERSION}.tar.gz"
-   echo "[g4c] would download Geant4 v${G4_VERSION} source tarball (~150 MB) into ${GEANT4_SRC}"
+   echo "[g4c] would download Geant4 v${G4_VERSION} source tarball (~36 MB compressed, ~200 MB extracted) into ${GEANT4_SRC}"
    echo "       from ${TARBALL_URL}"
    echo "       (release listing: https://github.com/Geant4/geant4/releases)"
    ```
@@ -120,7 +120,7 @@ Optional argument: `--force` (overwrite existing workspace files).
    Then use `AskUserQuestion`:
    - **Question**: `Download Geant4 v<G4_VERSION> source into the plugin's data dir for offline citation verification?`
    - **Options**:
-     1. *Yes, fetch tarball* — recommended; ~150 MB; no git history.
+     1. *Yes, fetch tarball* — recommended; ~36 MB download, ~200 MB on disk; no git history.
      2. *Skip for now* — wiki synthesis pages still readable, but `.cc:line` citations cannot be cross-checked locally.
 
    On **Yes**, fetch the matching tag, extract, and create the symlink so
