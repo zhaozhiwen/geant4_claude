@@ -1,13 +1,17 @@
 ---
 name: geant4-geometry
-description: GDML reference for the geant4_claude generic main — units, materials (NIST), basic solids, placement, and the auxiliary "sensitive" tag. Load when writing or editing geometries/*.gdml.
+description: GDML reference — units, NIST materials, basic solids, placement, and the optional `auxiliary sensitive` tag convention used by the example main. Load when writing or editing geometries/*.gdml.
 ---
 
 # geant4-geometry
 
-GDML is XML that Geant4 parses at run time. The plugin's generic main
-loads it via `G4GDMLParser::Read`, then attaches a sensitive detector to
-every logical volume that carries an `auxiliary` tag of type `sensitive`.
+GDML is XML that Geant4 parses at run time via `G4GDMLParser::Read`. Any
+Geant4 application can load a GDML file; the file contract here is
+generic. The **example main** shipped by `/geant4-example` additionally
+auto-attaches a sensitive detector to every logical volume that carries
+an `auxiliary` tag of type `sensitive`. User-written mains can adopt the
+same convention (the tag is harmless to mains that ignore it) or wire
+their own SDs in C++.
 
 ## Skeleton
 
@@ -122,9 +126,9 @@ referenced by `<setup>/<world>`). It should be large enough to enclose
 all daughters with a comfortable margin (10–20% of the largest daughter
 dimension, typically).
 
-## The "sensitive" auxiliary tag
+## The "sensitive" auxiliary tag (example main convention)
 
-The plugin's generic main looks for this exact pattern:
+The example main looks for this exact pattern:
 
 ```xml
 <auxiliary auxtype="sensitive" auxvalue="true"/>
@@ -132,7 +136,8 @@ The plugin's generic main looks for this exact pattern:
 
 (or `auxvalue="1"`). It must appear inside a `<volume>` element. Any
 volume with this tag gets a `GenericSD` attached and its hits stream into
-the `Hits` TTree.
+the `Hits` TTree. The tag is **inert** in user-written mains that don't
+read it — safe to leave in shared GDML files.
 
 To score a volume that already has aux tags for other reasons (e.g.
 visualization), just add another `<auxiliary>` element — multiple are

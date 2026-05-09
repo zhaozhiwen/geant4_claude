@@ -1,6 +1,6 @@
 ---
 name: geant4-analysis
-description: Read the Hits TTree with uproot/numpy and make the standard plots (per-event edep, hit map, per-volume sums). Load when writing or running anything in analysis/ or interpreting runs/<id>/hits.root.
+description: Read a run's ROOT output with uproot/numpy and produce plots. Schema-aware — recipes target the example's `Hits` TTree (per-event edep, hit map, per-volume sums); adapt branch names for custom schemas. Load when writing or running anything in analysis/ or interpreting runs/<id>/*.root.
 ---
 
 # geant4-analysis
@@ -10,8 +10,14 @@ The plugin's default analysis stack is **`uproot` + `numpy` +
 genuinely needs ROOT (TBrowser, TMVA, RooFit) runs in the container via
 `g4run root <macro>`.
 
-## TTree contract
+The recipes below are written against the **example main's schema**
+(one `Hits` TTree). For user-written mains with different schemas,
+inspect the file first (`/geant4-analyze` does this automatically) and
+substitute branch names; the same uproot patterns apply.
 
+## TTree contract (example main)
+
+When the user runs the example main from `/geant4-example`,
 `runs/<id>/hits.root` contains exactly one TTree, `Hits`, with these
 branches:
 
@@ -27,9 +33,12 @@ branches:
 One row per non-zero-edep step. To get per-event quantities, group by
 `event`.
 
-The companion `runs/<id>/config.json` carries the run's provenance
-(`particle`, `energy_MeV`, `n_events`, image digest, etc.). Read it
-instead of hard-coding event counts.
+`runs/<id>/config.json` since v0.0.2 holds **generic provenance**
+(`run_id`, `executable`, `args`, `image`, `git_sha`, `started_utc`,
+`duration_s`, `exit_status`). Macro-derived fields (particle, energy,
+event count) are **not** in there — derive them from data
+(`event.max() + 1` for the event count) or parse the macro file
+yourself.
 
 ## Install
 
@@ -47,21 +56,32 @@ pip install uproot numpy matplotlib
 The plugin does not auto-install — pick your poison and add it to the
 project's normal Python flow.
 
-## Recipe: read the tree
+## Recipe: inspect first
+
+Always start by listing what's actually in the file. `/geant4-analyze`
+does this automatically; standalone:
 
 ```python
-import json, pathlib
+import uproot
+with uproot.open("runs/<id>/hits.root") as f:
+    for k, t in f.items():
+        if hasattr(t, "keys"):
+            print(f"{k}:", {b: t[b].typename for b in t.keys()})
+```
+
+## Recipe: read the tree (example schema)
+
+```python
+import pathlib
 import uproot, numpy as np
 
 run_dir = pathlib.Path("runs/<id>")
-cfg = json.loads((run_dir / "config.json").read_text())
-
 with uproot.open(run_dir / "hits.root") as f:
     t = f["Hits"]
     arrs = t.arrays(["event", "volume", "edep", "x", "y", "z", "t", "pdg"],
                     library="np")
-event = arrs["event"]
-edep  = arrs["edep"]
+event  = arrs["event"]
+edep   = arrs["edep"]
 # arrs["volume"] is a numpy array of bytes; decode if needed:
 volume = np.array([v.decode() for v in arrs["volume"]])
 ```
@@ -71,7 +91,7 @@ For large files use `t.iterate(step_size="100 MB", library="np")`.
 ## Recipe: per-event energy deposit
 
 ```python
-n_events  = cfg["n_events"]
+n_events  = int(event.max() + 1)             # derive from data, not config.json
 per_event = np.bincount(event, weights=edep, minlength=n_events)
 # per_event[i] is total MeV deposited in event i
 ```
@@ -84,15 +104,20 @@ fig, ax = plt.subplots()
 ax.hist(per_event, bins=50)
 ax.set_xlabel("Energy deposit per event [MeV]")
 ax.set_ylabel("Events")
-ax.set_title(f"{cfg['particle']} @ {cfg['energy_MeV']} MeV, "
-             f"{n_events} events")
+ax.set_title(f"{run_dir.name} — {n_events} events, {len(edep)} hits")
 fig.savefig(run_dir / "edep_hist.png", dpi=120)
 ```
+
+If you specifically need the gun energy / particle in the title, parse
+the macro file (`runs/<id>/run.mac` if your driver materialized one,
+else the original `macros/<name>.mac`) for `/gun/energy` and
+`/gun/particle` lines. The provenance file no longer carries them.
 
 ## Recipe: per-volume summary
 
 ```python
 import collections
+n_events = int(event.max() + 1)
 totals = collections.Counter()
 for v, e in zip(volume, edep):
     totals[v] += e

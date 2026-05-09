@@ -5,9 +5,11 @@ description: Choosing a Geant4 physics list and tuning step/range cuts. Load whe
 
 # geant4-physics-list
 
-The plugin's generic main hard-codes **`FTFP_BERT`** as the constructor
-default. That's the right choice for ~90% of HEP applications — fast,
-well-validated, and covers EM + hadronic over a wide energy range. Most
+`FTFP_BERT` is the right choice for ~90% of HEP applications — fast,
+well-validated, covers EM + hadronic over a wide energy range. The
+example main shipped by `/geant4-example` hard-codes it as the
+constructor default; user-written mains typically pick something via
+`G4PhysListFactory` keyed off `argv` or an env var. Either way, most
 users should not touch this.
 
 This skill exists for the cases where the default is *wrong*.
