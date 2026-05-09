@@ -86,12 +86,12 @@ release. A breaking change to the `Hits` TTree schema or to the
   `/geant4-init` calls in other projects detect the existing tree and skip
   the prompt. Required only to verify the wiki's source-citing synthesis
   pages against actual Geant4 code.
-- **Geant4 + physics wiki** (`wiki/`) — 69-page Obsidian vault covering
-  Geant4 toolkit mechanics (38 example summaries + 24 source-grounded
+- **Geant4 + physics wiki** (`wiki/`) — Obsidian vault covering Geant4
+  toolkit mechanics (canonical example summaries + source-grounded
   synthesis pages), particle physics (PDG "Passage of Particles Through
-  Matter" full chapter ingested verbatim with all 47 equations, 27 figures,
-  90-entry reference list), and a cross-domain mapping linking PDG sections
-  to specific `G4*Model`/`G4*Process` classes. Internal links use Obsidian
+  Matter" chapter ingested verbatim), and a cross-domain mapping linking
+  PDG sections to specific `G4*Model`/`G4*Process` classes. Internal
+  links use Obsidian
   `[[wikilink]]` syntax. Used by the plugin to answer Geant4 questions
   through slash commands.
 

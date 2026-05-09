@@ -168,7 +168,7 @@ will be re-run by other people who may not have ROOT.
 
 ## See also (wiki)
 
-The plugin ships a 69-page Geant4-and-physics knowledge base under `wiki/`.
+The plugin ships a Geant4-and-physics knowledge base under `wiki/` (see `wiki/index.md` for the full catalog).
 **Use the `Read` tool** to pull these pages into context when their topic
 is load-bearing for the task at hand:
 
