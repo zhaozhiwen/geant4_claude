@@ -31,8 +31,11 @@ Makefile
 # Apptainer cache (normally outside the repo; defensive)
 *.sif
 
-# Demo outputs if someone runs the smoke test at the repo root
-runs/
+# Demo outputs if someone runs the smoke test at the repo root.
+# Leading `/` anchors to the repo root only — without it the pattern
+# also matches templates/workspace/runs/, dropping the shipped
+# skeleton's runs/ placeholder from the package.
+/runs/
 *.root
 *.png
 
