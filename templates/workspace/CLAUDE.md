@@ -2,15 +2,15 @@
 
 Rules for Claude when working in this Geant4 simulation workspace. The
 `geant4_claude` plugin scaffolded these directories. The plugin's slash
-commands (`/geant4-build`, `/geant4-run`, `/geant4-analyze`,
-`/geant4-detector`) operate on the layout below.
+commands (`/geant4-claude:geant4-build`, `/geant4-claude:geant4-run`, `/geant4-claude:geant4-analyze`,
+`/geant4-claude:geant4-detector`) operate on the layout below.
 
 This workspace can hold either:
 
 - **Your own simulation** — your `src/main.cc` (or whatever you name it)
   with whatever physics list, geometry strategy, and output schema you
   choose; or
-- **The plugin's example** — drop it in with `/geant4-example` to get a
+- **The plugin's example** — drop it in with `/geant4-claude:geant4-example` to get a
   ready-to-build GDML-driven simulation that uses an `Hits` TTree.
 
 The four runtime commands work the same in both cases.
@@ -20,10 +20,10 @@ The four runtime commands work the same in both cases.
 | Directory | Role |
 |-----------|------|
 | `src/`        | C++ source for your Geant4 application. Plus `CMakeLists.txt`. |
-| `build/`      | CMake build output. **Gitignored.** Re-create with `/geant4-build`. |
+| `build/`      | CMake build output. **Gitignored.** Re-create with `/geant4-claude:geant4-build`. |
 | `geometries/` | GDML files (if you use GDML). Versioned. Optional. |
 | `macros/`     | Geant4 macro files (`*.mac`). Versioned. |
-| `runs/`       | One sub-directory per `/geant4-run`. **Gitignored.** |
+| `runs/`       | One sub-directory per `/geant4-claude:geant4-run`. **Gitignored.** |
 | `analysis/`   | Python scripts that read `runs/<id>/*.root`. |
 
 ## Non-negotiables
@@ -41,17 +41,17 @@ The four runtime commands work the same in both cases.
    that needs ROOT runs inside the container via `g4run root <args>`.
 5. **Geometry vs. rebuild.** If you use GDML loaded at runtime, geometry
    edits don't require a rebuild — change the file, run again. If you
-   hard-code geometry in C++, every change needs `/geant4-build`.
+   hard-code geometry in C++, every change needs `/geant4-claude:geant4-build`.
 
 ## Typical loop
 
 1. Edit `src/main.cc` (and any helpers) for your simulation logic; or
    `geometries/<name>.gdml` if you load geometry at runtime
-   (use `/geant4-detector` for natural-language → GDML).
-2. `/geant4-build` — compiles `src/` into `./build/<target>`.
+   (use `/geant4-claude:geant4-detector` for natural-language → GDML).
+2. `/geant4-claude:geant4-build` — compiles `src/` into `./build/<target>`.
 3. Edit `macros/<name>.mac` for primary particle, energy, event count.
-4. `/geant4-run --exe build/<target> -- macros/<name>.mac [your args]`.
-5. `/geant4-analyze runs/<id>` — auto-detects the output schema and
+4. `/geant4-claude:geant4-run --exe build/<target> -- macros/<name>.mac [your args]`.
+5. `/geant4-claude:geant4-analyze runs/<id>` — auto-detects the output schema and
    plots; or write your own script in `analysis/`.
 
 ## When something fails

@@ -7,7 +7,7 @@ description: Choosing a Geant4 physics list and tuning step/range cuts. Load whe
 
 `FTFP_BERT` is the right choice for ~90% of HEP applications — fast,
 well-validated, covers EM + hadronic over a wide energy range. The
-example main shipped by `/geant4-example` hard-codes it as the
+example main shipped by `/geant4-claude:geant4-example` hard-codes it as the
 constructor default; user-written mains typically pick something via
 `G4PhysListFactory` keyed off `argv` or an env var. Either way, most
 users should not touch this.
@@ -40,12 +40,12 @@ The plugin's main currently hard-codes `FTFP_BERT`. **MVP limitation:**
 you cannot swap the physics list from a macro alone. Three options:
 
 1. **You're using the example main.** Open `src/geant4_claude_main.cc`
-   (copied into your workspace by `/geant4-example`), replace the
+   (copied into your workspace by `/geant4-claude:geant4-example`), replace the
    `FTFP_BERT` constructor with the desired list (e.g. `Shielding`,
-   `QGSP_BIC_HP`), then `/geant4-build`.
+   `QGSP_BIC_HP`), then `/geant4-claude:geant4-build`.
 2. **You have your own main.** Edit your `main.cc` to hold the physics
    list constant your app needs (or thread a CLI/env knob through), then
-   `/geant4-build`.
+   `/geant4-claude:geant4-build`.
 3. **Long-term:** open an issue / PR adding a `--physics-list` flag to
    the example main so users no longer have to fork the file.
 

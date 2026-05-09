@@ -3,14 +3,14 @@ description: Execute a user-built Geant4 binary inside the container; capture pr
 allowed-tools: Bash, Read, Write, Glob
 ---
 
-# /geant4-run
+# /geant4-claude:geant4-run
 
 ## Purpose
 
 Run **the user's compiled Geant4 application** inside the pinned
 container, with full provenance capture into a fresh `runs/<id>/`
 directory. Content-neutral: works with any binary the user built via
-`/geant4-build`, regardless of CLI shape or output schema.
+`/geant4-claude:geant4-build`, regardless of CLI shape or output schema.
 
 ## Inputs
 
@@ -34,7 +34,7 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
    ```bash
    mapfile -t exes < <(find build -maxdepth 3 -type f -executable -not -path '*CMakeFiles*' 2>/dev/null)
    ```
-   - 0 executables → stop, suggest `/geant4-build` (or `/geant4-example`).
+   - 0 executables → stop, suggest `/geant4-claude:geant4-build` (or `/geant4-claude:geant4-example`).
    - 1 executable  → use it.
    - >1            → stop, list them, ask the user to pass `--exe`.
 
@@ -99,7 +99,7 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
      ```
      ✓ run <RUN_ID> finished in <duration>s
        → runs/<RUN_ID>/{log.txt, config.json, ...whatever the binary wrote}
-     Next: /geant4-analyze runs/<RUN_ID>
+     Next: /geant4-claude:geant4-analyze runs/<RUN_ID>
      ```
 
 ## Outputs
@@ -115,7 +115,7 @@ runs/<run_id>/
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `not an executable: <path>` | Binary missing or not built. | Run `/geant4-build`. |
+| `not an executable: <path>` | Binary missing or not built. | Run `/geant4-claude:geant4-build`. |
 | `more than one executable under build/` | Ambiguous default. | Pass `--exe build/<your-binary>`. |
 | Binary segfaults or `G4Exception` | Bug in user's main, missing GDML reference, OOM. | Inspect `runs/<id>/log.txt`. |
 | Output file missing where you expected it | Binary wrote relative to its own CWD or a hardcoded path. | Either pass `{run_dir}/<filename>` as an arg, or read `RUN_DIR` from env in your `main.cc`. |

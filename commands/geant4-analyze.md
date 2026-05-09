@@ -3,7 +3,7 @@ description: Inspect a run's output schema, plot/summarize it (canned fast-path 
 allowed-tools: Bash, Read, Write, Glob
 ---
 
-# /geant4-analyze
+# /geant4-claude:geant4-analyze
 
 ## Purpose
 

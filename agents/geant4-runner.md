@@ -1,6 +1,6 @@
 ---
 name: geant4-runner
-description: Babysit a long Geant4 simulation. Launch via /geant4-run, watch runs/<id>/log.txt for progress and Geant4 errors, summarize at the end. Use when a sim is expected to take more than a few minutes (large event counts, MT-heavy physics lists, or HP neutron transport).
+description: Babysit a long Geant4 simulation. Launch via /geant4-claude:geant4-run, watch runs/<id>/log.txt for progress and Geant4 errors, summarize at the end. Use when a sim is expected to take more than a few minutes (large event counts, MT-heavy physics lists, or HP neutron transport).
 tools: Bash, Read, Glob
 ---
 
@@ -15,7 +15,7 @@ caller's job. You monitor.
 
 The caller hands you:
 
-- a run command (a `/geant4-run --exe … -- <args>` invocation, or the
+- a run command (a `/geant4-claude:geant4-run --exe … -- <args>` invocation, or the
   raw `g4run exec <executable> <args…>` it would dispatch to),
 - the run id and run directory it will produce,
 - an estimate of how long it should take (so you can flag a hang),
@@ -53,7 +53,7 @@ The caller hands you:
    - if a `Hits` TTree (or any TTree the caller named) is present,
      report the entry count via `g4run root` with a one-liner,
    - write `runs/<id>/config.json`'s `duration_s` and `exit_status` if
-     `/geant4-run` didn't already,
+     `/geant4-claude:geant4-run` didn't already,
    - hand back: run id, duration, exit status, key counts, any
      warnings worth flagging, and the relative paths the caller should
      look at next.
@@ -81,5 +81,5 @@ If the Geant4 process exits non-zero:
 - You run sequentially; the simulation runs in the background. Do not
   block your own context waiting for it — poll, then sleep, then poll.
 - If the run is genuinely short (<1 min), the caller should just use
-  `/geant4-run` directly; you exist for the cases where context bloat
+  `/geant4-claude:geant4-run` directly; you exist for the cases where context bloat
   or attention drift is a real risk.

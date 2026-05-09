@@ -3,7 +3,7 @@ description: Translate a natural-language detector spec into a validated GDML fi
 allowed-tools: Read, Write, Edit, Bash, Glob
 ---
 
-# /geant4-detector
+# /geant4-claude:geant4-detector
 
 ## Purpose
 
@@ -14,7 +14,7 @@ a 50 cm air world, sensitive") into a syntactically valid GDML file under
 This command produces a **standalone GDML file**. Any Geant4 application
 that calls `G4GDMLParser::Read("geometries/<name>.gdml")` can consume it.
 The optional `<auxiliary auxtype="sensitive" auxvalue="true"/>` tag is a
-hint — the example main shipped by `/geant4-example` reads it to
+hint — the example main shipped by `/geant4-claude:geant4-example` reads it to
 auto-attach a sensitive detector, but the tag is harmless to other
 applications that ignore it.
 
@@ -89,7 +89,7 @@ applications that ignore it.
    step, depending on how their `main.cc` consumes geometry:
    - example main: rebuild if needed, then run with the GDML as the
      first positional arg —
-     `/geant4-run --exe build/geant4_claude_main -- geometries/<name>.gdml macros/<name>.mac {run_dir}/hits.root`;
+     `/geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/<name>.gdml macros/<name>.mac {run_dir}/hits.root`;
    - their own main: load it via `G4GDMLParser::Read("geometries/<name>.gdml")`.
 
 ## Outputs

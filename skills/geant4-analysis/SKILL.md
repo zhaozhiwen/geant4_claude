@@ -12,12 +12,12 @@ genuinely needs ROOT (TBrowser, TMVA, RooFit) runs in the container via
 
 The recipes below are written against the **example main's schema**
 (one `Hits` TTree). For user-written mains with different schemas,
-inspect the file first (`/geant4-analyze` does this automatically) and
+inspect the file first (`/geant4-claude:geant4-analyze` does this automatically) and
 substitute branch names; the same uproot patterns apply.
 
 ## TTree contract (example main)
 
-When the user runs the example main from `/geant4-example`,
+When the user runs the example main from `/geant4-claude:geant4-example`,
 `runs/<id>/hits.root` contains exactly one TTree, `Hits`, with these
 branches:
 
@@ -58,7 +58,7 @@ project's normal Python flow.
 
 ## Recipe: inspect first
 
-Always start by listing what's actually in the file. `/geant4-analyze`
+Always start by listing what's actually in the file. `/geant4-claude:geant4-analyze`
 does this automatically; standalone:
 
 ```python

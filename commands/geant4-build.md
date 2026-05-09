@@ -3,7 +3,7 @@ description: Build a Geant4 source tree (CMake) inside the pinned container into
 allowed-tools: Bash, Read, Glob
 ---
 
-# /geant4-build
+# /geant4-claude:geant4-build
 
 ## Purpose
 
@@ -30,7 +30,7 @@ directly.
    ```
    If the source dir doesn't exist or has no `CMakeLists.txt`, stop and
    suggest one of:
-   - `/geant4-example` to drop in a working sample (writes `src/main.cc`
+   - `/geant4-claude:geant4-example` to drop in a working sample (writes `src/main.cc`
      + `src/CMakeLists.txt`),
    - bring your own — point `--src` at the directory.
 
@@ -52,7 +52,7 @@ directly.
    - the build directory and the executables now under it
      (`find "${BUILD}" -maxdepth 3 -type f -executable -not -path '*CMakeFiles*'`),
    - what to run next:
-     `/geant4-run --exe <build>/<your-binary> -- <its args...>`.
+     `/geant4-claude:geant4-run --exe <build>/<your-binary> -- <its args...>`.
    If the build wrote no executables, surface that as a likely
    `add_executable` issue in the user's `CMakeLists.txt`.
 
@@ -65,7 +65,7 @@ directly.
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `no src/CMakeLists.txt` | Workspace has no source yet. | Run `/geant4-example` for a starter, or bring your own `main.cc` + `CMakeLists.txt`. |
+| `no src/CMakeLists.txt` | Workspace has no source yet. | Run `/geant4-claude:geant4-example` for a starter, or bring your own `main.cc` + `CMakeLists.txt`. |
 | `Could not find a package configuration file provided by "Geant4"` | `find_package(Geant4 …)` is missing or misspelled. | Inspect `src/CMakeLists.txt`; mirror the example at `${CLAUDE_PLUGIN_ROOT}/templates/example/src/CMakeLists.txt`. |
 | `error: ‘FTFP_BERT.hh’ file not found` | Header not in include path. | The container's `find_package(Geant4)` brings the Geant4 includes in; check for typos and `include(${Geant4_USE_FILE})`. |
 | Build succeeds but no executable | No `add_executable` directive. | Add it to `src/CMakeLists.txt` and rebuild. |
@@ -74,7 +74,7 @@ directly.
 ## Notes
 
 - `./build/` is gitignored by the workspace `.gitignore` shipped by
-  `/geant4-init`.
+  `/geant4-claude:geant4-init`.
 - This command is idempotent. CMake's incremental builds rebuild only
   what changed; pass `--clean` for a from-scratch rebuild.
 - Need a different toolchain or extra cmake flags? Use

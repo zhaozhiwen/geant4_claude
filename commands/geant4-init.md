@@ -3,7 +3,7 @@ description: Scaffold a Geant4 workspace in the current directory and pull the r
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---
 
-# /geant4-init
+# /geant4-claude:geant4-init
 
 ## Purpose
 
@@ -11,7 +11,7 @@ Set up a fresh Geant4 simulation workspace in the user's current working
 directory, and pre-pull the pinned apptainer image so later commands run
 without surprise downloads. The workspace is **generic** — it has empty
 `src/`, `geometries/`, `macros/`, `runs/`, `analysis/` directories ready
-for your own simulation. Run `/geant4-example` afterwards if you want a
+for your own simulation. Run `/geant4-claude:geant4-example` afterwards if you want a
 ready-to-build sample dropped in.
 
 ## Inputs
@@ -44,7 +44,7 @@ Optional argument: `--force` (overwrite existing workspace files).
    - `CLAUDE.md` — workspace rules for future Claude sessions.
    - `.gitignore` — excludes `runs/`, `*.root`, `build/`, `__pycache__/`.
    - `src/.gitkeep` — empty source directory (your `main.cc` and
-     `CMakeLists.txt` go here, or `/geant4-example` will populate it).
+     `CMakeLists.txt` go here, or `/geant4-claude:geant4-example` will populate it).
    - `geometries/.gitkeep`, `macros/.gitkeep`, `analysis/.gitkeep` —
      empty directories with the conventional names that the rest of the
      plugin's commands expect.
@@ -88,7 +88,7 @@ Optional argument: `--force` (overwrite existing workspace files).
    fi
 
    # (Re)create the symlink. Plugin updates wipe ${CLAUDE_PLUGIN_ROOT},
-   # so /geant4-init must rebuild this link each run.
+   # so /geant4-claude:geant4-init must rebuild this link each run.
    if [ -d "${GEANT4_SRC}" ]; then
      mkdir -p "$(dirname "${LEGACY_SRC}")"
      if [ -L "${LEGACY_SRC}" ] || [ ! -e "${LEGACY_SRC}" ]; then
@@ -142,7 +142,7 @@ Optional argument: `--force` (overwrite existing workspace files).
    ln -sfn "${GEANT4_SRC}" "${LEGACY_SRC}"
    ```
    On **Skip**, continue. The user can re-trigger this step later by running
-   `/geant4-init` again from any workspace (or `--force`); the check is
+   `/geant4-claude:geant4-init` again from any workspace (or `--force`); the check is
    idempotent.
 
 6. **Report status:**
@@ -153,8 +153,8 @@ Optional argument: `--force` (overwrite existing workspace files).
    - workspace files written,
    - image cached at,
    - what to do next: either drop in your own `src/main.cc` +
-     `src/CMakeLists.txt` and run `/geant4-build`, or run
-     `/geant4-example` to populate the workspace with a working sample
+     `src/CMakeLists.txt` and run `/geant4-claude:geant4-build`, or run
+     `/geant4-claude:geant4-example` to populate the workspace with a working sample
      (GDML detector + macro + main + analysis script).
 
 ## Outputs
@@ -176,9 +176,9 @@ Optional argument: `--force` (overwrite existing workspace files).
 | `apptainer: command not found` | Apptainer not installed. | Install apptainer; rerun. |
 | `cp: cannot stat '${CLAUDE_PLUGIN_ROOT}/templates/...'` | Plugin not properly installed. | Re-install the `geant4_claude` plugin. |
 | `apptainer pull` fails with auth/network error | Offline or registry unreachable. | Retry with network; or set `GEANT4_CLAUDE_CACHE` to a directory that already has the `.sif`. The default cache lives at `${CLAUDE_PLUGIN_DATA}/cache/` (plugin-scoped). |
-| Existing files refuse to be touched | Workspace already initialized. | Re-run with `/geant4-init --force` (only after confirming with the user). |
-| Geant4 source download fails (HTTP 404, network) | Offline, GitHub unreachable, or the image's Geant4 version is not yet tagged on `Geant4/geant4`. | User can skip; re-run `/geant4-init` later. Manual fallback (substitute `<V>`, e.g. `11.4.0`): `curl -fL https://github.com/Geant4/geant4/archive/refs/tags/v<V>.tar.gz \| tar -xz -C ${CLAUDE_PLUGIN_DATA}/geant4-src --strip-components=1 && ln -sfn ${CLAUDE_PLUGIN_DATA}/geant4-src ${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src`. |
-| `wiki/raw/geant4-src` exists as a real directory after a plugin update | Pre-relocation install left a real dir at the legacy path; auto-migration was skipped because the new canonical path was also present. | Inspect both, keep the desired one, remove the other, then re-run `/geant4-init` to recreate the symlink. |
+| Existing files refuse to be touched | Workspace already initialized. | Re-run with `/geant4-claude:geant4-init --force` (only after confirming with the user). |
+| Geant4 source download fails (HTTP 404, network) | Offline, GitHub unreachable, or the image's Geant4 version is not yet tagged on `Geant4/geant4`. | User can skip; re-run `/geant4-claude:geant4-init` later. Manual fallback (substitute `<V>`, e.g. `11.4.0`): `curl -fL https://github.com/Geant4/geant4/archive/refs/tags/v<V>.tar.gz \| tar -xz -C ${CLAUDE_PLUGIN_DATA}/geant4-src --strip-components=1 && ln -sfn ${CLAUDE_PLUGIN_DATA}/geant4-src ${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src`. |
+| `wiki/raw/geant4-src` exists as a real directory after a plugin update | Pre-relocation install left a real dir at the legacy path; auto-migration was skipped because the new canonical path was also present. | Inspect both, keep the desired one, remove the other, then re-run `/geant4-claude:geant4-init` to recreate the symlink. |
 
 ## Notes
 

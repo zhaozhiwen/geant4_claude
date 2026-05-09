@@ -3,7 +3,7 @@ description: Drop a ready-to-build Geant4 example (GDML detector + macro + main 
 allowed-tools: Bash, Read, Write, Glob
 ---
 
-# /geant4-example
+# /geant4-claude:geant4-example
 
 ## Purpose
 
@@ -16,7 +16,7 @@ writes a flat `Hits` TTree.
 
 This command is for **learning** and **smoke-testing**. Once you're
 ready to write your own simulation, edit `src/main.cc` (rename if you
-like) and rebuild with `/geant4-build`.
+like) and rebuild with `/geant4-claude:geant4-build`.
 
 ## Inputs
 
@@ -26,10 +26,10 @@ like) and rebuild with `/geant4-build`.
 ## Steps
 
 1. **Refuse to run on an empty workspace.** This command builds on the
-   skeleton from `/geant4-init`:
+   skeleton from `/geant4-claude:geant4-init`:
    ```bash
    for d in src geometries macros analysis runs; do
-     test -d "${d}" || { echo "no ${d}/; run /geant4-init first"; exit 1; }
+     test -d "${d}" || { echo "no ${d}/; run /geant4-claude:geant4-init first"; exit 1; }
    done
    ```
 
@@ -65,9 +65,9 @@ like) and rebuild with `/geant4-build`.
    ✓ example dropped into ./{src,geometries,macros,analysis}/
 
    Next:
-     /geant4-build
-     /geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
-     /geant4-analyze runs/<the-id-from-/geant4-run>
+     /geant4-claude:geant4-build
+     /geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
+     /geant4-claude:geant4-analyze runs/<the-id-from-/geant4-claude:geant4-run>
    ```
 
 ## Outputs
@@ -80,7 +80,7 @@ untouched.
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `no src/; run /geant4-init first` | The workspace skeleton isn't there. | `/geant4-init`. |
+| `no src/; run /geant4-claude:geant4-init first` | The workspace skeleton isn't there. | `/geant4-claude:geant4-init`. |
 | Collision: `src/main.cc` already exists | The workspace already has user code. | Pass `--force` only after confirming with the user that the file is safe to overwrite — most likely they want to keep their own. |
 | `validate-gdml` fails | The example template is corrupted. | Re-install the plugin. |
 

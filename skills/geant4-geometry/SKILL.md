@@ -7,7 +7,7 @@ description: GDML reference — units, NIST materials, basic solids, placement, 
 
 GDML is XML that Geant4 parses at run time via `G4GDMLParser::Read`. Any
 Geant4 application can load a GDML file; the file contract here is
-generic. The **example main** shipped by `/geant4-example` additionally
+generic. The **example main** shipped by `/geant4-claude:geant4-example` additionally
 auto-attaches a sensitive detector to every logical volume that carries
 an `auxiliary` tag of type `sensitive`. User-written mains can adopt the
 same convention (the tag is harmless to mains that ignore it) or wire
@@ -152,7 +152,7 @@ g4run validate-gdml geometries/<name>.gdml
 Runs `xmllint --noout` inside the container. Catches XML well-formedness;
 **does not** catch material or volume reference errors — those surface
 only when Geant4 reads the file. To catch reference errors early, run
-the file through a quick simulation (`/geant4-run --events 1`).
+the file through a quick simulation (`/geant4-claude:geant4-run --events 1`).
 
 ## Common mistakes
 
