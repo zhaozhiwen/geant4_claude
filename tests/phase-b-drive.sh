@@ -94,6 +94,8 @@ require apptainer
 
 [ -f ~/.claude/.credentials.json ] \
   || fail "~/.claude/.credentials.json missing — log in to Claude Code first"
+[ -f ~/.claude.json ] \
+  || fail "~/.claude.json missing — log in to Claude Code at least once first (it stores the post-first-run state needed to skip the theme picker + account selection in the sandbox)"
 
 # Locate a real .sif to symlink (avoid 600 MB pull)
 SIF_SRC=""
@@ -126,9 +128,21 @@ log "sandbox: ${SANDBOX}"
 rm -rf "${SANDBOX}"
 mkdir -p "${SANDBOX_CLAUDE}" "${WS}" "${PLUGIN_DATA_SANDBOX}/cache/sif"
 
-# Preserve auth — symlink, not copy, so token refreshes propagate.
+# Why HOME= override (not just CLAUDE_CONFIG_DIR=):
+# Claude Code keeps post-first-run state in ~/.claude.json (in $HOME, NOT
+# under ~/.claude/). Without that file, a sandboxed instance triggers the
+# theme picker + account-type selection. CLAUDE_CONFIG_DIR alone would
+# require sharing the operator's real .claude.json, which would let the
+# sandbox's plugin install bleed into operator state. HOME override
+# isolates both ~/.claude/ and ~/.claude.json under ${SANDBOX}.
+#
+# Preserve auth + post-first-run state by:
+#   - SYMLINK .credentials.json (token refreshes propagate to operator)
+#   - COPY .claude.json (sandbox writes don't bleed back)
+#   - COPY settings.json (preserves theme/keybindings without sharing writes)
 ln -s ~/.claude/.credentials.json "${SANDBOX_CLAUDE}/.credentials.json"
 [ -f ~/.claude/settings.json ] && cp ~/.claude/settings.json "${SANDBOX_CLAUDE}/settings.json"
+cp ~/.claude.json "${SANDBOX}/.claude.json"
 
 # Symlink .sif into sandboxed plugin data dir (saves the pull).
 ln -s "${SIF_SRC}" "${PLUGIN_DATA_SANDBOX}/cache/sif/${SIF_NAME}"
@@ -153,13 +167,17 @@ log "tmux: starting session ${SESSION}"
 tmux kill-session -t "${SESSION}" 2>/dev/null || true
 tmux new-session -d -s "${SESSION}" -x 200 -y 50
 
-# Launch Claude Code with isolated config dir, in the workspace dir.
+# Launch Claude Code with HOME redirected, in the workspace dir.
 tmux send-keys -t "${SESSION}" \
-  "cd '${WS}' && CLAUDE_CONFIG_DIR='${SANDBOX_CLAUDE}' claude" Enter
+  "cd '${WS}' && HOME='${SANDBOX}' claude" Enter
 
-# Wait for the input prompt
-log "phase 0: wait for Claude Code TUI to come up"
-wait_for "to interrupt" 30 || wait_for "ctrl-c" 30 || wait_for "?" 30
+# Phase 0: wait for the workspace-trust dialog (fires for any new path),
+# auto-trust it, then wait for the welcome card.
+log "phase 0: wait for trust dialog → auto-trust → wait for welcome"
+wait_for "trust this folder" 30
+key Enter   # default option 1: "Yes, I trust this folder"
+wait_for "Welcome" 30
+note "✓ TUI ready in sandbox"
 
 # --- phase 1: plugin install ------------------------------------------------
 log "phase 1: install plugin via marketplace"
