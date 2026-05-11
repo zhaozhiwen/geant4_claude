@@ -9,6 +9,31 @@ A bump of the pinned container image tag is at minimum a **minor**
 release. A breaking change to the `Hits` TTree schema or to the
 `runs/<id>/config.json` provenance contract is a **major** release.
 
+## [Unreleased]
+
+### Documentation
+
+- **README quickstart restructured into three independent paths** so the
+  shipped example flow is cleanly separated from the user's manual flow:
+  *A. Describe what you want to simulate* (orchestrator skill, recommended),
+  *B. Try the shipped example end-to-end* (smoke test only — drops the
+  bundled demo into the workspace and runs it as-is), *C. Build your own
+  simulation manually* (init + optional `geant4-detector` + your own
+  `main.cc` + build + run + analyze). Headline, status, "What goes in
+  the user's project", and Design highlights bullets rewritten so the
+  example is consistently positioned as familiarity tooling, not as a
+  default workflow component. The previous v0.0.3 framing had the example
+  main acting as the "default binary for `/geant4-claude:geant4-detector`
+  output" and presented BYO-`main.cc` as the alternative to that
+  combined flow; this rework corrects the conflation.
+- **`docs/DESIGN.md` mirrors the README split** — user-journey
+  walkthrough, Example main section, slash-command table row for
+  `/geant4-claude:geant4-example`, and the workspace tree comment all
+  reframed. The "default binary / no-C++ default loop" language is gone;
+  the orchestrator skill's option to compose detector output with the
+  example main is now described as an internal shortcut rather than a
+  documented user-facing path.
+
 ## [0.0.3] - 2026-05-09
 
 ### Added
