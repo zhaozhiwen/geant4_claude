@@ -18,6 +18,8 @@ directory. Content-neutral: works with any binary the user built via
 |-----------------|-----------|---------|
 | `--exe <path>`  | yes (or auto-detect) | Path to the executable. Default: if exactly one executable exists under `./build/`, use it; otherwise stop and ask. |
 | `--name <slug>` | no        | Human-readable suffix appended to the run id. |
+| `--from <prev>` | no        | Path to a previous `runs/<id>/` directory this run derives from. Recorded as `parent_run` in `config.json` so the lineage is machine-readable. Useful for "v2 = v1 + this change" iteration. |
+| `--reason <text>` | no      | One-liner explaining the diff from `--from`. Recorded as `diff_reason` in `config.json`. Required if `--from` is given. |
 | `--`            | no        | Everything after `--` is forwarded as positional args to the executable. |
 
 Two placeholders are substituted in forwarded args:
@@ -70,9 +72,17 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
      "git_sha":     "<git rev-parse HEAD, or null>",
      "started_utc": "<ISO-8601>",
      "duration_s":  null,
-     "exit_status": null
+     "exit_status": null,
+     "parent_run":  "<run_id parsed from --from, or null>",
+     "diff_reason": "<--reason text, or null>"
    }
    ```
+
+   If `--from <prev>` was passed, parse the run id out of `<prev>`
+   (basename of the directory) and record it as `parent_run`. Require
+   `--reason` in that case — refusing it forces the user to articulate
+   *why* this run differs, which is the whole point of capturing lineage.
+   If `--from` is absent, both fields are `null`.
 
 5. **Run the executable.** Stream stdout+stderr to `log.txt`. Export
    `RUN_DIR` and `RUN_ID` for the binary's benefit.
@@ -89,7 +99,71 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
 6. **Patch `config.json`** with `duration_s = $((END-START))` and
    `exit_status = ${STATUS}`.
 
-7. **Verify and report.**
+7. **Prepend a `log.md` stub** (only if `log.md` exists in the cwd —
+   created by `/geant4-claude:geant4-init`). The stub carries the four
+   mechanical Outcome fields (run id, status, duration, output path),
+   so the orchestrator skill or the user only has to fill in Request,
+   Plan, Decision, and Notes. The stub is inserted above the
+   `<!-- ENTRY TEMPLATE -->` comment so the most recent entry sits
+   directly under the intro.
+
+   ```bash
+   if [[ -f log.md ]]; then
+     TS="$(date -u +'%Y-%m-%d %H:%M UTC')"
+     if [[ ${STATUS} -eq 0 ]]; then
+       STATUS_DESC="succeeded"
+     else
+       STATUS_DESC="failed (exit ${STATUS})"
+     fi
+     # List what the binary wrote, excluding the wrapper-generated files.
+     OUTPUTS="$(find "${RUN_DIR}" -maxdepth 1 -mindepth 1 -type f \
+                  ! -name 'log.txt' ! -name 'config.json' \
+                  -printf '  - runs/'"${RUN_ID}"'/%P\n' | head -5)"
+     STUB="$(mktemp)"
+     {
+       echo "## ${TS} — <one-line headline>"
+       echo
+       echo "### Request"
+       echo
+       echo "> <verbatim user request, in their own words>"
+       echo
+       echo "### Plan"
+       echo
+       echo "- Goal:      <…>"
+       echo "- Geometry:  <…>"
+       echo "- Beam:      <…>"
+       echo "- Sensitive: <…>"
+       echo "- Output:    <…>"
+       echo "- Analysis:  <…>"
+       echo
+       echo "### Decision"
+       echo
+       echo "<approved as-is | edited spec to <…> | plan-only>"
+       echo
+       echo "### Outcome"
+       echo
+       echo "- Run id:   \`runs/${RUN_ID}\`"
+       echo "- Status:   ${STATUS_DESC} in $((END-START))s"
+       if [[ -n "${OUTPUTS}" ]]; then
+         echo "- Output:"
+         echo "${OUTPUTS}"
+       else
+         echo "- Output:   runs/${RUN_ID}/ (no extra files written)"
+       fi
+       echo "- Notes:    <one or two lines: what worked, what surprised, what's next>"
+       echo
+     } > "${STUB}"
+     # Insert above the <!-- entry-template --> comment block.
+     awk -v stub="$(cat "${STUB}")" '
+       /^<!--/ && !done { printf "%s\n\n", stub; done=1 }
+       { print }
+       END { if (!done) printf "%s\n", stub }
+     ' log.md > log.md.new && mv log.md.new log.md
+     rm -f "${STUB}"
+   fi
+   ```
+
+8. **Verify and report.**
    - Don't assert anything about output files — the binary may write
      `hits.root`, `tracks.root`, `summary.json`, or nothing at all. Just
      list whatever's in `${RUN_DIR}` after the run.
@@ -111,6 +185,11 @@ runs/<run_id>/
 ├── config.json    # generic provenance (the file analysis tools must read)
 └── ...            # whatever your binary wrote (hits.root, etc.)
 ```
+
+Plus, if the cwd contains a `log.md` (the workspace is `init`-ed): a
+new dated entry prepended at the top with the four mechanical Outcome
+fields filled in and Request / Plan / Decision / Notes left as
+`<…>` placeholders for the orchestrator or user to fill.
 
 ## Failure modes
 

@@ -17,6 +17,14 @@ The default flow this skill drives is the no-C++ path:
 init → detector → example → (edit macros/run.mac) → build → run → analyze
 ```
 
+`/geant4-claude:geant4-preview` exists (renders three RayTracer JPEGs
+of the GDML) and is the right tool when you want to *eyeball* the
+geometry before running. It is currently **alpha** — see its slash
+command for the known limitation — so the orchestrator does NOT call
+it automatically. Offer it explicitly when the user's spec puts a
+sensor near the beam axis or otherwise smells like a geometry trap
+(see Geometry-sanity gates below); otherwise skip.
+
 Bring-your-own-`main.cc` is the alternative the skill picks when the spec
 needs hard-coded geometry, custom physics (optical photons, HP neutrons,
 scintillation, polarization), or an output schema that isn't `Hits`.
@@ -107,6 +115,33 @@ step 3 of the flow becomes "write a custom `src/main.cc` +
 `src/CMakeLists.txt`" instead of `/geant4-claude:geant4-example`.
 For the Cherenkov example, this is the case — surface it in the plan.
 
+### Geometry-sanity gates (run before presenting the plan)
+
+Walk the captured spec against these four checks. If any fail, surface
+the issue in **Open questions / risks** with a *concrete fix*, not a
+generic warning. "Risks: none" is almost always wrong on a first pass —
+one of these usually applies.
+
+1. **Sensor in the forward direct-flux path.** If the sensitive volume
+   sits between the beam origin and the primary active target
+   (radiator, converter, reflector), it records direct primary flux
+   *on top of* whatever the user wanted from the target — usually
+   unphysical. Canonical trap: on-axis sensor for a Cherenkov +
+   reflector geometry. Propose moving the sensor downstream past the
+   target, off-axis, or wrapping the target instead.
+2. **Overlapping placements.** Two volumes sharing a face or
+   overlapping (e.g., sensor flush against radiator) silently produce
+   wrong steps at the boundary. Insert a small gap, or check that the
+   sensor is a daughter of the radiator rather than a sibling sitting
+   at the same coordinates.
+3. **"Sensor" not tagged sensitive.** If the spec names a sensor /
+   backplate / detector volume but the user hasn't said which volume
+   records hits, confirm before scaffolding — wrong tag = empty `Hits`
+   TTree and hours wasted before the user notices.
+4. **Beam origin outside or on the world boundary.** Primaries get
+   killed before reaching the target if the origin sits on or outside
+   the world volume. Pull it inside by ≥1 cm.
+
 ## Step 2 — Present a brief plan for approval
 
 Once the spec is complete, show the user a compact plan in this shape
@@ -185,12 +220,17 @@ orchestrator-flavored slice of that rule:
 - Capture the user's **decision** (approved as-is, edited spec to …,
   or plan-only).
 - Capture the **outcome** (run id, status, one or two lines on what
-  happened).
+  happened). Note: `/geant4-claude:geant4-run` already prepended a
+  stub block to `log.md` with the run id, status, duration, and
+  output paths filled in. Your job is to **find that stub** (it's the
+  most recent `## YYYY-MM-DD …` block at the top of `log.md`, with
+  `<…>` placeholders in Request / Plan / Decision / Notes) and edit
+  the placeholders. Don't write a new section from scratch — that
+  duplicates the entry.
 
-Prepend all four as a single dated section at the top of `log.md`
-before reporting back to the user. Update `result.md` with the key
-numbers and plot paths after analysis. Use the template that ships in
-`log.md`.
+Update `result.md` with the key numbers and plot paths after analysis.
+The `<!-- ENTRY TEMPLATE -->` comment block at the bottom of `log.md`
+is a reference for future sessions; do not modify or delete it.
 
 ## Step 4 — Final report
 

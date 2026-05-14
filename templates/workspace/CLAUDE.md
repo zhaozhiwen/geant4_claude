@@ -69,6 +69,13 @@ the four runtime commands work the same in both cases.
 6. `/geant4-claude:geant4-analyze runs/<id>` — auto-detects the output schema and
    plots; or write your own script in `analysis/`.
 
+Optional: between steps 1 and 2 you can run
+`/geant4-claude:geant4-preview geometries/<name>.gdml` to eyeball the
+geometry. The command is currently alpha (rendering hangs in the v11.4
+container — see the slash-command doc); when it does render, it
+produces three JPEG views useful for catching forward-flux sensor
+traps and other geometry mistakes before the simulation runs.
+
 To iterate on geometry, repeat step 1 — no rebuild needed because the
 example main loads GDML at runtime.
 

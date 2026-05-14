@@ -250,6 +250,9 @@ For the full architecture, see [docs/DESIGN.md](docs/DESIGN.md).
 | `ModuleNotFoundError: uproot` (analyze step) | `pip install --user uproot numpy matplotlib`, or use a venv. |
 | Empty `Hits` tree | No volume has the sensitive aux tag, or gun energy is zero. |
 | Build fails | `g4run shell` and try `cmake -S /…/src -B /tmp/build` manually to see the real cmake error. |
+| `TGeoManager::Import` returns null in container ROOT | The pinned image's ROOT 6.38 is built without `root-geom`. To preview geometry, load the GDML inside Geant4's own viewer via `g4run shell` and a `vis.mac` macro, not via ROOT. |
+| `g4run: command not found` outside slash commands | `g4run` lives at `${CLAUDE_PLUGIN_ROOT}/bin/g4run` (set only inside Claude Code's command context); the plugin doesn't touch your shell `$PATH`. For ad-hoc use, find the installed path with `claude plugin list` and either invoke it by full path or symlink it to `~/.local/bin/g4run`. |
+| `g4run validate-gdml` passes but `geant4-run` crashes on the GDML | The validator does an xmllint pass plus a `G4GDMLParser::Read` pass, but the parser does not do schema validation (the schema is hosted on the web and not always reachable in sandboxes), so a typo'd unit name like `unit="milimeter"` can still slip through as a warning. Check `runs/<id>/log.txt` for the underlying Geant4 message. |
 
 ## License
 

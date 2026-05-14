@@ -110,6 +110,22 @@ wait_for() {
   fail "timeout (${timeout}s) waiting for: ${marker}"
 }
 
+# Wait until a file exists on disk and is non-empty; fail on timeout.
+# More reliable than text-matching the tmux pane when Claude collapses
+# the underlying bash output (e.g. CMake's "[100%] Built target …" is
+# hidden inside a "~N lines" summary).
+wait_for_file() {
+  local path="$1" timeout="${2:-60}"
+  local i
+  for ((i=0; i<timeout; i++)); do
+    [[ -s "${path}" ]] && return 0
+    [[ -x "${path}" ]] && return 0    # executables can be 0-size on bind mounts? defensive
+    sleep 1
+  done
+  pane_tail 40
+  fail "timeout (${timeout}s) waiting for file: ${path}"
+}
+
 # --- prereqs ----------------------------------------------------------------
 require tmux
 require claude
@@ -189,22 +205,30 @@ fi
 # Helper: launch claude in the sandbox, tolerantly handle the
 # workspace-trust dialog (fires only on first launch in a path), and
 # wait for the welcome card before returning.
+#
+# Detection strings (as of Claude Code v2.1.x):
+#   trust dialog → "Yes, I trust this folder" (the option text)
+#   welcome     → "shift+tab to cycle" (status-line hint, always present
+#                  once the prompt is ready; single-line so capture-pane
+#                  doesn't split it across the side-by-side card layout
+#                  the way "Tips for getting started" gets split).
+# If a future Claude Code release changes either, update both strings.
 launch_claude() {
   tmux send-keys -t "${SESSION}" \
     "cd '${WS}' && HOME='${SANDBOX}' claude" Enter
   local i pane
-  for ((i=0; i<15; i++)); do
+  for ((i=0; i<25; i++)); do
     pane=$(tmux capture-pane -t "${SESSION}" -p)
-    if printf '%s' "${pane}" | grep -qF "trust this folder"; then
+    if printf '%s' "${pane}" | grep -qF "Yes, I trust this folder"; then
       key Enter   # default option 1: trust
     fi
-    if printf '%s' "${pane}" | grep -qF "Welcome"; then
+    if printf '%s' "${pane}" | grep -qF "shift+tab to cycle"; then
       return 0
     fi
     sleep 1
   done
-  pane_tail 30
-  fail "claude TUI didn't reach welcome state within 15 s"
+  pane_tail 40
+  fail "claude TUI didn't reach welcome state within 25 s"
 }
 
 log "tmux: starting session ${SESSION}"
@@ -297,9 +321,11 @@ note "✓ example files in place"
 # --- phase 4b: /geant4-claude:geant4-build ---------------------------------
 log "phase 4b: /geant4-claude:geant4-build"
 send "/geant4-claude:geant4-build"
-wait_for "built" 300
-
-[ -x "${WS}/build/geant4_claude_main" ] || fail "binary not built"
+# CMake's "[100%] Built target …" line is the obvious text marker, but
+# Claude collapses long bash outputs into a "~N lines" summary, so the
+# pane won't show it. Poll the produced binary directly instead — that's
+# the post-condition we care about anyway.
+wait_for_file "${WS}/build/geant4_claude_main" 300
 note "✓ binary built"
 
 # --- phase 4c: /geant4-claude:geant4-run -----------------------------------
@@ -335,9 +361,9 @@ log "phase 4d: /geant4-claude:geant4-analyze (fast-path on Hits TTree)"
 # to accommodate.
 RUN_ID="${RUN_DIR##*/}"
 send "/geant4-claude:geant4-analyze runs/${RUN_ID}"
-wait_for "edep_hist" 240 || wait_for "MeV" 240
-
-[ -f "${RUN_DIR}/edep_hist.png" ] || fail "edep_hist.png not produced"
+# Same collapse problem as the build phase — wait for the output PNG
+# instead of a text marker.
+wait_for_file "${RUN_DIR}/edep_hist.png" 240
 note "✓ analyze produced ${RUN_DIR}/edep_hist.png"
 
 # --- exit Claude Code & cleanup --------------------------------------------

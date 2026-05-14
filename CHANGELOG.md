@@ -11,8 +11,105 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-05-14
+
+### Added
+
+- **`bin/g4run validate-gdml` upgraded to a two-layer check.** The
+  existing xmllint pass now runs alongside a `G4GDMLParser::Read` pass
+  via a tiny cached helper built once at
+  `${CLAUDE_PLUGIN_DATA}/cache/bin/validate_gdml` from
+  `templates/validate/{main.cc,CMakeLists.txt}`. Catches the class of
+  error xmllint can't: undefined materials (`G4_NOT_A_MAT`), undefined
+  solid/volume refs, malformed `<auxiliary>` tags. Custom exception
+  handler translates fatal `G4Exception` into a clean `exit 1` with a
+  one-line error message instead of `SIGABRT` (no more "core dumped"
+  shouting in the user's terminal).
+- **`bin/g4run preview <gdml> [out_dir]` + `/geant4-claude:geant4-preview`
+  command (alpha).** Infrastructure: `templates/preview/{main.cc,
+  CMakeLists.txt}` ships a tiny Geant4 program that loads the GDML and
+  drives the RayTracer driver to produce three JPEG views (iso, xy,
+  yz) into `<gdml>.preview/`. Cached helper binary at
+  `${CACHE_DIR}/bin/preview_gdml` is built on first use, same pattern
+  as `validate_gdml`. **Status: alpha — rendering hangs.** Three
+  different vis-command sequences all trigger
+  `G4RTMessenger::SetNewValue: No valid current viewer` and the
+  `/vis/rayTracer/trace` step hangs. Documented in
+  `commands/geant4-preview.md` and `docs/DESIGN.md` hardening backlog
+  item #2 with three suspected fixes; orchestrator skill does NOT
+  call preview automatically.
+- **`/geant4-claude:geant4-validate <topic> <run_dir>` command.** Runs
+  a physics closure test against a finished run, prints PASS/FAIL with
+  numbers and tolerance, writes `runs/<id>/validate_<topic>.json`.
+  Exit code: `0` PASS, `1` FAIL, `2` bad input. v1 ships `cherenkov`
+  (Frank-Tamm yield vs simulation, Poisson-tolerance gate). Validator
+  Python scripts live at `scripts/validators/<topic>.py`; new
+  validators are a one-file addition. Frank-Tamm closure verified
+  against known references (CO₂ 1m → 154 photons/event, quartz 10mm
+  → 913 photons/event).
+- **`scripts/validators/`** — new directory for host-side closure-test
+  Python scripts driven by `/geant4-claude:geant4-validate`. v1
+  contents: `cherenkov.py`. Listed in `CLAUDE.md` repo conventions.
+- **`/geant4-claude:geant4-run --from <prev>` + `--reason <text>`
+  flags.** Records `parent_run` and `diff_reason` in `runs/<id>/config.json`
+  so re-run lineage is machine-readable instead of living only in
+  filename suffixes / `log.md` prose. Additive contract change to
+  `config.json` (`parent_run`, `diff_reason`); old analysis tools
+  that don't read the fields keep working.
+- **`/geant4-claude:geant4-run` now prepends a `log.md` stub.** If
+  `log.md` exists in the workspace (created by `geant4-init`), the
+  run command writes a new dated entry block at the top with the four
+  mechanical Outcome fields (run id, status, output paths, duration)
+  prefilled. The orchestrator skill (or the user) only needs to fill
+  Request, Plan, Decision, and Notes. Stub is inserted above the
+  `<!-- ENTRY TEMPLATE -->` marker comment.
+
+### Changed
+
+- **`templates/workspace/log.md` template wrapped in an HTML comment.**
+  The entry-template block previously sat at the bottom of the file
+  as a literal stub with `<verbatim user request, …>` angle-bracket
+  placeholders. After the orchestrator prepended its first real entry,
+  the stub stayed mid-file and looked like an unfilled entry — confusing
+  for anyone reading `log.md` to pick up where they left off. Now
+  wrapped in `<!-- … -->` so it's invisible in any markdown render but
+  still available to future Claude sessions as a structural reference.
+  Orchestrator skill's log.md-handling instructions updated to insert
+  new entries above the comment.
+- **Orchestrator skill (`skills/geant4`) gains a "Geometry-sanity
+  gates" subsection.** Four explicit checks Claude runs against the
+  captured spec before presenting the plan: sensor in the forward-flux
+  path (the Cherenkov + reflector trap), overlapping placements,
+  sensor not tagged sensitive, beam origin on/outside the world
+  boundary. Each carries a concrete fix to propose rather than a
+  generic warning. Replaces the previous "list real risks" guidance
+  that was easy to satisfy with `Risks: none`.
+
+### Fixed
+
+- **`bin/g4run validate-gdml` usage text was misleading.** It described
+  the command as xmllint-only and warned that "missing materials, bad
+  units, or undefined refs slip past." That's no longer true now that
+  the G4GDMLParser layer is in place — usage rewritten.
+
 ### Documentation
 
+- **README troubleshooting** has three new rows: `TGeoManager::Import
+  returns null in container ROOT` (root-geom is not compiled in;
+  preview goes through the Geant4 viewer instead — hardening backlog
+  item #6 *accepted, resolved by #2*), `g4run: command not found
+  outside slash commands` (the wrapper lives at
+  `${CLAUDE_PLUGIN_ROOT}/bin/g4run`, which is only set inside
+  slash-command execution; symlink to `~/.local/bin/g4run` for ad-hoc
+  shell use), and a note on the residual `validate-gdml` limitation
+  (schema validation requires reaching the web-hosted XSD).
+- **`docs/DESIGN.md` gains a "Hardening backlog (post-v0.0.3)"
+  section** listing seven actionable follow-up items surfaced by the
+  Cherenkov dogfooding session: real GDML validation (#1, shipped),
+  headless preview (#2, alpha), log.md stub (#3, shipped), run
+  lineage (#4, shipped), physics closure validators (#5, shipped),
+  root-geom (#6, accepted), `g4run` symlink (#7, deferred). Each
+  item carries motivation + concrete fix + expected impact.
 - **README quickstart restructured into three independent paths** so the
   shipped example flow is cleanly separated from the user's manual flow:
   *A. Describe what you want to simulate* (orchestrator skill, recommended),

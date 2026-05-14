@@ -107,9 +107,15 @@ bin/g4run build <src_dir> <build_dir>     # CMake-build user source inside the c
 bin/g4run exec  <executable> [args…]      # run any binary inside the container
 bin/g4run shell                           # interactive shell inside the container
 bin/g4run root  <args…>                   # forward to ROOT inside the container
-bin/g4run validate-gdml <file>            # xmllint a GDML file inside the container
+bin/g4run validate-gdml <file>            # xmllint + G4GDMLParser parse check
+bin/g4run preview <file.gdml> [out_dir]   # RayTracer JPEG previews (3 views)
 bin/g4run pull / info                     # image management & status
 ```
+
+`validate-gdml` and `preview` build tiny cached helper binaries
+(`${CACHE_DIR}/bin/validate_gdml`, `…/preview_gdml`) from
+`templates/validate/` and `templates/preview/` on first use; rebuilds
+are triggered automatically when the relevant source files change.
 
 `build` and `exec` are content-neutral — `bin/g4run` knows nothing about
 the user's CMake target name, output schema, or argument shape. Slash
@@ -181,12 +187,21 @@ macro file, not here; analysis scripts that need them parse the macro.
   "git_sha":     "<workspace HEAD or null>",
   "started_utc": "2026-05-08T22:10:45Z",
   "duration_s":  8.2,
-  "exit_status": 0
+  "exit_status": 0,
+  "parent_run":  null,
+  "diff_reason": null
 }
 ```
 
 Analysis tools read this, *not* the surrounding directory structure. It is
 the provenance record.
+
+`parent_run` + `diff_reason` together capture **run lineage**: when a
+user re-runs with `--from runs/<prev> --reason "bumped sensor to off-axis"`,
+both fields are populated and the chain is walkable from
+`runs/B/config.json` → `parent_run = "A"` → `runs/A/config.json`. The
+two fields are an additive contract change to the run record — old
+analysis tools that don't read them keep working.
 
 ## Slash command surface
 
@@ -201,7 +216,9 @@ demo, and one helper writes GDML.
 | `/geant4-claude:geant4-run` | Execute the user's binary inside the container; allocate `runs/<id>/`; capture generic provenance (executable, args, image, git_sha, duration, exit status). Substitutes `{run_dir}`/`{run_id}` placeholders and exports `RUN_DIR`/`RUN_ID` so the binary can write into the run dir. |
 | `/geant4-claude:geant4-analyze` | Inspect the run's ROOT file. Schema-aware fast-path (canned per-event edep histogram) when a `Hits` TTree matching the example schema is found; otherwise generates a custom analysis script tailored to the actual branches. |
 | `/geant4-claude:geant4-detector` | Translate a natural-language detector spec into a validated standalone GDML file under `geometries/`. The output is consumable by any `main.cc` that calls `G4GDMLParser::Read(...)`. |
+| `/geant4-claude:geant4-preview` | Render headless 3-view JPEG previews of a GDML file via Geant4's RayTracer driver. Builds a cached helper inside the container on first use. The orchestrator inserts this step after `geant4-detector` so geometry mistakes surface before a simulation runs. |
 | `/geant4-claude:geant4-example` | Drop a self-contained smoke test (GDML + macro + a generic GDML-loading `main.cc` + analysis script) into the workspace. Independent of the manual user flow — used once on a fresh install to confirm the toolchain works, or as reference code when writing your own simulation. The orchestrator skill may compose the example main with detector output for simple-physics specs as an internal shortcut, but the manual flow expects the user to bring their own `main.cc`. |
+| `/geant4-claude:geant4-validate` | Run a physics closure test (Frank-Tamm Cherenkov yield in v1) against a `runs/<id>/` directory. Reads the output ROOT file, compares simulated yield to the analytic prediction, prints PASS/FAIL with sigma, writes a machine-readable summary at `runs/<id>/validate_<topic>.json`. Topics live under `scripts/validators/<topic>.py`. |
 
 Each command's full contract lives in its `.md` file under `commands/`.
 
@@ -237,6 +254,19 @@ my-project/
 └── analysis/            # python analysis scripts
 ```
 
+Plugin-internal scripts and templates (live in the plugin checkout,
+*not* in any user workspace):
+
+```
+geant4_claude/
+├── templates/validate/      C++ harness for /geant4-claude:geant4-validate-gdml.
+│                            Built on first use; cached under CLAUDE_PLUGIN_DATA.
+├── templates/preview/       C++ harness for /geant4-claude:geant4-preview
+│                            (alpha; see Hardening backlog).
+└── scripts/validators/      Python validators driven by /geant4-claude:geant4-validate.
+    └── cherenkov.py         v1: Frank-Tamm closure test.
+```
+
 `/geant4-claude:geant4-example` adds the demo on top:
 
 ```
@@ -266,6 +296,146 @@ rename these four.
   shift inside Geant4 across patch versions).
 - TTree schema change = major bump.
 - GDML is whatever Geant4 11.4 accepts; we don't define our own schema layer.
+
+## Hardening backlog (post-v0.0.3)
+
+Items below were surfaced by dogfooding the plugin on a real Cherenkov
+study. Each is actionable and scoped — listed here so the maintainer can
+pick them up in order of leverage. None of them block any current user
+flow; they're sharp edges around what already works.
+
+### 1. Real GDML validation (not just xmllint)
+
+**Current:** `bin/g4run validate-gdml <file>` runs `xmllint --noout`,
+catching XML syntax errors only. Missing materials, malformed
+`<auxiliary>` tags, bad unit names (`mm` vs `millimeter`), and undefined
+volume references slip past and surface as a crash deep inside
+`/geant4-claude:geant4-run`.
+
+**Fix:** ship a tiny C++ harness (e.g. `templates/validate/main.cc`)
+that does `G4GDMLParser::Read()` against the file, prints any parser
+error, and exits non-zero on failure. Build it on first use inside the
+container, cache the binary at `${CLAUDE_PLUGIN_DATA}/cache/bin/`, and
+call it from `cmd_validate_gdml` after the xmllint pass.
+
+**Impact:** Geometry errors surface before `/geant4-claude:geant4-build`
+/`-run`, when the fix is "edit the GDML" rather than "read the run log."
+
+### 2. Headless GDML preview (`/geant4-claude:geant4-preview`) *(alpha — rendering open)*
+
+**Current:** Infrastructure shipped — `templates/preview/{main.cc,
+CMakeLists.txt}`, `bin/g4run preview <gdml> [out_dir]` subcommand,
+`commands/geant4-preview.md`, and a cached helper binary built on
+first use at `${CACHE_DIR}/bin/preview_gdml`. The helper builds and
+loads the GDML cleanly. **Rendering does not work yet.** With the
+v11.4 container's RayTracer driver, three different command sequences
+(combinations of `/vis/open`, `/vis/scene/create`, `/vis/sceneHandler/
+create`, `/vis/viewer/create`, then `/vis/rayTracer/trace`) all
+trigger `G4RTMessenger::SetNewValue: No valid current viewer. Using
+default RayTracer.` and the subsequent `/vis/rayTracer/trace` hangs
+indefinitely. The orchestrator skill therefore does NOT call preview
+automatically; the slash command exists but is documented as alpha.
+
+**Suspect:** `ApplyCommand`-driven RayTracer setup may not match what
+the messenger expects in non-interactive (no G4UIsession) mode. Worth
+investigating: (a) install a `G4UIsession` before issuing vis
+commands; (b) load the commands via `/control/execute <macro.mac>`
+instead of direct `ApplyCommand`; (c) call vis manager APIs
+(`vis->CreateSceneHandler`, `vis->CreateViewer`) directly in C++
+instead of going through the messenger.
+
+**Workaround until rendering works:** `g4run shell`, then inside the
+container:
+
+```
+$Geant4_DIR/bin/geant4-vis-config --help  # check available drivers
+# Then a manual vis macro through any user binary that initializes
+# G4VisExecutive, e.g. /geant4-claude:geant4-example's main with
+# UI handed an extra macro.
+```
+
+**Impact when working:** the forward-flux-sensor class of bug is
+visible at first glance instead of after a 1000-event run.
+
+### 3. `/geant4-claude:geant4-run` writes a `log.md` stub
+
+**Current:** The orchestrator skill prepends a full dated section to
+`log.md`. Four of the Outcome fields (run id, status, output path,
+duration) are 100% derivable from `runs/<id>/config.json`, so the
+skill hand-types values the command already wrote.
+
+**Fix:** `geant4-run` writes a stub `log.md` block at the top with the
+mechanical fields filled in and the narrative fields left as `<…>`
+placeholders. The orchestrator/Claude fills only Request, Plan,
+Decision, and the Notes line.
+
+**Impact:** Removes a mechanical step from post-run housekeeping, and
+guarantees the log entry exists even if the session ends before Claude
+writes the narrative.
+
+### 4. Run lineage (`--from <prev>` flag + `parent_run` in config.json)
+
+**Current:** `--name <slug>` lets a user mark a re-run, but there's no
+machine-readable link from `runs/B/config.json` back to `runs/A/`. The
+v1 → v2 → v3 chain lives only in filename suffixes and `log.md` prose.
+
+**Fix:** add `--from runs/<prev>` (and optional `--reason "<text>"`) to
+`geant4-run`. When set, record `"parent_run": "<prev_run_id>"` and
+`"diff_reason": "<text>"` in `config.json`. This is a contract change
+to `config.json` → minor version bump.
+
+**Impact:** Analysis tools and `log.md` readers can walk the chain
+mechanically. The orchestrator can render run trees.
+
+### 5. Physics closure validators (`/geant4-claude:geant4-validate <topic>`)
+
+**Current:** Validation of physics correctness (Frank-Tamm yield for
+Cherenkov, Bethe-Bloch dE/dx for ionization, Compton edge position,
+etc.) happens by hand in `result.md`. The highest-signal part of the
+Cherenkov dogfooding session was that closure check — and it was
+manual.
+
+**Fix:** new command with a library of canned closure tests. v1
+candidates:
+
+- `cherenkov` — Frank-Tamm yield vs. simulated count for a given
+  radiator + beam (Poisson agreement).
+- `bethe-bloch` — dE/dx of a charged particle through a thin foil
+  vs. PDG table value.
+- `compton` — Compton edge position in a γ-on-target spectrum.
+
+Each validator reads `runs/<id>/`, makes documented schema
+assumptions, and prints PASS/FAIL with the number and tolerance.
+
+**Impact:** The orchestrator (and the user) can confirm a simulation
+is physically sane before drawing scientific conclusions.
+
+### 6. ROOT in the pinned image lacks `root-geom` *(accepted, resolved by #2)*
+
+**Current:** `g4run root` works, but `TGeoManager::Import` returns null
+— the image is built without `-Droot-geom=ON`. Documented in the
+README troubleshooting table.
+
+**Decision:** accept the gap. Users who want a headless geometry view
+now have `/geant4-claude:geant4-preview` (item 2), which goes through
+Geant4's own viewer and matches what the user sees in interactive vis
+sessions. There's no reason to add a parallel ROOT-based renderer.
+
+### 7. `g4run` discoverability outside slash commands
+
+**Current:** `g4run` lives at `${CLAUDE_PLUGIN_ROOT}/bin/g4run`, which
+is only set inside slash-command execution. Ad-hoc debugging from a
+plain shell requires finding the installed plugin path manually.
+Documented in README troubleshooting now.
+
+**Fix (cheap):** at install time, offer to symlink `g4run` into
+`~/.local/bin/`. The symlink target uses the plugin's stable install
+path (under `~/.claude/plugins/.../geant4-claude/bin/g4run`). Idempotent;
+removed on plugin uninstall.
+
+**Impact:** `g4run shell`, `g4run validate-gdml`, and `g4run info` all
+become usable from anywhere — particularly useful when debugging an
+issue raised by a slash command without leaving the failing terminal.
 
 ## Open questions (parked, do not block MVP)
 

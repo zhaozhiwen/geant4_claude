@@ -7,11 +7,15 @@ asked for**, **what Claude planned**, **what the user decided**, and
 up where you left off; the user reads it to remember why a particular
 run exists.
 
-Use the template below for each new entry. Keep prose tight — link to
-specific `runs/<id>/` directories or analysis scripts rather than
-quoting their contents.
+Keep prose tight — link to specific `runs/<id>/` directories or
+analysis scripts rather than quoting their contents.
 
----
+<!--
+ENTRY TEMPLATE — do not modify, do not fill in. Prepend a copy of this
+block (with angle-bracket placeholders replaced) immediately above
+this comment for each new entry, so the most recent entry sits right
+under the intro paragraph and the template stays as a reference for
+future sessions.
 
 ## YYYY-MM-DD HH:MM UTC — <one-line headline>
 
@@ -42,3 +46,4 @@ quoting their contents.
 - Run id:  `runs/<id>` (or "n/a — plan only")
 - Status:  <succeeded | failed at <step> with <reason>>
 - Notes:   <one or two lines: what worked, what surprised, what's next>
+-->

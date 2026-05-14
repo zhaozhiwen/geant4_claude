@@ -143,6 +143,104 @@ extra_binds_for() {
   done
 }
 
+# Build a tiny helper binary inside the container from a source subtree
+# under templates/<src_subdir>/. Caches the binary at
+# ${CACHE_DIR}/bin/<helper_name>. Idempotent — only rebuilds when any
+# source file is newer than the cached binary. Used by cmd_validate_gdml
+# and cmd_preview to ship small Geant4-linked tools without forcing the
+# user to build them from a workspace.
+HELPERS_DIR=""
+ensure_helper() {
+  local helper_name="$1" src_subdir="$2"
+  resolve_cache_dir
+  HELPERS_DIR="${CACHE_DIR}/bin"
+  mkdir -p "${HELPERS_DIR}"
+  local helper="${HELPERS_DIR}/${helper_name}"
+  local src="${PLUGIN_ROOT}/templates/${src_subdir}"
+  [[ -d "${src}" ]] || die "helper source missing: ${src}"
+
+  if [[ -x "${helper}" ]]; then
+    local stale=0
+    while IFS= read -r f; do
+      [[ "${f}" -nt "${helper}" ]] && { stale=1; break; }
+    done < <(find "${src}" -type f \( -name '*.cc' -o -name '*.hh' -o -name 'CMakeLists.txt' \))
+    [[ "${stale}" -eq 0 ]] && return 0
+    log "${helper_name}: source changed, rebuilding"
+  fi
+
+  ensure_sif
+  local build_dir="${CACHE_DIR}/build/${helper_name}"
+  rm -rf "${build_dir}"
+  mkdir -p "${build_dir}"
+
+  local wd cache_real src_real build_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
+  src_real="$(readlink -f "${src}")"
+  build_real="$(readlink -f "${build_dir}")"
+
+  local -a binds=(--bind "${wd}" --bind "${cache_real}")
+  while IFS= read -r line; do binds+=("${line}"); done < <(
+    extra_binds_for "${wd}" "${cache_real}" "${src_real}" "${build_real}"
+  )
+
+  log "building ${helper_name} (one-time, ~30 s)…"
+  apptainer exec \
+    --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
+    "${binds[@]}" \
+    --pwd "${wd}" \
+    "${SIF_PATH}" \
+    bash -lc 'source "$0" && cmake -S "$1" -B "$2" && cmake --build "$2" -j' \
+    "${ENTRYPOINT}" "${src_real}" "${build_real}"
+
+  [[ -x "${build_real}/${helper_name}" ]] \
+    || die "${helper_name} build did not produce ${build_real}/${helper_name}"
+  install -Dm755 "${build_real}/${helper_name}" "${helper}"
+  rm -rf "${build_real}"
+  log "${helper_name} cached at ${helper}"
+}
+
+# Run a cached helper inside the container. The helper lives under
+# CACHE_DIR (already bind-mounted); arg paths under wd or CACHE_DIR are
+# also auto-bound. Anything else needs explicit handling.
+run_helper() {
+  local helper_name="$1"; shift
+  resolve_cache_dir
+  local helper="${CACHE_DIR}/bin/${helper_name}"
+  [[ -x "${helper}" ]] || die "helper not cached: ${helper}"
+
+  ensure_sif
+  local wd cache_real helper_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
+  helper_real="$(readlink -f "${helper}")"
+
+  local -a resolved_args=()
+  local -a extra_paths=()
+  for arg in "$@"; do
+    if [[ -e "${arg}" ]]; then
+      local r; r="$(readlink -f "${arg}")"
+      resolved_args+=("${r}")
+      extra_paths+=("${r}")
+    else
+      resolved_args+=("${arg}")
+    fi
+  done
+
+  local -a binds=(--bind "${wd}" --bind "${cache_real}")
+  while IFS= read -r line; do binds+=("${line}"); done < <(
+    extra_binds_for "${wd}" "${cache_real}" "${helper_real}" "${extra_paths[@]}"
+  )
+
+  apptainer exec \
+    --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
+    "${binds[@]}" \
+    --pwd "${wd}" \
+    "${SIF_PATH}" \
+    bash -lc 'source "$0" && exec "$@"' \
+    "${ENTRYPOINT}" "${helper_real}" "${resolved_args[@]}"
+}
+
 cmd_build() {
   local src_dir="${1:-}" build_dir="${2:-}"
   [[ -n "${src_dir}" && -n "${build_dir}" ]] \
@@ -206,8 +304,35 @@ cmd_exec() {
 cmd_validate_gdml() {
   local gdml="${1:-}"
   [[ -n "${gdml}" ]] || die "usage: g4run validate-gdml <file.gdml>"
+  [[ -f "${gdml}" ]] || die "no such file: ${gdml}"
+
+  # Layer 1: XML well-formedness (xmllint, ~ms).
   in_container "xmllint --noout '${gdml}'"
-  log "GDML well-formed: ${gdml}"
+
+  # Layer 2: G4GDMLParser semantic check. Catches missing materials, bad
+  # solid/volume refs, malformed auxiliary tags — anything xmllint misses.
+  ensure_helper validate_gdml validate
+  run_helper validate_gdml "${gdml}"
+
+  log "GDML parses cleanly (xmllint + G4GDMLParser): ${gdml}"
+}
+
+cmd_preview() {
+  local gdml="${1:-}" out_dir="${2:-}"
+  [[ -n "${gdml}" ]] || die "usage: g4run preview <file.gdml> [out_dir]"
+  [[ -f "${gdml}" ]] || die "no such file: ${gdml}"
+
+  if [[ -z "${out_dir}" ]]; then
+    local base; base="$(basename "${gdml}" .gdml)"
+    out_dir="$(dirname "${gdml}")/${base}.preview"
+  fi
+  mkdir -p "${out_dir}"
+  local out_real; out_real="$(readlink -f "${out_dir}")"
+
+  ensure_helper preview_gdml preview
+  run_helper preview_gdml "${gdml}" "${out_real}"
+
+  log "preview images written to ${out_dir}/"
 }
 
 usage() {
@@ -223,7 +348,14 @@ Subcommands:
   build <src> <build>           CMake-build the user source tree inside the container.
   exec  <executable> [args...]  Run an executable inside the container.
   root  <args...>               Run ROOT inside the container.
-  validate-gdml <file>          xmllint a GDML file inside the container.
+  validate-gdml <file>          Two-layer GDML check inside the container:
+                                xmllint (XML well-formedness) plus
+                                G4GDMLParser::Read (materials, refs, aux tags).
+                                Builds a tiny cached helper on first use.
+  preview <file.gdml> [out_dir] Render headless previews (3 JPEGs) of a GDML
+                                file via Geant4's RayTracer driver. Builds a
+                                tiny cached helper on first use. Default out_dir
+                                is <file.gdml>.preview/ next to the GDML.
 
 Image: ${IMAGE_TAG}
 Cache resolution order:
@@ -246,5 +378,6 @@ case "${sub}" in
   exec)           cmd_exec "$@" ;;
   root)           cmd_root "$@" ;;
   validate-gdml)  cmd_validate_gdml "$@" ;;
+  preview)        cmd_preview "$@" ;;
   *)              usage; die "unknown subcommand: ${sub}" ;;
 esac

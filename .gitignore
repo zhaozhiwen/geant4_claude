@@ -48,8 +48,9 @@ wiki/raw/geant4-src/
 # Per-user Obsidian vault config (workspace state, plugins, themes)
 wiki/.obsidian/
 
-# Per-user Claude Code local settings (personal allowlist, not for the public repo)
-.claude/settings.local.json
+# Per-user Claude Code local state — settings.local.json, scheduled_tasks.lock,
+# transcripts, etc. None of it belongs in the public repo.
+.claude/
 
 # Scratch chunked outputs from PDG-chapter ingest (regenerable from the source PDF)
 wiki/raw/pdg-reviews/parts/
