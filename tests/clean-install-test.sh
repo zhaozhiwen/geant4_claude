@@ -54,7 +54,15 @@
 #   being approved.
 #
 # Usage:
-#   tests/clean-install-test.sh [SESSION_NAME]
+#   tests/clean-install-test.sh [--local|--github] [SESSION_NAME]
+#
+#   --github  (default) Install the plugin from the public GitHub
+#             marketplace (zhaozhiwen/geant4_claude). Tests the
+#             currently-published version, not local edits.
+#   --local   Install the plugin from this checkout. Tests the local
+#             code you're about to release. Use this before pushing a
+#             release tag to catch breakage that didn't make it to
+#             clean-smoke.sh's plumbing checks.
 #
 #   SESSION_NAME defaults to "g4c_clean_install". The sandbox lives at
 #   /tmp/${SESSION_NAME}/ and is removed on success (preserved on failure
@@ -65,6 +73,20 @@
 # download).
 
 set -euo pipefail
+
+# --- parse args -------------------------------------------------------------
+MODE="github"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --local)  MODE="local";  shift ;;
+    --github) MODE="github"; shift ;;
+    --help|-h)
+      sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *) break ;;
+  esac
+done
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SESSION="${1:-g4c_clean_install}"
@@ -240,8 +262,17 @@ launch_claude
 note "✓ TUI ready in sandbox"
 
 # --- phase 1: plugin install ------------------------------------------------
-log "phase 1: install plugin via marketplace"
-send "/plugin marketplace add zhaozhiwen/geant4_claude"
+# /plugin marketplace add accepts either a GitHub shorthand (owner/repo)
+# or an absolute filesystem path to a directory containing
+# .claude-plugin/marketplace.json. The path form is what powers --local.
+if [[ "${MODE}" = "local" ]]; then
+  MARKETPLACE_SOURCE="${PLUGIN_ROOT}"
+  log "phase 1: install plugin via marketplace (LOCAL: ${PLUGIN_ROOT})"
+else
+  MARKETPLACE_SOURCE="zhaozhiwen/geant4_claude"
+  log "phase 1: install plugin via marketplace (GITHUB: ${MARKETPLACE_SOURCE})"
+fi
+send "/plugin marketplace add ${MARKETPLACE_SOURCE}"
 wait_for "Successfully added marketplace" 60
 
 send "/plugin install geant4-claude@geant4-claude"
