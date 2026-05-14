@@ -25,6 +25,7 @@ the four runtime commands work the same in both cases.
 | `analysis/`   | Python scripts that read `runs/<id>/*.root`. |
 | `log.md`      | Chronological work log — append at the top after each session. |
 | `result.md`   | Per-run findings, with paths to `runs/<id>/` and `analysis/`. |
+| `report.html` | Single-page browser-friendly summary of the study (overview, runs table, key numbers, plots, interpretation). Self-contained — open in any browser via `file://`. Derived from `log.md` + `result.md` + `runs/`; markdown is authoritative if they disagree. |
 
 ## Non-negotiables
 
@@ -42,19 +43,26 @@ the four runtime commands work the same in both cases.
 5. **Geometry vs. rebuild.** If you use GDML loaded at runtime, geometry
    edits don't require a rebuild — change the file, run again. If you
    hard-code geometry in C++, every change needs `/geant4-claude:geant4-build`.
-6. **Maintain `log.md` and `result.md`.** Every simulation effort —
-   orchestrator-driven *or* manual command invocation — leaves a
-   record. Prepend a new dated section to `log.md` capturing four
-   things: the user's **original request** (verbatim, in their own
-   words), the **plan** Claude drew up (spec + step list), the user's
-   **decision** (approved, edited the spec, or stop-and-just-write-the-
-   plan), and the **outcome** (run id, exit status, one-line summary
-   of what happened). After a `/geant4-claude:geant4-analyze` that
-   produced a noteworthy result, add or update a section in `result.md`
-   with key numbers + plot paths. Both files are load-bearing handoff
-   documents — the user reads them to pick up where they left off, and
-   future Claude sessions read them to understand context. Treat them
-   as part of the deliverable, not as decoration.
+6. **Maintain `log.md`, `result.md`, and `report.html`.** Every
+   simulation effort — orchestrator-driven *or* manual command
+   invocation — leaves a record. Prepend a new dated section to
+   `log.md` capturing four things: the user's **original request**
+   (verbatim, in their own words), the **plan** Claude drew up (spec
+   + step list), the user's **decision** (approved, edited the spec,
+   or stop-and-just-write-the-plan), and the **outcome** (run id,
+   exit status, one-line summary of what happened). After a
+   `/geant4-claude:geant4-analyze` that produced a noteworthy
+   result, add or update a section in `result.md` with key numbers
+   + plot paths, and update `report.html` to match (replace the
+   placeholders in Summary / Setup / Runs table / Key numbers /
+   Plots / Notes; preserve the section structure). The markdown
+   files are authoritative — `report.html` is a presentation layer
+   derived from them, so if they disagree the markdown wins. All
+   three are load-bearing handoff documents — the user reads them
+   to pick up where they left off, future Claude sessions read them
+   to understand context, and `report.html` is what a collaborator
+   or reviewer opens in a browser. Treat them as part of the
+   deliverable, not as decoration.
 
 ## Typical loop (default — NL detector + example main)
 

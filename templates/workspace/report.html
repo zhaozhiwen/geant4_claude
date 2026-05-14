@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--
+  Workspace report — single-file HTML summary of a Geant4 study.
+
+  Audience: human readers (yourself a month from now, a collaborator
+  on email, a reviewer with no Claude session). Open in any browser
+  via file:// and it works offline; relative paths resolve from the
+  workspace root, so keep this file next to log.md, result.md, and
+  the runs/ / geometries/ / analysis/ directories.
+
+  How it gets updated:
+    - You can hand-edit any <!-- EDIT: ... --> section directly.
+    - Or ask Claude in this workspace to "update the report" — it
+      will read runs/ + log.md + result.md and replace placeholders.
+    - Keep the section structure intact; add or remove rows inside
+      sections (Runs table, Key numbers, Plots grid) rather than
+      restructuring.
+
+  Relationship to the markdown handoff docs:
+    - log.md   = chronological work log (verbatim request / plan /
+                 decision / outcome per dated entry). Authoritative.
+    - result.md = per-run findings record. Authoritative.
+    - report.html (this file) = browser-friendly presentation layer
+                 derived from the above. If they disagree, the
+                 markdown wins.
+-->
+<title>Project Report</title>
+<style>
+  :root {
+    --fg: #1a202c;
+    --muted: #4a5568;
+    --accent: #2b6cb0;
+    --bg: #ffffff;
+    --border: #cbd5e0;
+    --stripe: #f7fafc;
+    --placeholder: #a0aec0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    max-width: 880px;
+    margin: 2rem auto;
+    padding: 0 1.5rem 4rem;
+    line-height: 1.55;
+  }
+  header {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  h1 { margin: 0; font-size: 1.75rem; }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; }
+  h2 {
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25rem;
+    margin-top: 2rem;
+  }
+  h3 { color: var(--fg); margin: 1.25rem 0 0.5rem; }
+  p { margin: 0.5rem 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    margin: 0.75rem 0;
+  }
+  th, td {
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { background: var(--stripe); font-weight: 600; }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+  .plots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  figure {
+    margin: 0;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--stripe);
+  }
+  figure img { max-width: 100%; height: auto; display: block; border-radius: 2px; }
+  figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
+  code, pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+  }
+  pre {
+    background: var(--stripe);
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  dl.kv { margin: 0.5rem 0; }
+  dl.kv dt { font-weight: 600; margin-top: 0.4rem; }
+  dl.kv dd { margin: 0 0 0 1.25rem; color: var(--muted); }
+  .placeholder { color: var(--placeholder); font-style: italic; }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  @media print {
+    body { max-width: none; margin: 0; padding: 0.5in; }
+    h2 { page-break-after: avoid; }
+    figure { page-break-inside: avoid; }
+    .plots { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><!-- EDIT: project title --><span class="placeholder">Project title (edit me)</span></h1>
+  <div class="meta">
+    <!-- EDIT: short status line + ISO date, e.g. "In progress · updated 2026-05-14" -->
+    <span class="placeholder">Status — last updated YYYY-MM-DD</span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>
+    <!-- EDIT: 1–3 sentences. What's being simulated, why, and the headline result. -->
+    <span class="placeholder">One paragraph describing the simulation study and its headline finding. Replace this placeholder.</span>
+  </p>
+</section>
+
+<section id="setup">
+  <h2>Setup</h2>
+
+  <h3>Geometry</h3>
+  <p>
+    <!-- EDIT: short prose description; reference the GDML file under geometries/. -->
+    <span class="placeholder">Describe the active volume(s), world, materials, and which volumes are tagged sensitive. Cite the GDML file under <code>geometries/</code>.</span>
+  </p>
+  <!--
+    Optional preview image — uncomment once /geant4-claude:geant4-preview
+    produces JPGs in geometries/<name>.preview/ :
+
+    <figure>
+      <img src="geometries/REPLACE_NAME.preview/preview_iso.jpg" alt="Geometry, isometric view">
+      <figcaption>Isometric view (RayTracer).</figcaption>
+    </figure>
+  -->
+
+  <h3>Beam &amp; physics</h3>
+  <dl class="kv">
+    <dt>Beam particle</dt>     <dd><!-- EDIT --><span class="placeholder">e.g. e-</span></dd>
+    <dt>Beam energy</dt>       <dd><!-- EDIT --><span class="placeholder">e.g. 1 GeV</span></dd>
+    <dt>Origin / direction</dt><dd><!-- EDIT --><span class="placeholder">e.g. (0, 0, -0.5 m) along +z</span></dd>
+    <dt>Events</dt>            <dd><!-- EDIT --><span class="placeholder">e.g. 1000</span></dd>
+    <dt>Physics list</dt>      <dd><!-- EDIT --><span class="placeholder">e.g. FTFP_BERT (+ G4OpticalPhysics for Cherenkov)</span></dd>
+    <dt>Sensitive volumes</dt> <dd><!-- EDIT --><span class="placeholder">Comma-separated list of volume names tagged sensitive</span></dd>
+  </dl>
+</section>
+
+<section id="runs">
+  <h2>Runs</h2>
+  <p class="meta">
+    One row per <code>runs/&lt;id&gt;/</code>. Mechanical fields (id, status, duration)
+    come from <code>runs/&lt;id&gt;/config.json</code>; notes are your prose.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Run id</th>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Events</th>
+        <th>Duration</th>
+        <th>Parent</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- EDIT: one row per run. Add or remove rows freely. -->
+      <tr>
+        <td><code><span class="placeholder">YYYYMMDD-HHMMSS-xxxxxx</span></code></td>
+        <td><span class="placeholder">slug or —</span></td>
+        <td><span class="placeholder">ok / failed at &lt;step&gt;</span></td>
+        <td><span class="placeholder">1000</span></td>
+        <td><span class="placeholder">8.2 s</span></td>
+        <td><span class="placeholder">— or parent run id</span></td>
+        <td><span class="placeholder">one-line what changed vs parent</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="results">
+  <h2>Results</h2>
+
+  <h3>Key numbers</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Quantity</th>
+        <th>Value</th>
+        <th>Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- EDIT: one row per headline number. Source can be a run path, a validator JSON, or a hand calculation. -->
+      <tr>
+        <td><span class="placeholder">e.g. mean photons / event</span></td>
+        <td><span class="placeholder">154 ± 12</span></td>
+        <td><span class="placeholder"><code>runs/.../validate_cherenkov.json</code></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Plots</h3>
+  <div class="plots">
+    <!-- EDIT: one <figure> per plot. src paths are relative to this file (the workspace root). -->
+    <figure>
+      <img src="runs/REPLACE_RUN_ID/edep_hist.png" alt="Plot placeholder">
+      <figcaption><span class="placeholder">What the plot shows, and which run it came from.</span></figcaption>
+    </figure>
+    <!--
+      Duplicate the <figure> block for additional plots. Two- and three-column
+      layouts auto-form via CSS grid; rendering uses whatever fits at the
+      reader's viewport width.
+    -->
+  </div>
+</section>
+
+<section id="notes">
+  <h2>Notes &amp; interpretation</h2>
+  <p>
+    <!-- EDIT: free-form prose. Physics context, surprises, what's next. -->
+    <span class="placeholder">Interpretation in physics terms — does the simulated number match an analytic expectation (Frank-Tamm yield, Bethe-Bloch dE/dx, Compton edge)? What's the headline takeaway? What would change with more events, a different geometry, or a different physics list?</span>
+  </p>
+</section>
+
+<footer>
+  <p>
+    <strong>Provenance.</strong>
+    Full chronological record in <a href="log.md">log.md</a>;
+    latest per-run findings in <a href="result.md">result.md</a>;
+    per-run metadata in each <code>runs/&lt;id&gt;/config.json</code>.
+    Simulation tooling: <a href="https://github.com/zhaozhiwen/geant4_claude">geant4_claude</a>
+    plugin · Geant4 + ROOT in a pinned apptainer image · analysis with
+    <a href="https://github.com/scikit-hep/uproot5">uproot</a>.
+  </p>
+</footer>
+
+</body>
+</html>

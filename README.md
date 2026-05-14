@@ -104,7 +104,7 @@ simulation.
 
 ```text
 > /geant4-claude:geant4-init
-✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
+✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md, report.html)
 ✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
 
 > /geant4-claude:geant4-example
@@ -191,6 +191,7 @@ my-project/
 ├── .gitignore         excludes runs/, *.root, build/, __pycache__/
 ├── log.md             chronological work log (Claude appends after each run)
 ├── result.md          per-run findings (Claude updates after a noteworthy analyze)
+├── report.html        single-page browser-friendly summary (overview + runs table + plots + interpretation)
 ├── src/               your main.cc + CMakeLists.txt go here
 ├── geometries/        GDML files (optional; if you load geometry at runtime)
 ├── macros/            Geant4 .mac files
@@ -207,8 +208,12 @@ or reference material — when you're ready, write your own
 `src/main.cc` and your own `analysis/*.py`.
 
 The directory layout is opinionated — skills and commands assume those
-names. `log.md` and `result.md` are starter handoff documents Claude
-maintains as the project evolves.
+names. `log.md`, `result.md`, and `report.html` are starter handoff
+documents Claude maintains as the project evolves: the two markdown
+files are the authoritative records (versioned, easy to diff);
+`report.html` is the browser-friendly presentation layer derived from
+them — open it locally with `file://` to share a snapshot of the
+project with a collaborator who isn't in Claude Code.
 
 ## Design highlights
 

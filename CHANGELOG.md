@@ -11,6 +11,29 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ## [Unreleased]
 
+### Added
+
+- **`templates/workspace/report.html`** — single-page browser-friendly
+  summary of a Geant4 study. Joins `log.md` (chronological work log)
+  and `result.md` (per-run findings) as a third handoff document in
+  the scaffolded workspace skeleton. Self-contained HTML (inline CSS,
+  no JavaScript, no external resources); relative paths resolve from
+  the workspace root so opening it via `file://` Just Works offline.
+  Sections: project header, summary, geometry + beam/physics setup,
+  runs table (read from `runs/<id>/config.json`), key-numbers table,
+  plot grid (auto-laid via CSS), interpretation, provenance footer.
+  Print-friendly via `@media print`. Updated alongside `result.md`
+  after a noteworthy `/geant4-claude:geant4-analyze` — the markdown
+  files stay authoritative; `report.html` is a presentation layer
+  derived from them.
+- **GitHub Pages landing page** at
+  [zhaozhiwen.github.io/geant4_claude](https://zhaozhiwen.github.io/geant4_claude/).
+  Built from `docs/` with the Jekyll Cayman theme — two files
+  (`docs/_config.yml`, `docs/index.md`), no Actions workflow,
+  no Gemfile. README, DESIGN, CHANGELOG continue to live at the repo
+  root and on GitHub; the landing page is a separate one-page
+  entry surface for casual visitors.
+
 ## [0.0.4] - 2026-05-14
 
 ### Added

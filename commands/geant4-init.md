@@ -55,8 +55,12 @@ Optional argument: `--force` (overwrite existing workspace files).
    - `log.md` — chronological work log (Claude appends one-line
      entries to it after each successful `/geant4-claude:geant4-run`).
    - `result.md` — per-run findings (Claude updates after a noteworthy
-     `/geant4-claude:geant4-analyze`). Treat both as load-bearing
-     handoff documents, not decorative.
+     `/geant4-claude:geant4-analyze`).
+   - `report.html` — single-page browser-friendly summary (overview +
+     runs table + plot grid + interpretation). Self-contained — opens
+     in any browser via `file://`. Derived from the two markdown
+     handoff docs; the markdown is authoritative if they disagree.
+   - Treat all three as load-bearing handoff documents, not decorative.
 
 4. **Pull the runtime image** through the wrapper. This is the *only* sanctioned
    way to invoke the Geant4 runtime; all later commands also go through it:
@@ -176,7 +180,8 @@ Optional argument: `--force` (overwrite existing workspace files).
 ## Outputs
 
 - A populated workspace under `cwd`: `CLAUDE.md`, `.gitignore`, `log.md`,
-  `result.md`, `src/`, `geometries/`, `macros/`, `runs/`, `analysis/`
+  `result.md`, `report.html`, `src/`, `geometries/`, `macros/`, `runs/`,
+  `analysis/`
   (subdirectories empty except for `.gitkeep` placeholders).
 - A cached `.sif` at `${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
   (resolved by `bin/g4run`; override with `GEANT4_CLAUDE_CACHE`).
