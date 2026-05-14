@@ -56,13 +56,15 @@
 # Usage:
 #   tests/clean-install-test.sh [--local|--github] [SESSION_NAME]
 #
-#   --github  (default) Install the plugin from the public GitHub
-#             marketplace (zhaozhiwen/geant4_claude). Tests the
-#             currently-published version, not local edits.
-#   --local   Install the plugin from this checkout. Tests the local
-#             code you're about to release. Use this before pushing a
-#             release tag to catch breakage that didn't make it to
-#             clean-smoke.sh's plumbing checks.
+#   --local   (default) Install the plugin from this checkout. Tests
+#             the local code you're about to release. Use this before
+#             pushing a release tag to catch breakage that didn't make
+#             it to clean-smoke.sh's plumbing checks.
+#   --github  Install the plugin from the public GitHub marketplace
+#             (zhaozhiwen/geant4_claude). Tests the currently-published
+#             version, not local edits. Useful for confirming a release
+#             is healthy after pushing, or for reproducing user-reported
+#             install issues against the canonical source.
 #
 #   SESSION_NAME defaults to "g4c_clean_install". The sandbox lives at
 #   /tmp/${SESSION_NAME}/ and is removed on success (preserved on failure
@@ -75,7 +77,7 @@
 set -euo pipefail
 
 # --- parse args -------------------------------------------------------------
-MODE="github"
+MODE="local"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --local)  MODE="local";  shift ;;
