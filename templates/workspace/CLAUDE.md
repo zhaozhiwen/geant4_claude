@@ -26,6 +26,7 @@ the four runtime commands work the same in both cases.
 | `log.md`      | Chronological work log — append at the top after each session. |
 | `result.md`   | Per-run findings, with paths to `runs/<id>/` and `analysis/`. |
 | `report.html` | Single-page browser-friendly summary of the study (overview, runs table, key numbers, plots, interpretation). Self-contained — open in any browser via `file://`. Derived from `log.md` + `result.md` + `runs/`; markdown is authoritative if they disagree. |
+| `embed_html.py` | Stdlib-only helper that takes `report.html` (with relative `<img src="runs/...">` paths) and writes `report_portable.html` with each image base64-embedded inline. Run when you want to email or upload the report as a single self-contained file. Idempotent and traceable (preserves original paths in `data-source` attributes). Output is gitignored (`*_portable.html`). |
 
 ## Non-negotiables
 

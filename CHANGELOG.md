@@ -13,6 +13,16 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ### Added
 
+- **`templates/workspace/embed_html.py`** — stdlib-only helper that
+  takes `report.html` with relative `<img src="runs/...">` references
+  and writes `report_portable.html` with each image base64-embedded
+  inline. Usage: `python3 embed_html.py report.html`. Idempotent
+  (negative-lookahead skips `src="data:..."` tags on re-run);
+  preserves original paths in a `data-source` attribute for
+  traceability. Output gitignored via `*_portable.html` in the
+  workspace `.gitignore`. Use case: emailing or uploading the report
+  as a single self-contained file when the `runs/` directory can't
+  travel with it.
 - **`templates/workspace/report.html`** — single-page browser-friendly
   summary of a Geant4 study. Joins `log.md` (chronological work log)
   and `result.md` (per-run findings) as a third handoff document in

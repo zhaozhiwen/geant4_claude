@@ -13,12 +13,21 @@
   the runs/ / geometries/ / analysis/ directories.
 
   How it gets updated:
-    - You can hand-edit any <!-- EDIT: ... --> section directly.
+    - You can hand-edit any "EDIT:" placeholder directly (search for
+      that token to find every spot meant for human input).
     - Or ask Claude in this workspace to "update the report" — it
       will read runs/ + log.md + result.md and replace placeholders.
     - Keep the section structure intact; add or remove rows inside
       sections (Runs table, Key numbers, Plots grid) rather than
       restructuring.
+
+  Sharing this report off-machine:
+    - The relative <img src="runs/...png"> references only resolve
+      when the runs/ directory is present alongside this file.
+    - For a single-file copy you can email or attach, run
+        python3 embed_html.py report.html
+      which writes report_portable.html with each image base64-
+      embedded inline (stdlib only, no dependencies).
 
   Relationship to the markdown handoff docs:
     - log.md   = chronological work log (verbatim request / plan /

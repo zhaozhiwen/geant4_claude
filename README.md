@@ -192,6 +192,7 @@ my-project/
 ├── log.md             chronological work log (Claude appends after each run)
 ├── result.md          per-run findings (Claude updates after a noteworthy analyze)
 ├── report.html        single-page browser-friendly summary (overview + runs table + plots + interpretation)
+├── embed_html.py      stdlib helper: convert report.html into a single-file report_portable.html (images base64-embedded) for emailing
 ├── src/               your main.cc + CMakeLists.txt go here
 ├── geometries/        GDML files (optional; if you load geometry at runtime)
 ├── macros/            Geant4 .mac files

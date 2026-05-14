@@ -60,7 +60,12 @@ Optional argument: `--force` (overwrite existing workspace files).
      runs table + plot grid + interpretation). Self-contained — opens
      in any browser via `file://`. Derived from the two markdown
      handoff docs; the markdown is authoritative if they disagree.
-   - Treat all three as load-bearing handoff documents, not decorative.
+   - `embed_html.py` — stdlib-only helper that converts
+     `report.html` (with relative `<img>` paths) into
+     `report_portable.html` with images base64-embedded for emailing
+     or uploading as a single file. `*_portable.html` is gitignored.
+   - Treat the three handoff documents (log.md / result.md /
+     report.html) as load-bearing, not decorative.
 
 4. **Pull the runtime image** through the wrapper. This is the *only* sanctioned
    way to invoke the Geant4 runtime; all later commands also go through it:
@@ -180,8 +185,8 @@ Optional argument: `--force` (overwrite existing workspace files).
 ## Outputs
 
 - A populated workspace under `cwd`: `CLAUDE.md`, `.gitignore`, `log.md`,
-  `result.md`, `report.html`, `src/`, `geometries/`, `macros/`, `runs/`,
-  `analysis/`
+  `result.md`, `report.html`, `embed_html.py`, `src/`, `geometries/`,
+  `macros/`, `runs/`, `analysis/`
   (subdirectories empty except for `.gitkeep` placeholders).
 - A cached `.sif` at `${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
   (resolved by `bin/g4run`; override with `GEANT4_CLAUDE_CACHE`).

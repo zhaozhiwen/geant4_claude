@@ -248,6 +248,7 @@ my-project/
 ├── log.md               # chronological work log; Claude appends after each run
 ├── result.md            # per-run findings; Claude updates after a noteworthy analyze
 ├── report.html          # single-page browser-friendly summary (overview + runs table + plots + interpretation); self-contained, derived from log.md + result.md + runs/
+├── embed_html.py        # stdlib helper: `python3 embed_html.py report.html` → report_portable.html (images base64-embedded for emailing)
 ├── src/                 # your main.cc + CMakeLists.txt go here (or `/geant4-claude:geant4-example` fills it for the smoke test)
 ├── geometries/          # GDML files, one per detector (optional)
 ├── macros/              # Geant4 macro files

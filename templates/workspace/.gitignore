@@ -6,3 +6,5 @@ build/
 __pycache__/
 .venv/
 .ipynb_checkpoints/
+# derived portable HTML produced by embed_html.py (regenerable)
+*_portable.html
