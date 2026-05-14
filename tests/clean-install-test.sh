@@ -277,7 +277,12 @@ fi
 send "/plugin marketplace add ${MARKETPLACE_SOURCE}"
 wait_for "Successfully added marketplace" 60
 
-send "/plugin install geant4-claude@geant4-claude"
+# Bare `geant4-claude` rather than `geant4-claude@geant4-claude` —
+# the latter works against the GitHub marketplace but fails against a
+# locally-added marketplace with "Marketplace 'geant4-claude' not
+# found" (the marketplace's effective name differs from its display
+# name when added by path). The bare form works for both sources.
+send "/plugin install geant4-claude"
 # /plugin install pauses on a scope-confirmation prompt. Default option
 # (user scope) is right for solo testing.
 wait_for "user scope" 30
@@ -342,7 +347,10 @@ note "✓ workspace skeleton + cached .sif present"
 # --- phase 4a: /geant4-claude:geant4-example -------------------------------
 log "phase 4a: /geant4-claude:geant4-example (drop demo)"
 send "/geant4-claude:geant4-example"
-wait_for "validated" 60 || wait_for "well-formed" 60
+# example writes 5 files into the workspace, the last to land is
+# typically analysis/example.py — wait for it instead of pattern-matching
+# the validate-gdml banner (whose text has churned: "well-formed" → "parses cleanly").
+wait_for_file "${WS}/analysis/example.py" 90
 
 [ -f "${WS}/src/geant4_claude_main.cc" ] || fail "example src/main missing"
 [ -f "${WS}/src/CMakeLists.txt" ]        || fail "example CMakeLists missing"
