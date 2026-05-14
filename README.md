@@ -260,7 +260,13 @@ For the full architecture, see [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Acknowledgments
 
-The container image is built and maintained at
-[github.com/gemc/g4install](https://github.com/gemc/g4install). The
-plugin pins a specific tag of that image; bumping it is a minor
-version bump for `geant4_claude`.
+- **Geant4** — the simulation toolkit this plugin drives. See
+  [geant4.web.cern.ch/about](https://geant4.web.cern.ch/about) for the
+  project's history, scope, and citation policy. Any publication that
+  uses simulation output produced through this plugin should cite the
+  Geant4 Collaboration's references (NIM A 506 (2003) 250-303;
+  IEEE-TNS 53 (2006) 270-278; NIM A 835 (2016) 186-225).
+- **`g4install` container** — built and maintained at Jefferson Lab;
+  see [jeffersonlab.github.io/g4home](https://jeffersonlab.github.io/g4home).
+  The plugin pins a specific tag of that image; bumping the tag is a
+  minor version bump for `geant4_claude`.
