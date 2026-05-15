@@ -12,8 +12,8 @@
 
   --fg:           #E8E6E0;
   --fg-soft:      #B7BEC9;
-  --fg-mute:      #6B7480;
-  --fg-faint:     #4A525E;
+  --fg-mute:      #838C9A;
+  --fg-faint:     #727B8A;
 
   --cyan:         #00D9FF;
   --cyan-soft:    #9DECFF;
@@ -162,6 +162,14 @@ a:hover { color: var(--cyan-soft); }
 }
 .nav__github::after { display: none !important; }
 .nav__github:hover { border-color: rgba(0, 217, 255, 0.45); }
+
+@media (max-width: 620px) {
+  .nav { padding: 1.1rem var(--gutter); }
+  .nav__links { gap: 0.9rem; }
+  .nav__links a:not(.nav__github) { display: none; }
+  .nav__github span { display: none; }
+  .nav__github { padding: 0.42rem 0.5rem; }
+}
 
 /* ========================================================================
    HERO
@@ -368,6 +376,8 @@ a:hover { color: var(--cyan-soft); }
 .cone__spokes line:nth-child(6) { animation-delay: 2.0s; }
 
 .electron {
+  transform-box: view-box;
+  transform-origin: 0 0;
   animation: electron 4s linear infinite;
 }
 
@@ -451,16 +461,16 @@ a:hover { color: var(--cyan-soft); }
   display: flex;
   align-items: baseline;
   gap: 0.45rem;
-  font-family: var(--serif);
   line-height: 1;
 }
 .stat__value .num {
-  font-size: clamp(2.2rem, 4vw, 2.8rem);
-  font-weight: 400;
-  font-style: italic;
+  font-family: var(--mono);
+  font-size: clamp(2.1rem, 3.8vw, 2.7rem);
+  font-weight: 600;
+  font-style: normal;
   color: var(--fg);
   letter-spacing: -0.02em;
-  font-feature-settings: "ss01";
+  font-variant-numeric: tabular-nums;
 }
 .stat__value .unit {
   font-family: var(--mono);

@@ -81,8 +81,8 @@
     </div>
 
     <figure class="hero__figure" aria-label="Cherenkov cone schematic">
-      <div class="figure__corner figure__corner--tl mono">x = 0.0 cm</div>
-      <div class="figure__corner figure__corner--tr mono">backplate</div>
+      <div class="figure__corner figure__corner--tl mono">radiator · CO₂ 1 atm</div>
+      <div class="figure__corner figure__corner--tr mono">backplate · z = 1 m</div>
       <div class="figure__corner figure__corner--bl mono">θ_c = 26.1°</div>
       <div class="figure__corner figure__corner--br mono">R = 3.15 cm</div>
 
@@ -109,13 +109,19 @@
             <stop offset="50%" stop-color="#00D9FF"/>
             <stop offset="100%" stop-color="#00D9FF" stop-opacity="0"/>
           </radialGradient>
+          <filter id="glow" x="-200%" y="-200%" width="500%" height="500%">
+            <feGaussianBlur stdDeviation="2.4" result="b"/>
+            <feMerge>
+              <feMergeNode in="b"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
         </defs>
 
         <rect width="480" height="360" fill="url(#grid)"/>
 
         <!-- backplate -->
         <line x1="400" y1="60" x2="400" y2="300" stroke="#3B4150" stroke-width="2" stroke-dasharray="2 4"/>
-        <text x="408" y="74" class="cone-label">z = 1.0 m</text>
 
         <!-- beam axis -->
         <line x1="40" y1="180" x2="400" y2="180" stroke="#3B4150" stroke-width="0.6" stroke-dasharray="2 4"/>
@@ -159,15 +165,12 @@
           <circle cx="400" cy="318" r="2.4" fill="#9DECFF"/>
         </g>
 
-        <!-- angle annotation -->
-        <path d="M 175 180 A 55 55 0 0 0 173 153" fill="none" stroke="#FFB300" stroke-width="1" opacity="0.85"/>
-        <text x="184" y="170" class="cone-label cone-label--accent">θc</text>
+        <!-- angle annotation (drawn at the cone vertex) -->
+        <path d="M 166 180 A 46 46 0 0 0 161 160" fill="none" stroke="#FFB300" stroke-width="1.1" opacity="0.9"/>
+        <text x="173" y="172" class="cone-label cone-label--accent">θc</text>
 
         <!-- axis label -->
-        <text x="42" y="195" class="cone-label">e⁻ · 1 GeV</text>
-
-        <!-- backplate ring annotation -->
-        <text x="408" y="300" class="cone-label">ring R</text>
+        <text x="44" y="197" class="cone-label">e⁻ · 1 GeV</text>
       </svg>
     </figure>
   </div>
