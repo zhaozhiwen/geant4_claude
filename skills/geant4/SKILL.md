@@ -1,6 +1,6 @@
 ---
 name: geant4
-description: Orchestrate the full Geant4 simulation flow (init → detector → build → run → analyze) from a single natural-language user request. Load whenever the user asks to "do", "build", "run", "set up", "create", or "simulate" anything in Geant4 — including one-shot setups like "simulate a 1 GeV e- on a lead block" or "Cherenkov yield from a CO2 radiator". Captures the physics spec, asks targeted clarifying questions when anything required is missing, presents a brief plan for approval, then drives the slash commands in sequence. This is the main entry point for any user who hasn't already picked a single step to run.
+description: Orchestrate the full Geant4 simulation flow (init → detector → preview → build → run → analyze) from a single natural-language user request. Load whenever the user asks to "do", "build", "run", "set up", "create", or "simulate" anything in Geant4 — including one-shot setups like "simulate a 1 GeV e- on a lead block" or "Cherenkov yield from a CO2 radiator". Captures the physics spec, asks targeted clarifying questions when anything required is missing, presents a brief plan for approval, then drives the slash commands in sequence. This is the main entry point for any user who hasn't already picked a single step to run.
 ---
 
 # geant4 — full-flow orchestrator
@@ -14,16 +14,19 @@ commands (`/geant4-claude:geant4-init`, `…detector`, `…build`, `…run`,
 The default flow this skill drives is the no-C++ path:
 
 ```
-init → detector → example → (edit macros/run.mac) → build → run → analyze
+init → detector → preview → example → (edit macros/run.mac) → build → run → analyze
 ```
 
-`/geant4-claude:geant4-preview` exists (renders three RayTracer JPEGs
-of the GDML) and is the right tool when you want to *eyeball* the
-geometry before running. It is currently **alpha** — see its slash
-command for the known limitation — so the orchestrator does NOT call
-it automatically. Offer it explicitly when the user's spec puts a
-sensor near the beam axis or otherwise smells like a geometry trap
-(see Geometry-sanity gates below); otherwise skip.
+`/geant4-claude:geant4-preview` renders three orthographic PNGs of the
+GDML (XY/YZ/XZ) via a host-side matplotlib backend — fast (~1 s), no
+container call, supports box/tube/cone/polycone + 3D rotations. The
+orchestrator **does** call it automatically between `geant4-detector`
+and `geant4-build`, because catching a geometry trap visually saves
+the cost of the full build+run cycle. (A second `--backend=raytracer`
+backend wraps Geant4's RayTracer for exact-silhouette rendering of
+boolean solids; it's alpha and currently hangs in v11.4.) Skip the
+preview step if the user explicitly says "no preview" or the geometry
+is already known-good from an earlier session.
 
 Bring-your-own-`main.cc` is the alternative the skill picks when the spec
 needs hard-coded geometry, custom physics (optical photons, HP neutrons,
@@ -115,6 +118,14 @@ step 3 of the flow becomes "write a custom `src/main.cc` +
 `src/CMakeLists.txt`" instead of `/geant4-claude:geant4-example`.
 For the Cherenkov example, this is the case — surface it in the plan.
 
+When writing the custom `main.cc`, follow the same init-order contract
+the example main uses: do **not** call `runManager->Initialize()` before
+executing the macro. Let the macro own `/run/initialize`. Otherwise the
+user can't add `/run/numberOfThreads N` to the macro without hitting
+"Illegal application state" — Geant4 only accepts thread count in the
+PreInit state, before initialization. Common Geant4 examples (basic/B1,
+etc.) do call `Initialize()` in main; we deliberately don't.
+
 ### Geometry-sanity gates (run before presenting the plan)
 
 Walk the captured spec against these four checks. If any fail, surface
@@ -162,14 +173,16 @@ Spec
 Steps
 1. /geant4-claude:geant4-init       — scaffold workspace + cache image
 2. /geant4-claude:geant4-detector   — write geometries/<name>.gdml
-3. <one of:>
+3. /geant4-claude:geant4-preview    — three orthographic PNGs of the GDML;
+     eyeball before building. Skip if the user said "no preview".
+4. <one of:>
      /geant4-claude:geant4-example  — drop in the GDML-loading main + macro
      <or> hand-write src/main.cc + src/CMakeLists.txt for <reason>
-4. edit macros/<name>.mac for beam particle/energy/event count
-5. /geant4-claude:geant4-build
-6. /geant4-claude:geant4-run --exe build/<binary> -- \
+5. edit macros/<name>.mac for beam particle/energy/event count
+6. /geant4-claude:geant4-build
+7. /geant4-claude:geant4-run --exe build/<binary> -- \
      geometries/<name>.gdml macros/<name>.mac {run_dir}/<output>.root
-7. /geant4-claude:geant4-analyze runs/<id>
+8. /geant4-claude:geant4-analyze runs/<id>
      <one line: canned Hits-TTree plot vs. custom uproot script vs. ROOT macro>
 
 Defaults applied
@@ -182,7 +195,7 @@ Open questions / risks
 
 Then use `AskUserQuestion` with three options:
 
-1. **Approve and run** — proceed with steps 1–7.
+1. **Approve and run** — proceed with steps 1–8.
 2. **Edit the spec** — user wants to change something; loop back to step 1.
 3. **Just write the plan, don't run yet** — leaves the plan in the chat
    without executing; useful when the user wants a second look.
@@ -198,6 +211,12 @@ Only after the user picks "Approve and run". For each step:
    - `init` → `CLAUDE.md`, `.gitignore`, `log.md`, `result.md` and the
      six directories exist; `.sif` cached.
    - `detector` → `geometries/<name>.gdml` exists and validates.
+   - `preview` → `geometries/<name>.preview/{preview_xy,preview_yz,preview_xz}.png`
+     exist. Open the side view (`preview_yz.png`) and confirm the
+     captured spec matches what you drew — sensor on the right side
+     of the beam, target where you said it'd be, no off-axis offset.
+     If the picture disagrees with the spec, **stop and ask** before
+     moving to build; that's the whole point of this step.
    - `example` (or hand-written main) → `src/main.cc` (or `src/<name>.cc`)
      and `src/CMakeLists.txt` exist.
    - `build` → `build/<binary>` exists and is executable.

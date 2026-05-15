@@ -1,1 +1,5 @@
 pdg>=0.2.2
+# matplotlib + numpy power scripts/preview_gdml.py (sketch backend for
+# /geant4-claude:geant4-preview) and the canned analyze plots.
+matplotlib>=3.6
+numpy>=1.23

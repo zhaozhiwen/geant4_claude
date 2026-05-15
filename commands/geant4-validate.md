@@ -34,18 +34,61 @@ for a constant-`n` radiator.
 | Flag | Required? | Default | Meaning |
 |------|-----------|---------|---------|
 | `--radiator-length`  | yes | — | Track length through the radiator, e.g. `1m`, `50cm`. |
-| `--refractive-index` | yes | — | Refractive index of the radiator (constant `n`). |
 | `--wavelength-min`   | no  | `200nm` | Lower wavelength bound of the photon count. |
 | `--wavelength-max`   | no  | `800nm` | Upper wavelength bound. |
 | `--beam-beta`        | no  | `1.0` | `v/c` of the primary (1.0 = ultra-relativistic). |
-| `--photon-pdg`       | no  | `-22` | PDG code for optical photons in the TTree. |
 | `--tree`             | no  | `Hits` | Name of the TTree to read. |
 | `--root`             | no  | autodetect | Explicit `.root` file path (use when run dir has multiple). |
 | `--tolerance-sigma`  | no  | `3.0` | PASS if `|observed − predicted| < N · sigma`. |
 
-The TTree must have `event/I` and `pdg/I` branches at minimum — this
-matches the example main's `Hits` schema. Photon counts per event are
-derived by binning on `event` after filtering by `pdg == -22`.
+**Refractive-index flags** — pick one of the two paths. Required.
+
+*Constant n (cheaper, less accurate)*: a single number applied across
+the whole wavelength window. Fine for radiators where `n(λ)` varies
+<0.5% across `[λ_min, λ_max]` (e.g. low-density gases over narrow
+ranges); biased by 2-5% for dense radiators over visible light.
+
+| Flag | Meaning |
+|------|---------|
+| `--refractive-index` | Single dimensionless `n`. |
+
+*Dispersive n from GDML (recommended)*: reads the `RINDEX` matrix off
+the radiator material in your GDML and trapezoidally integrates
+Frank-Tamm in energy. The matrix's energy column is in Geant4 internal
+units (MeV), so 6.2 eV reads as `6.2e-06`.
+
+| Flag | Meaning |
+|------|---------|
+| `--rindex-from-gdml` | Path to a GDML file containing the material with a `RINDEX` matrix. |
+| `--rindex-material`  | Name of that material (must match the `<material name="…"/>` attribute). |
+
+Passing both is an error. Passing neither is an error.
+
+**Schema flags** — pick one of these two modes depending on how your
+TTree was written. The validator supports both because the example main
+writes per-hit rows but a custom main may write per-event rows.
+
+*Filtered mode (default)* — TTree has one row per hit with the photon
+PDG code stored; the validator filters and bins by event index.
+
+| Flag | Default | Meaning |
+|------|---------|---------|
+| `--event-branch` | `event` | Branch holding the event index. |
+| `--pdg-branch`   | `pdg`   | Branch holding the particle PDG code. |
+| `--photon-pdg`   | `-22`   | PDG code for optical photons in the TTree. |
+
+*Direct mode* — TTree has one row per event with a precomputed photon
+count. Use this when your custom main aggregates inside Geant4 (cheaper
+output, no PDG filtering on the host).
+
+| Flag | Default | Meaning |
+|------|---------|---------|
+| `--count-branch` | — (mode trigger) | Branch with per-event photon counts. When set, switches the validator to direct mode and ignores `--event-branch / --pdg-branch / --photon-pdg`. |
+
+The example main's `Hits` TTree (with `event/I` + `pdg/I` branches)
+works out-of-the-box with the filtered defaults. A custom main that
+stores Cherenkov yield in `Events.n_photons` would run with
+`--tree Events --count-branch n_photons`.
 
 ## Steps
 
@@ -96,8 +139,10 @@ derived by binning on `event` after filtering by `pdg == -22`.
 - v1 only ships the `cherenkov` validator. Adding a new validator =
   drop a `<topic>.py` next to `cherenkov.py`, document it in this file,
   and link from the orchestrator skill.
-- The cherenkov validator assumes constant refractive index. If `n(λ)`
-  varies meaningfully across `[λ_min, λ_max]`, use a tighter wavelength
-  window so the constant-`n` approximation holds.
+- If `n(λ)` varies meaningfully across `[λ_min, λ_max]`, prefer
+  `--rindex-from-gdml`. Falling back to `--refractive-index` is fine
+  when the geometry has no RINDEX matrix (the radiator material was
+  defined without optical properties), with the understanding that
+  predictions then carry a 2-5% bias on the upper bound.
 - Validators read `.root` files but **never** modify the run dir except
   to write their `validate_<topic>.json` summary. Re-running is safe.

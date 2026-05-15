@@ -318,8 +318,41 @@ cmd_validate_gdml() {
 }
 
 cmd_preview() {
-  local gdml="${1:-}" out_dir="${2:-}"
-  [[ -n "${gdml}" ]] || die "usage: g4run preview <file.gdml> [out_dir]"
+  # Two backends:
+  #   sketch    (default) — host-side matplotlib projection of <solids> +
+  #                         <structure>. No container, no Geant4 call. Three
+  #                         orthographic PNGs (xy/yz/xz). Stdlib XML parse +
+  #                         matplotlib. Fast, but does not handle boolean
+  #                         solids or non-axis-aligned curved surfaces beyond
+  #                         convex-hull silhouettes.
+  #   raytracer (alpha)   — Geant4 RayTracer driven by a cached helper
+  #                         binary. Three JPEGs (iso/xy/yz). Currently hangs
+  #                         in the v11.4 container; see docs/DESIGN.md
+  #                         hardening backlog. Kept opt-in for when it gets
+  #                         fixed.
+  local backend="sketch" gdml="" out_dir=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --backend=*)        backend="${1#--backend=}"; shift ;;
+      --backend)          backend="${2:-}"; shift 2 ;;
+      -h|--help)
+        cat <<EOF
+usage: g4run preview <file.gdml> [out_dir] [--backend=sketch|raytracer]
+
+Default backend is 'sketch' (matplotlib, host-side, fast).
+Use --backend=raytracer for the Geant4 RayTracer helper (alpha).
+EOF
+        return 0 ;;
+      --) shift; break ;;
+      -*) die "unknown flag: $1 (try --help)" ;;
+      *)  if [[ -z "${gdml}" ]]; then gdml="$1"
+          elif [[ -z "${out_dir}" ]]; then out_dir="$1"
+          else die "extra positional arg: $1"; fi
+          shift ;;
+    esac
+  done
+
+  [[ -n "${gdml}" ]] || die "usage: g4run preview <file.gdml> [out_dir] [--backend=sketch|raytracer]"
   [[ -f "${gdml}" ]] || die "no such file: ${gdml}"
 
   if [[ -z "${out_dir}" ]]; then
@@ -329,10 +362,27 @@ cmd_preview() {
   mkdir -p "${out_dir}"
   local out_real; out_real="$(readlink -f "${out_dir}")"
 
-  ensure_helper preview_gdml preview
-  run_helper preview_gdml "${gdml}" "${out_real}"
+  case "${backend}" in
+    sketch)
+      local py="${PLUGIN_ROOT}/scripts/preview_gdml.py"
+      [[ -f "${py}" ]] || die "missing sketch backend: ${py}"
+      local python_bin="python3"
+      # Prefer the plugin's managed venv if it exists (the SessionStart hook
+      # installs matplotlib there). Falls back to PATH python3 otherwise.
+      if [[ -n "${CLAUDE_PLUGIN_DATA:-}" && -x "${CLAUDE_PLUGIN_DATA}/venv/bin/python" ]]; then
+        python_bin="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+      fi
+      "${python_bin}" "${py}" "${gdml}" "${out_real}"
+      ;;
+    raytracer)
+      ensure_helper preview_gdml preview
+      run_helper preview_gdml "${gdml}" "${out_real}"
+      ;;
+    *)
+      die "unknown backend: ${backend} (want: sketch | raytracer)" ;;
+  esac
 
-  log "preview images written to ${out_dir}/"
+  log "preview images written to ${out_dir}/  [backend=${backend}]"
 }
 
 usage() {
@@ -352,10 +402,15 @@ Subcommands:
                                 xmllint (XML well-formedness) plus
                                 G4GDMLParser::Read (materials, refs, aux tags).
                                 Builds a tiny cached helper on first use.
-  preview <file.gdml> [out_dir] Render headless previews (3 JPEGs) of a GDML
-                                file via Geant4's RayTracer driver. Builds a
-                                tiny cached helper on first use. Default out_dir
-                                is <file.gdml>.preview/ next to the GDML.
+  preview <file.gdml> [out_dir] [--backend=sketch|raytracer]
+                                Render headless previews of a GDML file.
+                                sketch (default): three PNG orthographic
+                                projections (xy/yz/xz) via host matplotlib —
+                                fast, no Geant4 call, handles box/tube/cone/
+                                polycone.  raytracer (alpha): three JPEGs
+                                via Geant4's RayTracer in a cached helper
+                                binary — currently hangs in v11.4 container.
+                                Default out_dir is <file.gdml>.preview/.
 
 Image: ${IMAGE_TAG}
 Cache resolution order:

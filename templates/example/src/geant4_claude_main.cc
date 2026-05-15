@@ -11,7 +11,18 @@
 //
 // Usage:  geant4_claude_main <geometry.gdml> <run.mac> <output.root>
 //
-// Sequential mode only. MT and a thread-safe TTree filler can come later.
+// Sequential mode only — the TTree filler in EndOfEventAction is not
+// thread-safe (single shared `gOut`/`gBuf`). Going MT requires a per-
+// worker buffer and a merging RunAction.
+//
+// Init-order contract: this main does NOT call runManager->Initialize()
+// before executing the macro. The macro owns /run/initialize. That way
+// any /run/numberOfThreads N must come BEFORE /run/initialize in the
+// macro (Geant4 only honors thread count in the PreInit state). If you
+// fork this main and add an explicit Initialize() call, move it after
+// the macro's threading commands have been processed — or you'll see
+// "Illegal application state" the moment a user adds threads to a
+// macro.
 
 #include "G4RunManagerFactory.hh"
 #include "G4UImanager.hh"

@@ -50,16 +50,17 @@ will clone it on a fresh machine.
 |------|------|
 | `.claude-plugin/plugin.json` | Plugin manifest. Version bumped on every release. |
 | `.mcp.json` | Plugin-shipped MCP servers (currently: deepwiki). Auto-loaded for plugin users; one approval prompt per user. Add servers here only if they are free, no-auth, and clearly useful for Geant4 work. |
-| `requirements.txt` | Python deps installed by the `SessionStart` hook into `${CLAUDE_PLUGIN_DATA}/venv/`. Currently: `pdg` (PDG particle data). Touch this file to trigger reinstall on next session. Add packages only when something in `commands/`/`skills/` actually imports them. |
+| `requirements.txt` | Python deps installed by the `SessionStart` hook into `${CLAUDE_PLUGIN_DATA}/venv/`. Currently: `pdg` (PDG particle data), `matplotlib`, `numpy` (used by `scripts/preview_gdml.py` and the canned analyze plots). Touch this file to trigger reinstall on next session. Add packages only when something in `commands/`/`skills/`/`scripts/` actually imports them. |
 | `hooks/hooks.json` + `hooks/install-deps.sh` | `SessionStart` hook that idempotently installs `requirements.txt` into a managed venv. uv first, `python3 -m venv` fallback. Silent no-op when in sync. |
 | `commands/` | Slash commands. One file per command, named `geant4-<verb>.md`. |
 | `skills/<name>/SKILL.md` | Focused how-to knowledge loaded on demand. |
 | `agents/` | Subagent definitions for long-running or specialized work. |
-| `bin/g4run` | The only allowed bridge to apptainer. Subcommands: `pull`, `info`, `shell`, `build <src> <build>`, `exec <executable> [args…]`, `root`, `validate-gdml`. |
+| `bin/g4run` | The only allowed bridge to apptainer (and the host-side dispatcher for the sketch preview backend). Subcommands: `pull`, `info`, `shell`, `build <src> <build>`, `exec <executable> [args…]`, `root`, `validate-gdml`, `preview <gdml> [out_dir] [--backend=sketch|raytracer]`. |
 | `templates/workspace/` | Generic skeleton `/geant4-claude:geant4-init` copies into a user's project (empty `src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md` and `.gitignore`). |
 | `templates/example/` | The opt-in demo `/geant4-claude:geant4-example` copies in (`src/geant4_claude_main.cc` + `src/CMakeLists.txt` + `geometries/example.gdml` + `macros/run.mac` + `analysis/example.py`). |
 | `templates/validate/` | Tiny Geant4 program (`main.cc` + `CMakeLists.txt`) built by `bin/g4run` on first `validate-gdml` call and cached at `${CACHE_DIR}/bin/validate_gdml`. Runs `G4GDMLParser::Read` so semantic errors xmllint misses get caught. |
-| `templates/preview/` | Tiny Geant4 program ditto — built on first `preview` call, cached at `${CACHE_DIR}/bin/preview_gdml`. Headless GDML preview via RayTracer. **Alpha** — rendering hangs in the v11.4 container; see DESIGN.md hardening backlog. |
+| `templates/preview/` | Tiny Geant4 program ditto — built on first `preview --backend=raytracer` call, cached at `${CACHE_DIR}/bin/preview_gdml`. Headless GDML preview via RayTracer. **Alpha** — rendering hangs in the v11.4 container; see DESIGN.md hardening backlog. The default sketch backend (no container call) lives in `scripts/preview_gdml.py`. |
+| `scripts/preview_gdml.py` | Host-side sketch backend for `/geant4-claude:geant4-preview` (default). Stdlib XML parse of `<solids>`/`<structure>` + matplotlib projections. Supports box/tube/cone/polycone + full 3D rotations; unknown solids render as bounding boxes with a "!" badge. |
 | `scripts/validators/` | Host-side Python validators driven by `/geant4-claude:geant4-validate <topic>`. Each is a self-contained `<topic>.py` reading a `runs/<id>/` directory and writing `validate_<topic>.json`. v1: `cherenkov.py` (Frank-Tamm closure). |
 | `docs/DESIGN.md` | Architecture, contracts, MVP boundary. Update whenever a contract changes. |
 

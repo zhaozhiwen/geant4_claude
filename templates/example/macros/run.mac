@@ -1,6 +1,12 @@
 # Default macro for /geant4-run.
 # 1 GeV electron gun aimed along +z, fired into the example lead block.
 
+# Threading commands (e.g. `/run/numberOfThreads 4`) belong here, BEFORE
+# /run/initialize — Geant4 only honors them in the PreInit state. The
+# shipped example main forces sequential mode, so adding threading here
+# is a no-op until you switch G4RunManagerType::Serial to ::Default in
+# the main and provide a thread-safe TTree filler.
+
 /run/initialize
 
 /gun/particle e-

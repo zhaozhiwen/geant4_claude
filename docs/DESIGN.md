@@ -216,7 +216,7 @@ demo, and one helper writes GDML.
 | `/geant4-claude:geant4-run` | Execute the user's binary inside the container; allocate `runs/<id>/`; capture generic provenance (executable, args, image, git_sha, duration, exit status). Substitutes `{run_dir}`/`{run_id}` placeholders and exports `RUN_DIR`/`RUN_ID` so the binary can write into the run dir. |
 | `/geant4-claude:geant4-analyze` | Inspect the run's ROOT file. Schema-aware fast-path (canned per-event edep histogram) when a `Hits` TTree matching the example schema is found; otherwise generates a custom analysis script tailored to the actual branches. |
 | `/geant4-claude:geant4-detector` | Translate a natural-language detector spec into a validated standalone GDML file under `geometries/`. The output is consumable by any `main.cc` that calls `G4GDMLParser::Read(...)`. |
-| `/geant4-claude:geant4-preview` | Render headless 3-view JPEG previews of a GDML file via Geant4's RayTracer driver. Builds a cached helper inside the container on first use. The orchestrator inserts this step after `geant4-detector` so geometry mistakes surface before a simulation runs. |
+| `/geant4-claude:geant4-preview` | Render three orthographic PNG previews of a GDML file. Default `--backend=sketch` reads `<solids>` + `<structure>` directly and draws projections with matplotlib (no container, ~1 s, box/tube/cone/polycone + rotations). `--backend=raytracer` keeps the Geant4-rendered fallback for exact silhouettes (alpha — currently hangs in v11.4). Orchestrator inserts this step after `geant4-detector`. |
 | `/geant4-claude:geant4-example` | Drop a self-contained smoke test (GDML + macro + a generic GDML-loading `main.cc` + analysis script) into the workspace. Independent of the manual user flow — used once on a fresh install to confirm the toolchain works, or as reference code when writing your own simulation. The orchestrator skill may compose the example main with detector output for simple-physics specs as an internal shortcut, but the manual flow expects the user to bring their own `main.cc`. |
 | `/geant4-claude:geant4-validate` | Run a physics closure test (Frank-Tamm Cherenkov yield in v1) against a `runs/<id>/` directory. Reads the output ROOT file, compares simulated yield to the analytic prediction, prints PASS/FAIL with sigma, writes a machine-readable summary at `runs/<id>/validate_<topic>.json`. Topics live under `scripts/validators/<topic>.py`. |
 
@@ -263,8 +263,12 @@ Plugin-internal scripts and templates (live in the plugin checkout,
 geant4_claude/
 ├── templates/validate/      C++ harness for /geant4-claude:geant4-validate-gdml.
 │                            Built on first use; cached under CLAUDE_PLUGIN_DATA.
-├── templates/preview/       C++ harness for /geant4-claude:geant4-preview
-│                            (alpha; see Hardening backlog).
+├── templates/preview/       C++ harness for the alpha RayTracer backend
+│                            of /geant4-claude:geant4-preview
+│                            (--backend=raytracer; see Hardening backlog).
+│                            Default backend lives in scripts/preview_gdml.py.
+├── scripts/preview_gdml.py  Host-side sketch backend for /geant4-claude:geant4-preview.
+│                            Stdlib XML + matplotlib. No container call.
 └── scripts/validators/      Python validators driven by /geant4-claude:geant4-validate.
     └── cherenkov.py         v1: Frank-Tamm closure test.
 ```
@@ -323,41 +327,53 @@ call it from `cmd_validate_gdml` after the xmllint pass.
 **Impact:** Geometry errors surface before `/geant4-claude:geant4-build`
 /`-run`, when the fix is "edit the GDML" rather than "read the run log."
 
-### 2. Headless GDML preview (`/geant4-claude:geant4-preview`) *(alpha — rendering open)*
+### 2. Headless GDML preview (`/geant4-claude:geant4-preview`)
 
-**Current:** Infrastructure shipped — `templates/preview/{main.cc,
-CMakeLists.txt}`, `bin/g4run preview <gdml> [out_dir]` subcommand,
-`commands/geant4-preview.md`, and a cached helper binary built on
-first use at `${CACHE_DIR}/bin/preview_gdml`. The helper builds and
-loads the GDML cleanly. **Rendering does not work yet.** With the
-v11.4 container's RayTracer driver, three different command sequences
-(combinations of `/vis/open`, `/vis/scene/create`, `/vis/sceneHandler/
-create`, `/vis/viewer/create`, then `/vis/rayTracer/trace`) all
-trigger `G4RTMessenger::SetNewValue: No valid current viewer. Using
-default RayTracer.` and the subsequent `/vis/rayTracer/trace` hangs
-indefinitely. The orchestrator skill therefore does NOT call preview
-automatically; the slash command exists but is documented as alpha.
+**Status: shipping in the default sketch backend; RayTracer backend
+still alpha.**
 
-**Suspect:** `ApplyCommand`-driven RayTracer setup may not match what
-the messenger expects in non-interactive (no G4UIsession) mode. Worth
-investigating: (a) install a `G4UIsession` before issuing vis
-commands; (b) load the commands via `/control/execute <macro.mac>`
+**Current:** Two backends behind one command.
+
+- `--backend=sketch` (default) — `scripts/preview_gdml.py`, pure host
+  Python. Stdlib XML parses `<solids>` + `<structure>`, applies a 3D
+  rotation+translation per physvol, projects to three orthographic
+  planes (XY/YZ/XZ), and renders the 2D convex-hull silhouettes with
+  matplotlib. Handles box, tube, cone, polycone, and arbitrary 3D
+  rotations. Boolean solids / parameterised volumes draw as bounding
+  boxes with a "!" badge so they don't silently disappear. Runs in
+  ~1 s on a typical geometry; needs no container. The orchestrator
+  skill calls this between `geant4-detector` and `geant4-build`.
+- `--backend=raytracer` — `templates/preview/{main.cc, CMakeLists.txt}`,
+  cached at `${CACHE_DIR}/bin/preview_gdml`. The helper builds and loads
+  the GDML cleanly. **Rendering does not work yet.** With the v11.4
+  container's RayTracer driver, three different command sequences
+  (combinations of `/vis/open`, `/vis/scene/create`, `/vis/sceneHandler/
+  create`, `/vis/viewer/create`, then `/vis/rayTracer/trace`) all
+  trigger `G4RTMessenger::SetNewValue: No valid current viewer. Using
+  default RayTracer.` and the subsequent `/vis/rayTracer/trace` hangs
+  indefinitely.
+
+**Why two backends.** The sketch backend solves the dogfooded user need
+("can I tell at a glance whether the sensor is in the forward-flux
+path?") without depending on Geant4 vis machinery. It deliberately does
+*not* try to be a CAD viewer — convex-hull silhouettes per primitive
+trade fidelity for stdlib XML + matplotlib, no GDML library link, no
+container round-trip. The RayTracer backend stays in the design so we
+can ship exact silhouettes (boolean solids, replicas) once the v11.4
+viewer issue is resolved.
+
+**Suspect (RayTracer):** `ApplyCommand`-driven RayTracer setup may not
+match what the messenger expects in non-interactive (no G4UIsession)
+mode. Worth investigating: (a) install a `G4UIsession` before issuing
+vis commands; (b) load the commands via `/control/execute <macro.mac>`
 instead of direct `ApplyCommand`; (c) call vis manager APIs
 (`vis->CreateSceneHandler`, `vis->CreateViewer`) directly in C++
 instead of going through the messenger.
 
-**Workaround until rendering works:** `g4run shell`, then inside the
-container:
-
-```
-$Geant4_DIR/bin/geant4-vis-config --help  # check available drivers
-# Then a manual vis macro through any user binary that initializes
-# G4VisExecutive, e.g. /geant4-claude:geant4-example's main with
-# UI handed an extra macro.
-```
-
-**Impact when working:** the forward-flux-sensor class of bug is
-visible at first glance instead of after a 1000-event run.
+**Impact (sketch shipped):** the forward-flux-sensor class of bug is
+visible at first glance instead of after a 1000-event run. Catching
+one geometry trap saves the cost of a build + run + analyze cycle and
+the user's mental model of "why is the photon count wrong?".
 
 ### 3. `/geant4-claude:geant4-run` writes a `log.md` stub
 

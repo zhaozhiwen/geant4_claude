@@ -13,6 +13,58 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ### Added
 
+- **Preview sketch backend.** `/geant4-claude:geant4-preview` now ships
+  a host-side matplotlib backend (`scripts/preview_gdml.py`) as the
+  default. Parses GDML `<solids>` + `<structure>` with the stdlib XML
+  parser, applies the full 3D transform per physvol, and renders three
+  orthographic PNG projections (XY / YZ / XZ) via matplotlib. Handles
+  box, tube, cone, polycone, and arbitrary rotations. Unknown solids
+  (booleans, replicas) draw as bounding boxes with a "!" badge so they
+  don't silently vanish. ~1 s per geometry, no container call. Selected
+  via `g4run preview <gdml> [out_dir] [--backend=sketch|raytracer]` —
+  `sketch` is default, `raytracer` is the existing alpha helper kept
+  opt-in until the v11.4 RayTracer hang is resolved. The orchestrator
+  skill now calls preview between `geant4-detector` and `geant4-build`
+  by default (it previously skipped because the RayTracer backend was
+  unusable). `matplotlib` and `numpy` added to `requirements.txt`.
+- **Cherenkov validator: schema flags.** `scripts/validators/cherenkov.py`
+  gains `--event-branch / --pdg-branch / --photon-pdg` (filtered mode,
+  the existing per-hit schema; defaults unchanged) and a new
+  `--count-branch` (per-event schema, one row per event with a
+  precomputed photon count). Removes the contradiction where the
+  orchestrator told Cherenkov users to write a custom main while the
+  validator hardcoded the example main's TTree shape. Direct mode also
+  skips the per-hit filter step, making validation cheaper for large
+  runs.
+- **Cherenkov validator: RINDEX from GDML.** New `--rindex-from-gdml
+  <file> --rindex-material <name>` path reads the radiator material's
+  `RINDEX` matrix directly out of the GDML and trapezoidally integrates
+  Frank-Tamm in energy: `N/event = (2π·α·L/hc) · ∫ dE · (1 −
+  1/(β²·n²(E)))`. Eliminates the 2-5% bias of feeding a single
+  refractive index for a real dispersive radiator. The constant-`n`
+  path via `--refractive-index` stays available as fallback when the
+  GDML has no optical properties. Summary JSON records source,
+  effective-`n`, and the parsed matrix.
+
+### Changed
+
+- **Example main's init-order contract is now documented.** The
+  shipped `templates/example/src/geant4_claude_main.cc` already
+  delegates `/run/initialize` to the macro (so the macro can set
+  `/run/numberOfThreads` in PreInit state without "Illegal application
+  state" errors), but the contract wasn't written down. A header
+  comment now spells it out, the example macro template marks where
+  threading commands belong, and the orchestrator skill's "bring-your-
+  own main" guidance warns against the common Geant4-tutorial pattern
+  of calling `runManager->Initialize()` in main.
+
+### Fixed
+
+- `embed_html.py` no longer base64-embeds `<img>` tags that sit inside
+  HTML comments — previously the regex matched placeholder examples in
+  the `report.html` header and threw a "missing image" error on the
+  shipped template.
+
 - **`templates/workspace/embed_html.py`** — stdlib-only helper that
   takes `report.html` with relative `<img src="runs/...">` references
   and writes `report_portable.html` with each image base64-embedded
