@@ -1,7 +1,8 @@
 title: geant4_claude
 description: A Claude Code plugin for Geant4 simulations — describe a detector, run it, analyze it.
-theme: jekyll-theme-cayman
-show_downloads: false
 url: https://zhaozhiwen.github.io
 baseurl: /geant4_claude
 repository: zhaozhiwen/geant4_claude
+show_downloads: false
+include:
+  - assets
