@@ -1,3 +1,10 @@
+---
+layout: page
+title: Architecture
+description: "geant4_claude — architecture, contracts, and the MVP boundary."
+permalink: /DESIGN/
+---
+
 # DESIGN.md — `geant4_claude`
 
 ## Goal

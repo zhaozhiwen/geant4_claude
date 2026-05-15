@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: home
 title: geant4_claude
 ---
 
@@ -38,7 +38,7 @@ That report is the `report.html` file the plugin scaffolds into every workspace 
 - **Single runtime seam.** All Geant4 / ROOT / CMake calls go through `bin/g4run`. The container tag is pinned in one place. The plugin contributes no compiled code — every binary is the user's binary, built inside the container.
 - **Schema-aware analysis.** `/geant4-claude:geant4-analyze` inspects the ROOT file and either uses the canned `Hits`-TTree plot or generates a custom analysis script tailored to whatever branches it actually finds.
 
-Architecture, contracts, and the post-v0.0.3 hardening backlog: [DESIGN.md](DESIGN).
+Architecture, contracts, and the post-v0.0.3 hardening backlog: [DESIGN.md](DESIGN/).
 
 ## Requirements
 
@@ -50,7 +50,7 @@ Architecture, contracts, and the post-v0.0.3 hardening backlog: [DESIGN.md](DESI
 ## Links
 
 - [Source on GitHub](https://github.com/zhaozhiwen/geant4_claude)
-- [Architecture (DESIGN.md)](DESIGN)
+- [Architecture (DESIGN.md)](DESIGN/)
 - [Release notes (CHANGELOG.md)](https://github.com/zhaozhiwen/geant4_claude/blob/main/CHANGELOG.md)
 - [License (MIT)](https://github.com/zhaozhiwen/geant4_claude/blob/main/LICENSE)
 
