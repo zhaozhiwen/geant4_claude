@@ -25,7 +25,7 @@ directly.
 
 1. **Validate source.**
    ```bash
-   test -d "${SRC}/CMakeLists.txt" -o -f "${SRC}/CMakeLists.txt" \
+   test -f "${SRC}/CMakeLists.txt" \
      || { echo "no ${SRC}/CMakeLists.txt"; exit 1; }
    ```
    If the source dir doesn't exist or has no `CMakeLists.txt`, stop and

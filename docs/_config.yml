@@ -4,5 +4,11 @@ url: https://zhaozhiwen.github.io
 baseurl: /geant4_claude
 repository: zhaozhiwen/geant4_claude
 show_downloads: false
+
+# Canonical source of the pinned container tag is bin/g4run. GitHub Pages
+# runs Jekyll in safe mode and cannot read that script at build time, so
+# the site mirrors the tag here as a single variable referenced by the
+# layout. Bump this in lockstep when bin/g4run's IMAGE_TAG changes.
+image_tag: ghcr.io/gemc/g4install:11.4.0-almalinux-9.4
 include:
   - assets

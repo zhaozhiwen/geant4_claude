@@ -3,3 +3,8 @@ pdg>=0.2.2
 # /geant4-claude:geant4-preview) and the canned analyze plots.
 matplotlib>=3.6
 numpy>=1.23
+# uproot is the host-side ROOT reader for /geant4-claude:geant4-analyze and
+# scripts/validators/. Seeding it here means the SessionStart hook installs
+# it into the managed venv, so the analyze/validate paths work on a fresh
+# clone without a separate pip step (a uv-created venv ships no pip).
+uproot>=5.0

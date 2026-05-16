@@ -92,28 +92,51 @@ stores Cherenkov yield in `Events.n_photons` would run with
 
 ## Steps
 
-1. **Run the topic-specific validator.** The plugin ships these under
-   `scripts/validators/`:
+1. **Resolve a Python with uproot+numpy.** The validators read the ROOT
+   file with `uproot`, so use the *same* resolution as
+   `/geant4-claude:geant4-analyze` step 2 — never bare `python3`, and
+   never `pip install --user` (that pollutes the host site-packages):
 
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/validators/<topic>.py" <run_dir> <flags…>
+   # (a) host python   (b) plugin venv   (c) install into the plugin venv
+   if python3 -c "import uproot, numpy" 2>/dev/null; then
+     PY="$(command -v python3)"
+   elif "${CLAUDE_PLUGIN_DATA}/venv/bin/python" -c "import uproot, numpy" 2>/dev/null; then
+     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+   else
+     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+     if command -v uv >/dev/null 2>&1; then
+       uv pip install --python "${PY}" -q uproot numpy
+     else
+       "${PY}" -m pip install -q uproot numpy
+     fi
+   fi
+   ```
+
+   In normal operation the SessionStart hook already seeded the venv
+   from `requirements.txt`, so (b) hits.
+
+2. **Run the topic-specific validator** with the resolved `${PY}`:
+
+   ```bash
+   "${PY}" "${CLAUDE_PLUGIN_ROOT}/scripts/validators/<topic>.py" <run_dir> <flags…>
    ```
 
    For `cherenkov`:
 
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/validators/cherenkov.py" \
+   "${PY}" "${CLAUDE_PLUGIN_ROOT}/scripts/validators/cherenkov.py" \
      runs/<id> \
      --radiator-length 1m \
      --refractive-index 1.000449 \
      --beam-beta 1.0
    ```
 
-2. **Echo the validator's output back** to the user. The script prints
+3. **Echo the validator's output back** to the user. The script prints
    the predicted/observed/sigma/result block to stdout; show that
    verbatim. Don't paraphrase.
 
-3. **On FAIL**, do not silently continue. Surface the result, suggest a
+4. **On FAIL**, do not silently continue. Surface the result, suggest a
    follow-up (likely an investigation — wrong material properties,
    wrong physics list, sensor geometry) and stop. The user decides
    whether to re-run with different parameters or to dig in.
@@ -129,7 +152,7 @@ stores Cherenkov yield in `Events.n_photons` would run with
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `missing dep: uproot` | Host Python doesn't have uproot/numpy. | `pip install --user uproot numpy`. |
+| `missing dep: uproot` | Neither host Python nor the plugin venv has uproot/numpy (SessionStart hook hasn't run, or its install failed). | Re-resolve `${PY}` via step 1 (installs into the plugin venv). Never `pip install --user` — it pollutes the host site-packages. |
 | `tree 'Hits' not in <root>` | Output schema isn't the example schema. | Pass `--tree <name>`; check available trees with `python3 -c "import uproot; print(uproot.open('<root>').keys())"`. |
 | `predicted yield is 0 — beam is below Cherenkov threshold` | `beta * n` <= 1. | Use a more relativistic beam or a higher-`n` radiator; sanity-check inputs. |
 | FAIL by many sigma | Wrong material properties, missing `G4OpticalPhysics`, sensor outside the forward cone, wrong wavelength range. | Investigate — that's the whole point of the test. Don't reach for a wider tolerance. |

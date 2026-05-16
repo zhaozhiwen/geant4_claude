@@ -61,12 +61,22 @@ optional reusable scripts dropped in `analysis/`.
      PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
 
    # (c) install into the plugin venv (preferred — survives plugin updates,
-   #     isolated from system site-packages, cleaned with the plugin)
+   #     isolated from system site-packages, cleaned with the plugin).
+   #     A uv-created venv ships no pip, so install the same way the
+   #     SessionStart hook does: uv if present, else the venv's pip.
    else
-     "${CLAUDE_PLUGIN_DATA}/venv/bin/pip" install -q uproot numpy matplotlib
      PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+     if command -v uv >/dev/null 2>&1; then
+       uv pip install --python "${PY}" -q uproot numpy matplotlib
+     else
+       "${PY}" -m pip install -q uproot numpy matplotlib
+     fi
    fi
    ```
+
+   In normal operation the SessionStart hook has already seeded the venv
+   from `requirements.txt` (which now includes `uproot`), so branch (b)
+   hits and (c) is the rare network-was-down recovery path.
 
    Auto-installing into the **plugin venv** is the recommended fallback:
    the venv is per-user, plugin-scoped, and removed when the plugin is

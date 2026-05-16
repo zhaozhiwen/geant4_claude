@@ -79,6 +79,32 @@ def parse_length(s: str) -> float:
     return float(s)
 
 
+# Energy parsing (for GDML RINDEX matrix values) -----------------------------
+
+_ENERGY_UNITS_EV = {
+    "eV": 1.0,
+    "keV": 1e3,
+    "MeV": 1e6,
+    "GeV": 1e9,
+}
+
+
+def parse_energy_eV(tok: str) -> float:
+    """Parse one GDML matrix energy token into eV.
+
+    GDML matrix values may carry an explicit unit, written as a Geant4
+    unit expression (`1.5*eV`, `1.5eV`). A *bare* number is in Geant4
+    internal units, where energy is MeV — that is the convention the
+    plugin's own generated GDML uses, so it must keep working.
+    """
+    t = tok.strip().replace("*", "")
+    for unit in sorted(_ENERGY_UNITS_EV, key=len, reverse=True):
+        if t.endswith(unit):
+            return float(t[: -len(unit)]) * _ENERGY_UNITS_EV[unit]
+    # Bare number: Geant4 internal energy unit is MeV.
+    return float(t) * _ENERGY_UNITS_EV["MeV"]
+
+
 # ROOT reading ---------------------------------------------------------------
 
 
@@ -89,7 +115,9 @@ def _import_uproot():
     except ImportError as e:
         raise SystemExit(
             f"[validate-cherenkov] missing dep: {e}. "
-            "Install with: pip install --user uproot numpy"
+            "Run this through /geant4-claude:geant4-validate, which resolves "
+            "a Python with uproot+numpy (host or the plugin-managed venv). "
+            "Do not pip install --user."
         )
     import uproot
     import numpy as np
@@ -209,9 +237,11 @@ def parse_rindex_from_gdml(gdml_path: Path, material_name: str) -> list[tuple[fl
 
     Returns a list of (energy_eV, n) sorted by ascending energy.
 
-    GDML stores matrix values in Geant4 internal units, which means the
-    energy column reads in MeV (1.0 = 1 MeV). We multiply by 1e6 to get
-    eV — the unit users actually think in for optical photons.
+    The energy column is parsed per-token via ``parse_energy_eV``: a
+    bare number is Geant4-internal MeV (the convention the plugin's own
+    generated GDML uses), while an explicit unit expression such as
+    ``1.5*eV`` — common in hand-written or imported GDML — is honored
+    rather than crashing ``float()`` or being silently scaled by 1e6.
     """
     try:
         tree = ET.parse(gdml_path)
@@ -260,16 +290,23 @@ def parse_rindex_from_gdml(gdml_path: Path, material_name: str) -> list[tuple[fl
             f"[validate-cherenkov] unexpected coldim={coldim} for matrix "
             f"'{rindex_ref}' — RINDEX is a 2-column (energy, n) matrix."
         )
-    nums = [float(x) for x in (matrix.get("values") or "").split()]
-    if len(nums) < 4 or len(nums) % 2 != 0:
+    toks = (matrix.get("values") or "").split()
+    if len(toks) < 4 or len(toks) % 2 != 0:
         raise SystemExit(
-            f"[validate-cherenkov] matrix '{rindex_ref}' has {len(nums)} values; "
+            f"[validate-cherenkov] matrix '{rindex_ref}' has {len(toks)} values; "
             "expected an even count >= 4 (at least 2 (energy, n) pairs)."
         )
-    pairs = sorted(
-        (nums[i] * 1e6, nums[i + 1])  # MeV → eV
-        for i in range(0, len(nums), 2)
-    )
+    try:
+        pairs = sorted(
+            (parse_energy_eV(toks[i]), float(toks[i + 1]))
+            for i in range(0, len(toks), 2)
+        )
+    except ValueError as e:
+        raise SystemExit(
+            f"[validate-cherenkov] could not parse RINDEX matrix "
+            f"'{rindex_ref}' values ({e}). Expected (energy, n) pairs; "
+            "energy may carry a Geant4 unit (e.g. '2.0*eV')."
+        )
     return pairs
 
 

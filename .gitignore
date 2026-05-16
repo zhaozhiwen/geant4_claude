@@ -42,8 +42,11 @@ Makefile
 # Logs
 *.log
 
-# Geant4 source (wiki raw input — large, not tracked)
-wiki/raw/geant4-src/
+# Geant4 source (wiki raw input — large, not tracked). No trailing slash:
+# this is often a symlink into a sandbox cache, and a trailing-slash
+# pattern matches directories only, so `git add -A` would otherwise stage
+# a dangling absolute-path symlink.
+wiki/raw/geant4-src
 
 # Per-user Obsidian vault config (workspace state, plugins, themes)
 wiki/.obsidian/

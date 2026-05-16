@@ -153,11 +153,15 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
        echo "- Notes:    <one or two lines: what worked, what surprised, what's next>"
        echo
      } > "${STUB}"
-     # Insert above the <!-- entry-template --> comment block.
-     awk -v stub="$(cat "${STUB}")" '
-       /^<!--/ && !done { printf "%s\n\n", stub; done=1 }
+     # Insert above the <!-- entry-template --> comment block. Read the
+     # stub via getline (not `-v`): an `awk -v` value interprets
+     # backslash escapes, which would mangle a verbatim user request
+     # containing \n, \t, or a Windows path in the load-bearing log.md.
+     awk -v stubfile="${STUB}" '
+       BEGIN { while ((getline l < stubfile) > 0) stub = stub l "\n" }
+       /^<!--/ && !done { printf "%s\n", stub; done=1 }
        { print }
-       END { if (!done) printf "%s\n", stub }
+       END { if (!done) printf "%s", stub }
      ' log.md > log.md.new && mv log.md.new log.md
      rm -f "${STUB}"
    fi
