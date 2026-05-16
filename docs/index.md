@@ -3,6 +3,16 @@ layout: home
 title: geant4_claude
 ---
 
+## Worked example {#cherenkov}
+
+A full Cherenkov closure study — exactly the kind of run the [Quickstart](#quickstart) prompt below produces — written up as a single self-contained HTML page:
+
+> **[Cherenkov closure: 1 GeV e⁻ on 1 m CO₂ at 1 atm →](report_cherenkov.html)**
+>
+> 1000-event simulation observed **161.35 ± 0.40** Cherenkov photons per electron; Frank-Tamm prediction (with the wavelength-dependent refractive index pulled from GDML, 200–775 nm) gave **160.98** photons — agreement at **0.93 σ**. Radial profile on the downstream backplate hits the geometric endpoint *R = (D + L/2)·tan θ<sub>c</sub>* = 3.15 cm to 1.3 %. All three closure checks **PASS**.
+
+That report is the `report.html` file the plugin scaffolds into every workspace — a presentation layer over `log.md` + `result.md` + the `runs/` directory. Open it once you've run a study; share it by running `python3 embed_html.py report.html` to get a portable single-file copy with all plot images inlined.
+
 ## Quickstart
 
 The `geant4` orchestrator skill auto-loads on any "simulate / build / run a Geant4 …" request. Tell Claude what you want:
@@ -21,16 +31,6 @@ Three independent paths to a working simulation:
 - **Bring your own `main.cc`** — when you need custom physics (optical photons, HP neutrons, polarization), hard-coded geometry, or a non-`Hits` output schema.
 
 Full walkthroughs in the [README](https://github.com/zhaozhiwen/geant4_claude#quickstart).
-
-## Worked example {#cherenkov}
-
-The Quickstart prompt above, run end-to-end and written up as a single self-contained HTML page:
-
-> **[Cherenkov closure: 1 GeV e⁻ on 1 m CO₂ at 1 atm →](report_cherenkov.html)**
->
-> 1000-event simulation observed **161.35 ± 0.40** Cherenkov photons per electron; Frank-Tamm prediction (with the wavelength-dependent refractive index pulled from GDML, 200–775 nm) gave **160.98** photons — agreement at **0.93 σ**. Radial profile on the downstream backplate hits the geometric endpoint *R = (D + L/2)·tan θ<sub>c</sub>* = 3.15 cm to 1.3 %. All three closure checks **PASS**.
-
-That report is the `report.html` file the plugin scaffolds into every workspace — a presentation layer over `log.md` + `result.md` + the `runs/` directory. Open it once you've run a study; share it by running `python3 embed_html.py report.html` to get a portable single-file copy with all plot images inlined.
 
 ## What it does
 
