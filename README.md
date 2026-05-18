@@ -1,7 +1,7 @@
 # geant4_claude
 
 A Claude Code plugin that lets you **build, run, and analyze your
-own Geant4 simulation** through five slash commands plus a `geant4`
+own Geant4 simulation** through eight slash commands plus a `geant4`
 orchestrator skill that turns a natural-language description of a
 simulation into a planned end-to-end run. Geant4 and ROOT live in a
 pinned apptainer image; analysis runs on the host with

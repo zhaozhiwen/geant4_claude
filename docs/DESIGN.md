@@ -116,14 +116,17 @@ bin/g4run exec  <executable> [args…]      # run any binary inside the containe
 bin/g4run shell                           # interactive shell inside the container
 bin/g4run root  <args…>                   # forward to ROOT inside the container
 bin/g4run validate-gdml <file>            # xmllint + G4GDMLParser parse check
-bin/g4run preview <file.gdml> [out_dir]   # RayTracer JPEG previews (3 views)
+bin/g4run preview <file.gdml> [out_dir]   # 3 orthographic PNGs; --backend=sketch (default, host matplotlib, no container) | raytracer (alpha)
 bin/g4run pull / info                     # image management & status
+bin/g4run image-tag / sif-name            # echo the pinned image tag / .sif filename (single source of truth)
 ```
 
-`validate-gdml` and `preview` build tiny cached helper binaries
-(`${CACHE_DIR}/bin/validate_gdml`, `…/preview_gdml`) from
-`templates/validate/` and `templates/preview/` on first use; rebuilds
-are triggered automatically when the relevant source files change.
+`validate-gdml` (and `preview --backend=raytracer`) build tiny cached
+helper binaries (`${CACHE_DIR}/bin/validate_gdml`, `…/preview_gdml`)
+from `templates/validate/` and `templates/preview/` on first use;
+rebuilds are triggered automatically when the relevant source files
+change. The default `preview` sketch backend needs no helper — it is
+host-side `scripts/preview_gdml.py`.
 
 `build` and `exec` are content-neutral — `bin/g4run` knows nothing about
 the user's CMake target name, output schema, or argument shape. Slash

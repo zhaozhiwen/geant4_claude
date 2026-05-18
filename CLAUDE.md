@@ -55,7 +55,7 @@ will clone it on a fresh machine.
 | `commands/` | Slash commands. One file per command, named `geant4-<verb>.md`. |
 | `skills/<name>/SKILL.md` | Focused how-to knowledge loaded on demand. |
 | `agents/` | Subagent definitions for long-running or specialized work. |
-| `bin/g4run` | The only allowed bridge to apptainer (and the host-side dispatcher for the sketch preview backend). Subcommands: `pull`, `info`, `shell`, `build <src> <build>`, `exec <executable> [args…]`, `root`, `validate-gdml`, `preview <gdml> [out_dir] [--backend=sketch|raytracer]`. |
+| `bin/g4run` | The only allowed bridge to apptainer (and the host-side dispatcher for the sketch preview backend). Subcommands: `pull`, `info`, `shell`, `build <src> <build>`, `exec <executable> [args…]`, `root`, `validate-gdml`, `preview <gdml> [out_dir] [--backend=sketch|raytracer]`, `image-tag`, `sif-name` (echo the pinned tag / `.sif` name — the single-source accessors docs and tests derive from). |
 | `templates/workspace/` | Generic skeleton `/geant4-claude:geant4-init` copies into a user's project (empty `src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md` and `.gitignore`). |
 | `templates/example/` | The opt-in demo `/geant4-claude:geant4-example` copies in (`src/geant4_claude_main.cc` + `src/CMakeLists.txt` + `geometries/example.gdml` + `macros/run.mac` + `analysis/example.py`). |
 | `templates/validate/` | Tiny Geant4 program (`main.cc` + `CMakeLists.txt`) built by `bin/g4run` on first `validate-gdml` call and cached at `${CACHE_DIR}/bin/validate_gdml`. Runs `G4GDMLParser::Read` so semantic errors xmllint misses get caught. |
@@ -114,7 +114,7 @@ Naming:
 
 Three layers, in order of cost.
 
-### 1. `tests/clean-smoke.sh` — fast plumbing test (~30 s — 3 min)
+### 1. `tests/clean-smoke.sh` — fast plumbing test (~3–8 min)
 
 **Use:** every commit that touches `bin/g4run`, `templates/`, the
 example main, or any `commands/*.md`.
@@ -124,8 +124,11 @@ against a sandboxed `CLAUDE_PLUGIN_DATA`. Doesn't go through Claude
 Code, so it doesn't catch slash-dispatch / SessionStart / MCP /
 AskUserQuestion regressions — those need layer 2 or 3. Catches
 everything else (wrapper plumbing, build, run, schema-detection,
-idempotency, the no-fallback cache resolution, the `/home/$USER`
-leakage scan).
+idempotency, the no-fallback cache resolution, the tracked-files
+`/home/$USER` leakage scan, the optical fixture's Frank-Tamm closure,
+plus pure-bash gates: exit-capture, recipe↔fixture drift, the
+`g4run-unit` helper tests, and the README/`_config.yml`↔`g4run`
+image-tag sync check).
 
 ```bash
 # Reuse an existing .sif (fast):
@@ -172,8 +175,11 @@ If any layer fails on a fresh machine, that's a bug, not a user error.
 
 Before tagging a release or pushing the public branch:
 
-- `grep -RIn "/home/$USER\|jlab\.org\|jefflab" .` returns nothing in tracked
-  files (run with the maintainer's actual `$USER` expanded).
+- `git grep -In "/home/$USER\|jlab\.org\|jefflab" -- ':!tests/clean-smoke.sh'`
+  returns nothing (run with the maintainer's actual `$USER` expanded).
+  Tracked files only — matches `clean-smoke.sh` phase 7; an untracked
+  local scratch file (e.g. a gitignored `BUILD_LOG.md`) is intentionally
+  not scanned and is not a leak.
 - `grep -RIn "TODO\|FIXME\|XXX" .` is reviewed; nothing critical left.
 - `bin/g4run` tag matches `.claude-plugin/plugin.json` version expectations
   (image tag may lag plugin version, but bumping the image bumps minor).
