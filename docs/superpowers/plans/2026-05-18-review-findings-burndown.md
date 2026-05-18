@@ -338,10 +338,10 @@ Run (uses the already-cached `.sif`; builds the `validate_gdml` helper on first 
 ```bash
 mkdir -p /tmp/g4c-f4 && cp templates/example/geometries/example.gdml "/tmp/g4c-f4/wei'rd.gdml"
 GEANT4_CLAUDE_CACHE=/tmp/g4c-f4-cache \
-GEANT4_CLAUDE_CACHE="$(dirname "$(readlink -f /home/zwzhao/.geant4_claude/sif/g4install_11.4.0-almalinux-9.4.sif)")/.." \
+GEANT4_CLAUDE_CACHE="$(dirname "$(readlink -f /home/$USER/.geant4_claude/sif/g4install_11.4.0-almalinux-9.4.sif)")/.." \
   true   # (informational; real check below)
 cd /tmp/g4c-f4 && GEANT4_CLAUDE_CACHE="${HOME}/.geant4_claude" \
-  "$(git -C /home/zwzhao/claude/geant4_claude rev-parse --show-toplevel)/bin/g4run" \
+  "$(git -C /home/$USER/claude/geant4_claude rev-parse --show-toplevel)/bin/g4run" \
   validate-gdml "wei'rd.gdml" ; echo "exit=$?"; cd -
 ```
 Expected: the single-quote-in-filename path passes Layer 1 (xmllint) without a shell-quoting error and proceeds to Layer 2; `exit=0` and a `GDML parses cleanly` log line. The point is that the apostrophe filename no longer breaks the shell string. (If the cache/sif env differs on the run host, the implementer may instead defer this to the Task 7 smoke run, which includes an apostrophe-filename validate-gdml step — note that choice in the report.)
@@ -590,7 +590,7 @@ Expected: `SYNTAX-OK`, then `g4run-unit ok`.
 
 Run:
 ```bash
-G4C_REUSE_SIF=/home/zwzhao/.geant4_claude/sif/g4install_11.4.0-almalinux-9.4.sif tests/clean-smoke.sh
+G4C_REUSE_SIF=/home/$USER/.geant4_claude/sif/g4install_11.4.0-almalinux-9.4.sif tests/clean-smoke.sh
 ```
 Expected final line: `✓ all smoke checks passed`. Specifically confirm the new gates ran green: phase 0c (`g4run-unit`), the apostrophe-filename `validate-gdml` step in phase 2, phase 4b optical closure `RESULT: PASS`, phase 7b (`tag-sync`), phase 7 (`leakage`, tracked-only).
 
