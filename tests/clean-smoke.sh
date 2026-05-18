@@ -23,6 +23,7 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SIF_NAME="$("${PLUGIN_ROOT}/bin/g4run" sif-name)"
 
 # --- helpers ----------------------------------------------------------------
 log()  { printf '\n--- %s ---\n' "$*"; }
@@ -58,7 +59,7 @@ mkdir -p "${CLAUDE_PLUGIN_DATA}/cache/sif"
 if [[ -n "${G4C_REUSE_SIF:-}" && -f "${G4C_REUSE_SIF}" ]]; then
   log "reusing .sif: ${G4C_REUSE_SIF}"
   ln -s "${G4C_REUSE_SIF}" \
-    "${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif"
+    "${CLAUDE_PLUGIN_DATA}/cache/sif/${SIF_NAME}"
 fi
 
 g4run() {
@@ -83,6 +84,11 @@ if [ "${fixture_sd}" != "${recipe_sd}" ]; then
   fail "OpticalSD drifted between tests/fixtures/optical/main.cc and skills/geant4-physics-list/SKILL.md — re-sync them"
 fi
 
+# --- phase 0c: g4run pure-bash unit tests ----------------------------------
+log "g4run-unit: path containment + tag accessors"
+bash "${PLUGIN_ROOT}/tests/g4run-unit-test.sh" \
+  || fail "g4run-unit-test.sh failed"
+
 # --- phase 1: init equivalent ----------------------------------------------
 log "init: copy workspace skeleton from templates/workspace/"
 WS="${SCRATCH}/ws"
@@ -96,7 +102,7 @@ done
 
 log "init: pull pinned image (skipped if .sif already present)"
 g4run pull
-[ -f "${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif" ] \
+[ -f "${CLAUDE_PLUGIN_DATA}/cache/sif/${SIF_NAME}" ] \
   || fail ".sif missing after pull"
 
 # --- phase 2: example flow --------------------------------------------------
@@ -110,6 +116,11 @@ cp -r "${PLUGIN_ROOT}/templates/example/." .
 
 log "example: validate GDML"
 g4run validate-gdml geometries/example.gdml >/dev/null
+log "example: validate-gdml tolerates a quote in the filename (F4 regression)"
+cp geometries/example.gdml "geometries/wei'rd.gdml"
+g4run validate-gdml "geometries/wei'rd.gdml" >/dev/null \
+  || fail "validate-gdml broke on an apostrophe in the filename"
+rm -f "geometries/wei'rd.gdml"
 
 log "example: build"
 g4run build src build
@@ -222,7 +233,7 @@ cd "${WS}"
 
 # --- phase 5: idempotency — pull again, .sif must not change ---------------
 log "idempotency: re-pull (must not modify the .sif)"
-sif="${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif"
+sif="${CLAUDE_PLUGIN_DATA}/cache/sif/${SIF_NAME}"
 sif_before=$(stat -c%Y -L "${sif}")
 g4run pull
 sif_after=$(stat -c%Y -L "${sif}")
@@ -237,6 +248,17 @@ grep -q "no cache path" /tmp/g4c_smoke_info.out \
   || fail "wrong error message; expected 'no cache path'. Got:
 $(cat /tmp/g4c_smoke_info.out)"
 rm -f /tmp/g4c_smoke_info.out
+
+# --- phase 7b: image-tag single-source check -------------------------------
+# CLAUDE.md non-negotiable: the tag lives in bin/g4run only. Static docs that
+# DISPLAY it (README, Pages config) must match it; CHANGELOG/design history is
+# point-in-time and intentionally NOT checked here.
+log "tag-sync: README + docs/_config.yml must match g4run's pinned tag"
+want_tag="$("${PLUGIN_ROOT}/bin/g4run" image-tag)"
+grep -qF "${want_tag}" "${PLUGIN_ROOT}/README.md" \
+  || fail "README.md does not display g4run's pinned image tag (${want_tag})"
+grep -qF "${want_tag}" "${PLUGIN_ROOT}/docs/_config.yml" \
+  || fail "docs/_config.yml image_tag != g4run's pinned tag (${want_tag})"
 
 # --- phase 7: leakage scan --------------------------------------------------
 # Hard-block: the actual user's home path slipping into committed files. Scan

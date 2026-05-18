@@ -25,6 +25,11 @@ die()  { printf '[g4run] error: %s\n' "$*" >&2; exit 1; }
 # GEANT4_CLAUDE_CACHE explicitly. Resolution is lazy so `g4run help` works
 # without any env vars set.
 SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
+
+# Read-only accessors so docs/tests/CI derive the pinned identifiers from
+# this single source of truth instead of hardcoding them.
+image_tag_value() { printf '%s\n' "${IMAGE_TAG}"; }
+sif_name_value()  { printf '%s\n' "${SIF_NAME}"; }
 CACHE_DIR=""
 SIF_DIR=""
 SIF_PATH=""
@@ -440,6 +445,8 @@ esac
 case "${sub}" in
   pull)           cmd_pull "$@" ;;
   info)           cmd_info "$@" ;;
+  image-tag)      image_tag_value ;;
+  sif-name)       sif_name_value ;;
   shell)          cmd_shell "$@" ;;
   build)          cmd_build "$@" ;;
   exec)           cmd_exec "$@" ;;

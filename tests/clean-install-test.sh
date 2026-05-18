@@ -99,7 +99,7 @@ WS="${SANDBOX}/ws"
 
 # Plugin id format follows Claude Code's <plugin-name>-<marketplace-name> convention.
 PLUGIN_ID="geant4-claude-geant4-claude"
-SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
+SIF_NAME="$("$(cd "$(dirname "$0")/.." && pwd)/bin/g4run" sif-name)"
 
 # --- helpers ----------------------------------------------------------------
 log()  { printf '\n--- %s ---\n' "$*"; }
