@@ -53,15 +53,13 @@ plugin deliberately avoids. To force a manual repair:
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"
 ```
 
-If the user wants isolation (recommended), create a workspace venv:
+A separate project venv is a fine alternative if you prefer it isolated
+from the plugin's managed venv:
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install uproot numpy matplotlib
 ```
-
-The plugin does not auto-install — pick your poison and add it to the
-project's normal Python flow.
 
 ## Recipe: inspect first
 

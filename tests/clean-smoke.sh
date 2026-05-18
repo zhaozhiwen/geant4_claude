@@ -173,7 +173,7 @@ print("custom-schema correctly distinct from example fast-path")
 PY
 else
   log "analyze: SKIPPED — host lacks uproot+numpy+matplotlib"
-  log "         install with: pip install --user uproot numpy matplotlib"
+  log "         install uproot numpy matplotlib into a venv (not --user)"
 fi
 
 # --- phase 4b: optical-photon chain (fixture, not a user template) ----------

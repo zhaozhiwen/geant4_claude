@@ -51,9 +51,10 @@ except ImportError as e:
     sys.exit(
         f"[preview-gdml] missing dep: {e}. "
         "Run this through /geant4-claude:geant4-preview, which uses the "
-        "plugin-managed venv. To repair manually: "
-        'bash "$CLAUDE_PLUGIN_ROOT/hooks/install-deps.sh". '
-        "Do not pip install --user (pollutes host site-packages)."
+        "plugin-managed venv. If deps are still missing, re-launch Claude "
+        "Code to fire the SessionStart hook (it seeds the managed venv "
+        "automatically). Do not pip install --user (pollutes host "
+        "site-packages)."
     )
 
 

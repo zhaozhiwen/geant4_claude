@@ -87,7 +87,7 @@ solid type with a legend.
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `validate-gdml` step fails | GDML has a parse error. | Fix the GDML and retry. |
-| `missing dep: matplotlib` | Plugin venv not yet populated. | Re-launch Claude Code to fire the `SessionStart` hook, or `pip install --user matplotlib numpy` and retry. |
+| `missing dep: matplotlib` | Plugin venv not yet populated. | Re-launch Claude Code to fire the `SessionStart` hook (seeds the managed venv automatically); or run `bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"`. Do not `pip install --user`. |
 | `unsupported solid drawn as bounding box` notice | Geometry uses booleans, replicas, or solids the sketch backend doesn't know. | Acceptable for layout sanity-check; switch to `--backend=raytracer` (once unhung) for exact silhouettes. |
 | Sketch output looks empty | The world volume is gigantic and the daughters are 1000× smaller — the world is suppressed automatically, but if it's the only volume there's nothing left to draw. | Confirm `<structure>` has at least one daughter `physvol`. |
 | RayTracer hang on `--backend=raytracer` | Known issue with the v11.4 container; see DESIGN.md. | Use the default sketch backend; track the hardening backlog. |

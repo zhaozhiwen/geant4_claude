@@ -143,7 +143,7 @@ PY
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `ModuleNotFoundError: uproot` (after step 2's auto-install path) | Network blocked, or the plugin venv is missing/broken. | Inspect `${CLAUDE_PLUGIN_DATA}/venv/`; recreate by uninstalling and reinstalling the plugin. As a one-off, the user can run `pip install --user uproot numpy matplotlib` in a shell. |
+| `ModuleNotFoundError: uproot` (after step 2's auto-install path) | Network blocked, or the plugin venv is missing/broken. | Inspect `${CLAUDE_PLUGIN_DATA}/venv/`; repair with `bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"`, or reinstall the plugin. Never `pip install --user` (pollutes host site-packages). |
 | `no .root file in runs/<id>` | Binary didn't produce a ROOT file (or wrote elsewhere). | Inspect `runs/<id>/log.txt`; check the binary's args / `RUN_DIR` handling. |
 | `KeyError: 'Hits'` (custom schema) | The fast-path script was forced on a non-`Hits` file. | Don't pass `--script`; let the command auto-detect, or pass a script that matches your schema. |
 | Empty histogram | All entries zero, or selected branch is wrong. | Check the schema dump; explicitly pick the branch via a custom script. |
