@@ -173,7 +173,25 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
    fi
    ```
 
-8. **Verify and report.**
+8. **Refresh `report.html`** (only if it exists in the cwd — created by
+   `/geant4-claude:geant4-init`). Per workspace `CLAUDE.md`
+   non-negotiable #6, `report.html` is the browser-facing presentation
+   layer and must reflect every finished simulation, not just analyzed
+   ones. After this run completes, edit `report.html` in place:
+   - Add or update one row in the **Runs** table for `${RUN_ID}` (id,
+     name, status, events parsed from the macro, duration, parent,
+     one-line note). Replace the placeholder row on the first run.
+   - Fill the **Setup → Beam &amp; physics** fields from the macro if
+     they're still placeholders (particle, energy, origin/direction,
+     events, physics list).
+   - Refresh the `<div class="meta">` status + ISO date in the header.
+   - Leave **Results** (plots, key numbers, interpretation) for
+     `/geant4-claude:geant4-analyze` to fill — don't fabricate them here.
+   Preserve the section structure and only replace placeholders; the
+   markdown docs stay authoritative. This step is idempotent: a second
+   run for the same id updates its row rather than appending a duplicate.
+
+9. **Verify and report.**
    - Don't assert anything about output files — the binary may write
      `hits.root`, `tracks.root`, `summary.json`, or nothing at all. Just
      list whatever's in `${RUN_DIR}` after the run.
@@ -196,10 +214,10 @@ runs/<run_id>/
 └── ...            # whatever your binary wrote (hits.root, etc.)
 ```
 
-Plus, if the cwd contains a `log.md` (the workspace is `init`-ed): a
-new dated entry prepended at the top with the four mechanical Outcome
-fields filled in and Request / Plan / Decision / Notes left as
-`<…>` placeholders for the orchestrator or user to fill.
+Plus, if the cwd is `init`-ed: a new dated entry prepended to `log.md`
+(four mechanical Outcome fields filled, Request / Plan / Decision /
+Notes left as `<…>` placeholders), and `report.html`'s Runs table +
+Beam/physics + meta date refreshed for this run (step 8).
 
 ## Failure modes
 

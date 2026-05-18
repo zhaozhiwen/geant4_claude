@@ -51,7 +51,10 @@ the four runtime commands work the same in both cases.
    (verbatim, in their own words), the **plan** Claude drew up (spec
    + step list), the user's **decision** (approved, edited the spec,
    or stop-and-just-write-the-plan), and the **outcome** (run id,
-   exit status, one-line summary of what happened). After a
+   exit status, one-line summary of what happened). After every
+   `/geant4-claude:geant4-run`, refresh `report.html`'s Runs table,
+   Beam &amp; physics, and header date so the browser report reflects
+   the run even before it's analyzed. After a
    `/geant4-claude:geant4-analyze` that produced a noteworthy
    result, add or update a section in `result.md` with key numbers
    + plot paths, and update `report.html` to match (replace the

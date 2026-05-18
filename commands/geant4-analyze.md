@@ -105,7 +105,7 @@ PY
    ```
 
 4. **Pick the analysis path.**
-   - If `--script` was passed → use it. Skip to step 6.
+   - If `--script` was passed → use it. Skip to step 5.
    - Else if the file has a TTree named `Hits` with branches `event`,
      `edep`, and at least `volume` or `pdg` → **fast path**: use
      `analysis/example.py` if present in the workspace, else materialize
@@ -128,7 +128,24 @@ PY
    "${PY}" "${SCRIPT}" "${RUN_DIR}"
    ```
 
-6. **Show the user:**
+6. **Refresh `report.html` and `result.md`** (only if they exist —
+   created by `/geant4-claude:geant4-init`). Per workspace `CLAUDE.md`
+   non-negotiable #6, a noteworthy analyze must land in the handoff
+   docs. Edit in place:
+   - `result.md`: add/update the per-run findings section (key numbers,
+     plot paths). Markdown is authoritative.
+   - `report.html`: add a `<figure>` to the **Plots** grid for each PNG
+     this analyze produced (`src` relative to the workspace root, e.g.
+     `runs/<id>/edep_hist.png`); add **Key numbers** rows (value +
+     source path, including any `runs/<id>/validate_*.json`); fill the
+     **Summary** and **Notes &amp; interpretation** prose; refresh the
+     header meta date.
+   Preserve the section structure, replace placeholders only, keep
+   `report.html` consistent with `result.md` (markdown wins on
+   conflict). Idempotent: re-analyzing the same run updates its figures
+   and rows instead of duplicating them.
+
+7. **Show the user:**
    - the schema dump from step 3,
    - the path to the PNG and any other outputs,
    - the summary printed by the script,
@@ -142,6 +159,8 @@ PY
 - Stdout schema dump + summary statistics.
 - Possibly a new `analysis/<run_id>.py` on the custom path (versioned;
   user can edit and re-run).
+- If the workspace is `init`-ed: `result.md` and `report.html` refreshed
+  with this run's plots, key numbers, and interpretation (step 6).
 
 ## Failure modes
 

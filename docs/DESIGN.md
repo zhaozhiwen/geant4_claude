@@ -466,6 +466,26 @@ removed on plugin uninstall.
 become usable from anywhere — particularly useful when debugging an
 issue raised by a slash command without leaving the failing terminal.
 
+### 8. `report.html` refresh is command-driven, not deterministic
+
+**Current:** `report.html` is a derived presentation layer, but nothing
+refreshed it. `geant4-run` only wrote a `log.md` stub; `geant4-analyze`
+never mentioned `report.html`; the sole "update it" instruction lived
+in the workspace `CLAUDE.md` and was never triggered in the command
+flow. Result: the browser report stayed at placeholders forever.
+
+**Fix:** `geant4-run` step 8 and `geant4-analyze` step 6 now explicitly
+instruct Claude to refresh `report.html` in place — run fills the Runs
+table / Beam&physics / header date, analyze adds plots / key numbers /
+interpretation. Idempotent (update the row/figure, don't duplicate).
+
+**Tradeoff (accepted):** this is LLM-driven, not a deterministic
+generator. It depends on Claude obeying the command step, so it can
+still be skipped under context pressure. A stdlib `build_report.py`
+that regenerates the mechanical sections from `runs/*/config.json`
+remains the robust alternative if drift recurs — parked here, not
+built, by maintainer decision.
+
 ## Open questions (parked, do not block MVP)
 
 - **Sensitive detectors via aux tags vs. C++.** Lean: aux tags only for MVP;

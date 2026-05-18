@@ -13,10 +13,12 @@
   the runs/ / geometries/ / analysis/ directories.
 
   How it gets updated:
-    - You can hand-edit any "EDIT:" placeholder directly (search for
-      that token to find every spot meant for human input).
-    - Or ask Claude in this workspace to "update the report" — it
-      will read runs/ + log.md + result.md and replace placeholders.
+    - /geant4-claude:geant4-run refreshes the Runs table + Beam/physics
+      + header date after every finished simulation; /geant4-claude:
+      geant4-analyze adds the plots, key numbers, and interpretation.
+    - You can also hand-edit any "EDIT:" placeholder directly (search
+      for that token to find every spot meant for human input), or ask
+      Claude in this workspace to "update the report".
     - Keep the section structure intact; add or remove rows inside
       sections (Runs table, Key numbers, Plots grid) rather than
       restructuring.
