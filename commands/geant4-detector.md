@@ -24,6 +24,10 @@ applications that ignore it.
 - Optional `--name <slug>` → output file is `geometries/<slug>.gdml`
   (default: `det.gdml`; auto-suffix with `_2`, `_3`, … if the file exists
   and `--force` was not passed).
+- Optional `--optical` → force the optical-photon GDML path even if the
+  free-text spec doesn't name Cherenkov/scintillation. The path is also
+  auto-selected when the spec mentions Cherenkov, scintillation, or
+  optical photons.
 
 ## Steps
 
@@ -77,6 +81,51 @@ applications that ignore it.
    - All `<box>`, `<tubs>`, etc. carry `lunit="mm"`.
    - Mark every volume the user wants scored with the `auxiliary` tag.
 
+   **Optical path (Cherenkov / scintillation / `--optical`).** When the
+   spec involves optical photons, the radiator material needs a `RINDEX`
+   optical property or `G4OpticalPhysics` produces zero photons. For an
+   optical spec:
+
+   1. Define the radiator as an explicit `<material>` in a `<materials>`
+      block (NIST materials carry no optical properties), with a
+      `RINDEX` matrix in `<define>` and a `<property>` linking it.
+      Energies use the explicit `*eV` form:
+
+      ```xml
+      <define>
+        <matrix name="RAD_RINDEX" coldim="2"
+                values="1.5*eV <n_lo> 6.2*eV <n_hi>"/>
+      </define>
+      <materials>
+        <material name="<radmat>" formula="...">
+          <D value="<density>" unit="g/cm3"/>
+          <composite n="..." ref="..."/>
+          <property name="RINDEX" ref="RAD_RINDEX"/>
+        </material>
+      </materials>
+      ```
+      Use the user-specified refractive index; for a non-dispersive
+      radiator repeat the same `n` at both energies.
+
+   2. Add a downstream sensitive backplate placed *after* the radiator
+      along the beam axis (positive `z`), with a small gap — never
+      inside or face-overlapping the radiator (geometry-sanity check 1
+      and 2). Tag the backplate, not the radiator, with the
+      `<auxiliary auxtype="sensitive" auxvalue="true"/>`.
+
+   3. **RINDEX gate (mandatory).** Before declaring success, confirm the
+      radiator material has both a `<matrix>` and a
+      `<property name="RINDEX" .../>`. If it does not, **stop** — do not
+      report success. Tell the user the exact material name that is
+      missing RINDEX and that an optical run with it would silently
+      produce zero photons. This gate is the plugin's primary protection
+      against the zero-photon trap.
+
+   The optical run also needs a main with `G4OpticalPhysics` + a
+   photon-aware SD — that is `src/main.cc` regenerated from the recipe
+   in `skills/geant4-physics-list/SKILL.md`, not the canned
+   `geant4-example` main. Surface that in the next-step suggestion.
+
 4. **Validate.**
    ```bash
    GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
@@ -92,6 +141,12 @@ applications that ignore it.
      first positional arg —
      `/geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/<name>.gdml macros/<name>.mac {run_dir}/hits.root`;
    - their own main: load it via `G4GDMLParser::Read("geometries/<name>.gdml")`.
+   - optical spec: regenerate `src/main.cc` from the optical recipe in
+     `skills/geant4-physics-list/SKILL.md` (the canned `geant4-example`
+     main has no `G4OpticalPhysics` and its SD discards photons), build,
+     run, then `/geant4-claude:geant4-validate cherenkov runs/<id>
+     --rindex-from-gdml geometries/<name>.gdml --rindex-material
+     <radmat> --radiator-length <L>`.
 
 ## Outputs
 
@@ -106,6 +161,7 @@ applications that ignore it.
 | `xmllint: parser error` | Hand-written GDML is malformed. | Re-read the error; fix; re-validate. |
 | `G4GDML: WARNING: material '...' not found` (only seen at run time) | A non-NIST material name was used. | Switch to a NIST name (`G4_<symbol>`) or add a `<materials>` block defining the custom material. |
 | Volume not scored at run time | Missing `<auxiliary auxtype="sensitive" auxvalue="true"/>`. | Add the aux tag inside the `<volume>` element. |
+| Optical run produces zero photons | Radiator material has no `RINDEX` property. | The RINDEX gate should have stopped generation; if you hit this at run time the GDML was hand-edited — add a `<matrix>` + `<property name="RINDEX">` to the radiator material. |
 
 ## Notes
 
