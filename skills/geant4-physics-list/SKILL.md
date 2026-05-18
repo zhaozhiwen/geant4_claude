@@ -56,6 +56,91 @@ Either way, **never** silently change the physics list — record the
 choice in `runs/<id>/config.json` (extend the schema with a
 `physics_list` field).
 
+## Recipe: regenerating an optical-photon main
+
+There is no committed optical template. When the spec needs optical
+photons (Cherenkov, scintillation), regenerate `src/main.cc` from the
+generic `geant4_claude_main.cc` with exactly these changes — do not
+improvise the SD logic; copy it.
+
+**1. Physics list** — in `main()`, replace the `FTFP_BERT` registration:
+
+```cpp
+  auto* physics = new FTFP_BERT(0);
+  physics->RegisterPhysics(new G4OpticalPhysics());
+  runManager->SetUserInitialization(physics);
+```
+Add `#include "G4OpticalPhysics.hh"`.
+
+**2. Photon-aware SD** — the generic `GenericSD` returns `false` on
+`edep <= 0`, which discards every optical photon (they deposit ~0
+energy). Replace it with `OpticalSD`, which records one `Hits` row per
+optical photon at its first step inside a sensitive volume — i.e. once
+per entry into a sensitive volume; a photon absorbed before taking a
+step in a sensitive volume is not counted (negligible for a non-absorbing
+radiator, but note it if the radiator has an ABSLENGTH). The output stays
+the same `Hits` schema (`pdg = -22` for photons) so `geant4-validate
+cherenkov` runs with no extra flags:
+
+```cpp
+class OpticalSD : public G4VSensitiveDetector {
+public:
+  explicit OpticalSD(const G4String& name) : G4VSensitiveDetector(name) {}
+
+  G4bool ProcessHits(G4Step* step, G4TouchableHistory*) override {
+    const auto* track = step->GetTrack();
+    if (track->GetDefinition() != G4OpticalPhoton::Definition())
+      return false;
+    if (track->GetCurrentStepNumber() != 1) return false;  // count once
+
+    const auto& pos  = step->GetPreStepPoint()->GetPosition();
+    const auto  time = step->GetPreStepPoint()->GetGlobalTime();
+    const auto* lv   = step->GetPreStepPoint()
+                           ->GetTouchableHandle()
+                           ->GetVolume()
+                           ->GetLogicalVolume();
+    gBuf.volume.push_back(lv->GetName());
+    gBuf.edep.push_back(0.0);
+    gBuf.x.push_back(pos.x() / mm);
+    gBuf.y.push_back(pos.y() / mm);
+    gBuf.z.push_back(pos.z() / mm);
+    gBuf.t.push_back(time / ns);
+    gBuf.pdg.push_back(track->GetDefinition()->GetPDGEncoding());  // -22
+    return true;
+  }
+};
+```
+Add `#include "G4OpticalPhoton.hh"`. Attach `OpticalSD` (not
+`GenericSD`) in `ConstructSDandField()`.
+
+**3. Runtime RINDEX guard** — at the top of `RunAction::BeginOfRunAction`,
+before opening the ROOT file:
+
+```cpp
+    bool any_rindex = false;
+    for (const auto* m : *G4Material::GetMaterialTable()) {
+      const auto* mpt = m->GetMaterialPropertiesTable();
+      if (mpt && mpt->GetProperty("RINDEX")) { any_rindex = true; break; }
+    }
+    if (!any_rindex)
+      G4cerr << "[g4c] WARNING: no material has a RINDEX property — "
+                "G4OpticalPhysics will produce ZERO photons. Add RINDEX "
+                "to the radiator material (geant4-detector does this for "
+                "optical specs)." << G4endl;
+```
+Add `#include "G4Material.hh"` and `#include "G4MaterialPropertiesTable.hh"`.
+
+This is defense-in-depth; the primary RINDEX guarantee is
+`geant4-detector` refusing to emit an optical geometry whose radiator
+lacks a RINDEX matrix.
+
+Keep the init-order contract: do **not** call `runManager->Initialize()`
+in `main()`; the macro owns `/run/initialize`.
+
+The reference implementation that CI compiles and Frank-Tamm-closes is
+`tests/fixtures/optical/main.cc` — diff against it if a regenerated main
+misbehaves.
+
 ## Range cuts and step limits
 
 Range cuts control how finely Geant4 tracks low-energy secondaries.
