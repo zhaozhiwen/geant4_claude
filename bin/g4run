@@ -62,21 +62,6 @@ ensure_sif() {
 container_workdir()   { pwd -P; }
 container_cache_dir() { readlink -f "${CACHE_DIR}"; }
 
-# Run a shell command inside the container, with the entrypoint sourced and
-# the current working directory plus the cache bind-mounted.
-in_container() {
-  ensure_sif
-  local cmd="$1" wd cache_real
-  wd="$(container_workdir)"
-  cache_real="$(container_cache_dir)"
-  apptainer exec \
-    --bind "${wd}" \
-    --bind "${cache_real}" \
-    --pwd "${wd}" \
-    "${SIF_PATH}" \
-    bash -lc "source ${ENTRYPOINT} && ${cmd}"
-}
-
 # --- subcommands -------------------------------------------------------------
 cmd_info() {
   resolve_cache_dir
@@ -314,8 +299,20 @@ cmd_validate_gdml() {
   [[ -n "${gdml}" ]] || die "usage: g4run validate-gdml <file.gdml>"
   [[ -f "${gdml}" ]] || die "no such file: ${gdml}"
 
-  # Layer 1: XML well-formedness (xmllint, ~ms).
-  in_container "xmllint --noout '${gdml}'"
+  # Layer 1: XML well-formedness (xmllint, ~ms). The path is passed as a
+  # positional arg, never interpolated into a shell string — a quote or
+  # shell metachar in the filename would otherwise break or inject.
+  ensure_sif
+  local v_wd v_cache_real
+  v_wd="$(container_workdir)"
+  v_cache_real="$(container_cache_dir)"
+  apptainer exec \
+    --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
+    --bind "${v_wd}" \
+    --bind "${v_cache_real}" \
+    --pwd "${v_wd}" \
+    "${SIF_PATH}" \
+    bash -lc 'source "$0" && xmllint --noout "$1"' "${ENTRYPOINT}" "${gdml}"
 
   # Layer 2: G4GDMLParser semantic check. Catches missing materials, bad
   # solid/volume refs, malformed auxiliary tags — anything xmllint misses.
