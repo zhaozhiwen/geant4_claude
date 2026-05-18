@@ -7,10 +7,11 @@ simulation into a planned end-to-end run. Geant4 and ROOT live in a
 pinned apptainer image; analysis runs on the host with
 [`uproot`](https://github.com/scikit-hep/uproot5).
 
-> Status: **v0.0.3**. The four core commands (`init`, `build`, `run`,
-> `analyze`) are content-neutral — they accept any user-supplied
-> `main.cc` and any output schema. `/geant4-claude:geant4-detector`
-> writes standalone GDML for use with whatever `main.cc` you bring.
+> Status: **v0.0.6**. Eight commands (`init`, `detector`, `preview`,
+> `example`, `build`, `run`, `analyze`, `validate`) are content-neutral —
+> they accept any user-supplied `main.cc` and any output schema.
+> `/geant4-claude:geant4-detector` writes standalone GDML (including an
+> optical/RINDEX path) for use with whatever `main.cc` you bring.
 > `/geant4-claude:geant4-example` is a self-contained smoke test that
 > drops a working demo into the workspace so you can confirm the
 > toolchain works on your machine before writing any of your own code.
