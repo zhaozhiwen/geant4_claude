@@ -62,13 +62,11 @@ optional reusable scripts dropped in `analysis/`.
 
    # (c) install into the plugin venv (preferred — survives plugin updates,
    #     isolated from system site-packages, cleaned with the plugin).
-   #     A uv-created venv ships no pip, so install the same way the
-   #     SessionStart hook does: uv if present, else the venv's pip.
    else
-     # The SessionStart hook normally seeds the venv. If it didn't run
-     # (not approved / failed / fresh install) the venv may not exist —
-     # create+seed it via the hook itself (idempotent, single source of
-     # venv-creation logic), then re-resolve.
+     # The SessionStart hook normally seeds the venv. It may be absent
+     # (hook not approved / failed / never ran, or the venv was removed
+     # after a prior run) — create+seed it via the hook itself
+     # (idempotent, single source of venv-creation logic), then re-resolve.
      bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh" || true
      PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
      if ! "${PY}" -c "import uproot, numpy, matplotlib" 2>/dev/null; then

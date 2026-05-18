@@ -104,14 +104,16 @@ stores Cherenkov yield in `Events.n_photons` would run with
    elif "${CLAUDE_PLUGIN_DATA}/venv/bin/python" -c "import uproot, numpy" 2>/dev/null; then
      PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
    else
-     # SessionStart hook normally seeds the venv; if it didn't run the
-     # venv may be absent. Create+seed via the hook (idempotent), then
-     # re-resolve. Never pip install --user.
+     # The SessionStart hook normally seeds the venv. It may be absent
+     # (hook not approved / failed / never ran, or the venv was removed
+     # after a prior run) — create+seed it via the hook itself
+     # (idempotent, single source of venv-creation logic), then re-resolve.
      bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh" || true
      PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
      if ! "${PY}" -c "import uproot, numpy" 2>/dev/null; then
        echo "validate: could not provision uproot/numpy in the plugin" \
-            "venv (${PY}). Check hooks/install-deps.sh output and network." >&2
+            "venv (${PY}). Check hooks/install-deps.sh output and" \
+            "network; do not pip install --user." >&2
        exit 2
      fi
    fi
