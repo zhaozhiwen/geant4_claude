@@ -84,7 +84,11 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
    *why* this run differs, which is the whole point of capturing lineage.
    If `--from` is absent, both fields are `null`.
 
-5. **Run the executable.** Stream stdout+stderr to `log.txt`. Capture the executable's exit status via a sentinel file written outside the immutable run dir (`PIPESTATUS` is unreliable under a tcsh-login shell + subshell, and would let a failed run report as success). Export `RUN_DIR` and `RUN_ID` for the binary's benefit.
+5. **Run the executable.** Stream stdout+stderr to `log.txt`. Capture
+   the executable's exit status via a sentinel file written outside the
+   immutable run dir (`PIPESTATUS` is unreliable under a tcsh-login
+   shell + subshell, and would let a failed run report as success).
+   Export `RUN_DIR` and `RUN_ID` for the binary's benefit.
    ```bash
    EXIT_FILE="$(mktemp)"
    START=$(date +%s)

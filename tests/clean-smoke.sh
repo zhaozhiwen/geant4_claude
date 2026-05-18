@@ -68,6 +68,11 @@ g4run() {
     "${PLUGIN_ROOT}/bin/g4run" "$@"
 }
 
+# --- phase 0: exit-capture unit test ---------------------------------------
+log "exit-capture: sentinel-file pattern unit test"
+bash "${PLUGIN_ROOT}/tests/exit-capture-test.sh" \
+  || fail "exit-capture-test.sh failed"
+
 # --- phase 1: init equivalent ----------------------------------------------
 log "init: copy workspace skeleton from templates/workspace/"
 WS="${SCRATCH}/ws"
