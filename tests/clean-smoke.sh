@@ -75,10 +75,11 @@ bash "${PLUGIN_ROOT}/tests/exit-capture-test.sh" \
 
 # --- phase 0b: optical recipe ↔ fixture drift gate -------------------------
 log "recipe-sync: OpticalSD in skill must match the CI fixture verbatim"
-if ! diff \
-    <(sed -n '/class OpticalSD/,/^};/p' "${PLUGIN_ROOT}/tests/fixtures/optical/main.cc") \
-    <(sed -n '/class OpticalSD/,/^};/p' "${PLUGIN_ROOT}/skills/geant4-physics-list/SKILL.md") \
-    >/dev/null 2>&1; then
+fixture_sd="$(sed -n '/class OpticalSD/,/^};/p' "${PLUGIN_ROOT}/tests/fixtures/optical/main.cc")"
+recipe_sd="$(sed -n '/class OpticalSD/,/^};/p' "${PLUGIN_ROOT}/skills/geant4-physics-list/SKILL.md")"
+[ -n "${fixture_sd}" ] || fail "phase 0b: OpticalSD block not found in tests/fixtures/optical/main.cc — anchor broke"
+[ -n "${recipe_sd}" ] || fail "phase 0b: OpticalSD block not found in skills/geant4-physics-list/SKILL.md — anchor broke"
+if [ "${fixture_sd}" != "${recipe_sd}" ]; then
   fail "OpticalSD drifted between tests/fixtures/optical/main.cc and skills/geant4-physics-list/SKILL.md — re-sync them"
 fi
 
