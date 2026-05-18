@@ -130,14 +130,22 @@ cmd_root() {
     bash -lc 'source "$0" && root -l -b -q "$@"' "${ENTRYPOINT}" "$@"
 }
 
+# True if $1 is the directory $2 itself or a path strictly inside it.
+# String-prefix matching would treat /tmp/work2 as inside /tmp/work.
+path_is_under() {
+  local p="$1" dir="$2"
+  [[ "$p" == "$dir" || "$p" == "$dir"/* ]]
+}
+
 # Echo the host paths that need an explicit --bind beyond the workspace and
-# cache. A path is auto-covered if it's under the bound workdir or cache.
+# cache. A path is auto-covered only if it is the bound workdir/cache or a
+# path strictly inside one of them.
 extra_binds_for() {
   local wd="$1" cache_real="$2"; shift 2
   local p
   for p in "$@"; do
     [[ -z "$p" ]] && continue
-    if [[ "$p" != "${wd}"* && "$p" != "${cache_real}"* ]]; then
+    if ! path_is_under "$p" "$wd" && ! path_is_under "$p" "$cache_real"; then
       printf -- '--bind\n%s\n' "$p"
     fi
   done
@@ -421,6 +429,11 @@ EOF
 }
 
 # --- dispatch ----------------------------------------------------------------
+# Allow `source bin/g4run` in unit tests to load the functions/constants
+# without running a subcommand.
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+  return 0 2>/dev/null || true
+fi
 sub="${1:-}"; shift || true
 case "${sub}" in
   ""|-h|--help|help) usage; exit 0 ;;
