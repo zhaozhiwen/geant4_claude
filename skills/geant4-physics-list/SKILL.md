@@ -59,11 +59,11 @@ choice in `runs/<id>/config.json` (extend the schema with a
 ## Recipe: regenerating an optical-photon main
 
 There is no committed optical template. When the spec needs optical
-photons (Cherenkov, scintillation), regenerate `src/main.cc` from the
-generic `geant4_claude_main.cc` with exactly these changes — do not
-improvise the SD logic; copy it.
+photons (Cherenkov, scintillation), regenerate the workspace main
+(`src/geant4_claude_main.cc`, as dropped by `/geant4-claude:geant4-example`)
+with exactly these changes — do not improvise the SD logic; copy it.
 
-**1. Physics list** — in `main()`, replace the `FTFP_BERT` registration:
+**1. Physics list** — in `main()`, replace the single line `runManager->SetUserInitialization(new FTFP_BERT(0));` with:
 
 ```cpp
   auto* physics = new FTFP_BERT(0);
@@ -111,7 +111,10 @@ public:
 };
 ```
 Add `#include "G4OpticalPhoton.hh"`. Attach `OpticalSD` (not
-`GenericSD`) in `ConstructSDandField()`.
+`GenericSD`) in `ConstructSDandField()`. In `ConstructSDandField()`,
+change the one instantiation line
+`auto* sd = new GenericSD("SD/" + lv->GetName());` to
+`auto* sd = new OpticalSD("SD/" + lv->GetName());`.
 
 **3. Runtime RINDEX guard** — at the top of `RunAction::BeginOfRunAction`,
 before opening the ROOT file:

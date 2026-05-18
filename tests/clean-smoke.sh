@@ -73,6 +73,15 @@ log "exit-capture: sentinel-file pattern unit test"
 bash "${PLUGIN_ROOT}/tests/exit-capture-test.sh" \
   || fail "exit-capture-test.sh failed"
 
+# --- phase 0b: optical recipe ↔ fixture drift gate -------------------------
+log "recipe-sync: OpticalSD in skill must match the CI fixture verbatim"
+if ! diff \
+    <(sed -n '/class OpticalSD/,/^};/p' "${PLUGIN_ROOT}/tests/fixtures/optical/main.cc") \
+    <(sed -n '/class OpticalSD/,/^};/p' "${PLUGIN_ROOT}/skills/geant4-physics-list/SKILL.md") \
+    >/dev/null 2>&1; then
+  fail "OpticalSD drifted between tests/fixtures/optical/main.cc and skills/geant4-physics-list/SKILL.md — re-sync them"
+fi
+
 # --- phase 1: init equivalent ----------------------------------------------
 log "init: copy workspace skeleton from templates/workspace/"
 WS="${SCRATCH}/ws"
