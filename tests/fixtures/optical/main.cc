@@ -71,8 +71,11 @@ struct OutputState {
 };
 static OutputState gOut;
 
-// Optical-photon SD: record one row per optical photon at its first
-// step (counts each photon exactly once, decoupled from geometry).
+// Optical-photon SD: record one Hits row per optical photon at its
+// first step inside a sensitive volume. Counts each photon once per
+// entry into a sensitive volume; a photon absorbed before taking a
+// step in a sensitive volume is not counted (negligible here — the
+// radiator has no ABSLENGTH and photons are born well inside it).
 class OpticalSD : public G4VSensitiveDetector {
 public:
   explicit OpticalSD(const G4String& name) : G4VSensitiveDetector(name) {}

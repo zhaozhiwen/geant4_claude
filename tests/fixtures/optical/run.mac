@@ -1,4 +1,5 @@
 /run/initialize
+/random/setSeeds 12345 67890
 /gun/particle e-
 /gun/energy 10 GeV
 /gun/position 0 0 -650 mm
