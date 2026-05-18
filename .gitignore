@@ -57,3 +57,6 @@ wiki/.obsidian/
 
 # Scratch chunked outputs from PDG-chapter ingest (regenerable from the source PDF)
 wiki/raw/pdg-reviews/parts/
+
+# superpowers brainstorm/spec/plan artifacts — process scratch, not shipped docs
+docs/superpowers/
