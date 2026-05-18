@@ -42,8 +42,15 @@ yourself.
 
 ## Install
 
+`/geant4-claude:geant4-analyze` resolves a Python with `uproot`/`numpy`/
+`matplotlib` automatically: host Python if it already has them, else the
+plugin-managed venv at `${CLAUDE_PLUGIN_DATA}/venv` (seeded by the
+SessionStart hook from `requirements.txt`, or repaired on demand). Never
+`pip install --user` — it pollutes the host site-packages the rest of the
+plugin deliberately avoids. To force a manual repair:
+
 ```bash
-pip install --user uproot numpy matplotlib
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"
 ```
 
 If the user wants isolation (recommended), create a workspace venv:

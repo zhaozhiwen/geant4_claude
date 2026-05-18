@@ -256,7 +256,7 @@ For the full architecture, see [docs/DESIGN.md](docs/DESIGN.md).
 | `apptainer: command not found` | Install apptainer first. |
 | `pull` hangs or 401 | Check network; `ghcr.io/gemc/g4install` is public. |
 | `G4GDML: ERROR: ...` | `g4run validate-gdml <file>`; consult the `geant4-geometry` skill. |
-| `ModuleNotFoundError: uproot` (analyze step) | `pip install --user uproot numpy matplotlib`, or use a venv. |
+| `ModuleNotFoundError: uproot` (analyze step) | Re-run `/geant4-claude:geant4-analyze` — it seeds the plugin-managed venv (`${CLAUDE_PLUGIN_DATA}/venv`) automatically. Do not `pip install --user` (pollutes host site-packages). |
 | Empty `Hits` tree | No volume has the sensitive aux tag, or gun energy is zero. |
 | Build fails | `g4run shell` and try `cmake -S /…/src -B /tmp/build` manually to see the real cmake error. |
 | `TGeoManager::Import` returns null in container ROOT | The pinned image's ROOT 6.38 is built without `root-geom`. To preview geometry, load the GDML inside Geant4's own viewer via `g4run shell` and a `vis.mac` macro, not via ROOT. |

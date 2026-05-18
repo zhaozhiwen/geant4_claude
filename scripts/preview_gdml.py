@@ -50,7 +50,10 @@ try:
 except ImportError as e:
     sys.exit(
         f"[preview-gdml] missing dep: {e}. "
-        "Install with: pip install --user matplotlib numpy"
+        "Run this through /geant4-claude:geant4-preview, which uses the "
+        "plugin-managed venv. To repair manually: "
+        'bash "$CLAUDE_PLUGIN_ROOT/hooks/install-deps.sh". '
+        "Do not pip install --user (pollutes host site-packages)."
     )
 
 
