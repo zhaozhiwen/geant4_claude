@@ -431,7 +431,7 @@ EOF
 # --- dispatch ----------------------------------------------------------------
 # Allow `source bin/g4run` in unit tests to load the functions/constants
 # without running a subcommand.
-if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+if [[ "${BASH_SOURCE[0]:-}" != "${0}" ]]; then
   return 0 2>/dev/null || true
 fi
 sub="${1:-}"; shift || true
