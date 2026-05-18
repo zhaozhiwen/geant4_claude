@@ -303,14 +303,16 @@ cmd_validate_gdml() {
   # positional arg, never interpolated into a shell string — a quote or
   # shell metachar in the filename would otherwise break or inject.
   ensure_sif
-  local v_wd v_cache_real
-  v_wd="$(container_workdir)"
-  v_cache_real="$(container_cache_dir)"
+  local wd cache_real
+  wd="$(container_workdir)"
+  cache_real="$(container_cache_dir)"
+  # The container entrypoint ends in `exec "$@"` and would otherwise clobber
+  # forwarded positional args; DOCKER_ENTRYPOINT_SOURCE_ONLY=1 suppresses it.
   apptainer exec \
     --env DOCKER_ENTRYPOINT_SOURCE_ONLY=1 \
-    --bind "${v_wd}" \
-    --bind "${v_cache_real}" \
-    --pwd "${v_wd}" \
+    --bind "${wd}" \
+    --bind "${cache_real}" \
+    --pwd "${wd}" \
     "${SIF_PATH}" \
     bash -lc 'source "$0" && xmllint --noout "$1"' "${ENTRYPOINT}" "${gdml}"
 
