@@ -14,7 +14,7 @@ commands (`/geant4-claude:geant4-init`, `…detector`, `…build`, `…run`,
 The default flow this skill drives is the no-C++ path:
 
 ```
-init → detector → preview → example → (edit macros/run.mac) → build → run → analyze
+init → detector → preview → example → (edit macros/run.mac) → build → run → analyze → validate
 ```
 
 `/geant4-claude:geant4-preview` renders three orthographic PNGs of the
@@ -107,15 +107,24 @@ not safe. Do not chain a bunch of guesses together.
 The example main uses `FTFP_BERT` and a generic `Hits` TTree. If the
 spec involves any of:
 
-- Optical photons (Cherenkov, scintillation) → needs `G4OpticalPhysics`
-  registered + material optical properties + a photon-aware SD.
+- Optical photons (Cherenkov, scintillation) → `geant4-detector` writes
+  the RINDEX GDML (it gates on RINDEX); `src/geant4_claude_main.cc` is
+  regenerated from the optical recipe in
+  `skills/geant4-physics-list/SKILL.md` (§ "Recipe: regenerating an
+  optical-photon main") — apply the recipe in place: edit the three spots
+  (physics list, SD class, runtime RINDEX guard) in the existing
+  `src/geant4_claude_main.cc`. HP neutrons and non-`Hits` schemas still
+  force a fully hand-written main.
 - HP neutrons (sub-eV → 20 MeV resonances) → needs `G4HadronPhysicsHP`.
 - Polarization, radioactive decay, biasing.
 - A non-`Hits` output schema (per-track ntuple, dose grid, etc.).
 
 …then the example main alone can't do it. The plan must say so, and
 step 3 of the flow becomes "write a custom `src/main.cc` +
-`src/CMakeLists.txt`" instead of `/geant4-claude:geant4-example`.
+`src/CMakeLists.txt`" instead of `/geant4-claude:geant4-example` — for
+the optical case this is a recipe-guided in-place edit of
+`src/geant4_claude_main.cc`, not freehand; say so to the user (next
+rule).
 For the Cherenkov example, this is the case — surface it in the plan.
 
 When writing the custom `main.cc`, follow the same init-order contract
@@ -184,6 +193,9 @@ Steps
      geometries/<name>.gdml macros/<name>.mac {run_dir}/<output>.root
 8. /geant4-claude:geant4-analyze runs/<id>
      <one line: canned Hits-TTree plot vs. custom uproot script vs. ROOT macro>
+9. /geant4-claude:geant4-validate <topic> runs/<id> <topic flags>
+     — closure test when an analytic prediction exists (Cherenkov:
+       Frank-Tamm). Skip only if no validator covers the physics.
 
 Defaults applied
 - <only list defaults you actually filled in; skip this section if none>
@@ -222,10 +234,23 @@ Only after the user picks "Approve and run". For each step:
    - `build` → `build/<binary>` exists and is executable.
    - `run` → `runs/<id>/{<output>.root, log.txt, config.json}` exist.
    - `analyze` → expected `.png` plots exist under `runs/<id>/`.
+   - `validate` → `runs/<id>/validate_<topic>.json` exists; the
+     validator's PASS/FAIL block is shown to the user verbatim. On FAIL,
+     stop and surface it — do not proceed to the final report as if the
+     physics were sound.
 3. If a step fails, **stop**. Report the failure (last 20 lines of
    `runs/<id>/log.txt` or the build error) and ask the user how to
    proceed. Do not silently retry, do not paper over the error, do not
    move to the next step.
+
+**Use the slash commands in their documented order.** If you cannot use
+a command as documented and must improvise — hand-write what a command
+would generate, skip a step, or work around a failure — say so to the
+user explicitly: name the command you bypassed, what you did instead,
+and why. Never silently substitute your own approach for a documented
+command. (The optical case is a planned, reportable improvisation:
+`src/geant4_claude_main.cc` is regenerated from the recipe instead of
+using `geant4-example` as-is — tell the user that when it happens.)
 
 Maintain the workspace's handoff documents per the rule in
 `templates/workspace/CLAUDE.md` non-negotiable #6 — that file is the
@@ -279,6 +304,9 @@ plan — the plots and numbers are the recap.
   including optical photons (Cherenkov) and HP neutrons.
 - `skills/geant4-analysis/SKILL.md` — `uproot` recipes; ROOT-macro
   template under `analysis/` when the user asks for ROOT.
+- `commands/geant4-validate.md` — physics closure test (Frank-Tamm for
+  Cherenkov); the final step of the default flow when a validator
+  covers the physics.
 - `templates/workspace/CLAUDE.md` — the rules that apply once the
   workspace is scaffolded; loaded into Claude's context for every
   subsequent action in the workspace.

@@ -186,6 +186,40 @@ rm -rf /tmp/g4c_clean_smoke /tmp/g4c_clean_custom
 The data dir under `~/.claude/plugins/data/geant4-claude-*/` is removed
 automatically when the plugin is uninstalled.
 
+## Phase 9 — Optical-photon orchestrator (manual; clean-smoke can't reach this)
+
+**Goal:** verify the full orchestrator flow for an optical spec, including
+the RINDEX gate, the recipe-guided in-place edit, and the validate
+closure step.
+
+In a fresh scratch dir:
+
+```bash
+mkdir /tmp/g4c_optical_orch && cd /tmp/g4c_optical_orch
+```
+
+In Claude Code, send a single natural-language request:
+
+```text
+> Cherenkov yield from a 1 m CO₂ radiator, 10 GeV e⁻
+```
+
+The orchestrator skill should load, gap-check the spec, and present a
+plan. Verify the plan shows `geant4-validate cherenkov` as the final
+step.
+
+Approve the plan and let the orchestrator run. Pass criteria:
+
+| Check | Verify |
+|---|---|
+| **RINDEX gate — missing index** | Before approving, ask Claude to re-run with "a CO₂ radiator but don't add a refractive index". `geant4-detector` must stop and name the material that is missing RINDEX — do not write a success GDML. |
+| **RINDEX gate — happy path** | When given a valid spec (n ≈ 1.00045), `geant4-detector` writes `geometries/<name>.gdml` containing a `<matrix>` and `<property name="RINDEX">` for the radiator material. |
+| **Recipe-guided edit announced** | Claude tells the user explicitly that it is applying the optical-main recipe in place to `src/geant4_claude_main.cc` (the improvisation rule: it names `geant4-example` as the command bypassed, says it is applying the recipe instead, and says why). It does **not** silently drop in a different main. |
+| **Edited main compiles** | `/geant4-claude:geant4-build` succeeds. `build/<binary>` is present and executable. |
+| **Run produces photons** | `/geant4-claude:geant4-run` completes with exit status 0. `runs/<id>/hits.root` is non-empty. `log.txt` contains `[g4c] attached optical SD` and no `WARNING: no material has a RINDEX property`. |
+| **Validate PASS** | `/geant4-claude:geant4-validate cherenkov runs/<id> --rindex-from-gdml geometries/<name>.gdml --rindex-material <radmat> --radiator-length 1m` prints `RESULT: PASS` and writes `runs/<id>/validate_cherenkov.json`. |
+| **FAIL surfaced** | If the validate step returns FAIL, Claude stops and shows the PASS/FAIL block verbatim — it does **not** proceed to the final report as if the physics were sound. |
+
 ## Pass criteria for the release
 
 All eight phases pass without manual workarounds. Any phase that needed

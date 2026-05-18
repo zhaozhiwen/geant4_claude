@@ -60,11 +60,12 @@ $ claude
 
 The user journey above is the **manual** path. The `geant4`
 orchestrator skill collapses these steps behind a single
-natural-language request — see Skill split below. Separately,
-`/geant4-claude:geant4-example` drops a self-contained smoke test
-into the workspace; useful for confirming the toolchain works on
-a fresh install but *not* part of the user's real-simulation
-journey.
+natural-language request — see Skill split below. The orchestrator adds
+`geant4-preview` after `geant4-detector` and `geant4-validate` at the
+end when a closure validator covers the physics (Cherenkov: Frank-Tamm).
+Separately, `/geant4-claude:geant4-example` drops a self-contained smoke
+test into the workspace; useful for confirming the toolchain works on a
+fresh install but *not* part of the user's real-simulation journey.
 
 ## Architecture
 
@@ -233,7 +234,7 @@ Each command's full contract lives in its `.md` file under `commands/`.
 
 | Skill | Owns |
 |-------|------|
-| `geant4` | **Full-flow orchestrator (the highlighted entry point).** Auto-loads on "simulate / build / run a Geant4 …" requests; gap-checks the user's spec across six fields (goal, geometry, beam, sensitive, output, analysis); presents a brief plan; on approval drives `init → detector → build → run → analyze` in sequence. The only skill in the plugin that drives a workflow rather than describing one. |
+| `geant4` | **Full-flow orchestrator (the highlighted entry point).** Auto-loads on "simulate / build / run a Geant4 …" requests; gap-checks the user's spec across six fields (goal, geometry, beam, sensitive, output, analysis); presents a brief plan; on approval drives `init → detector → preview → build → run → analyze → validate` in sequence (validate runs when a closure validator covers the physics). For optical-photon specs, `geant4-detector` writes RINDEX GDML and gates at parse time; `src/geant4_claude_main.cc` is regenerated in place from the recipe in `skills/geant4-physics-list/SKILL.md` — no optical template is shipped. The only skill in the plugin that drives a workflow rather than describing one. |
 | `geant4-geometry` | GDML structure, units, materials, common shapes, validation, `auxiliary` tags for sensitive detectors. |
 | `geant4-physics-list` | Choosing among FTFP_BERT / QGSP_BIC / etc.; range cuts; what to set for EM-only vs hadronic. |
 | `geant4-analysis` | `uproot` recipes (read `Hits` TTree → numpy), common plots (edep histogram, hit map, per-volume sums). |
