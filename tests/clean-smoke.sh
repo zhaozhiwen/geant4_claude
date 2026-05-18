@@ -11,7 +11,7 @@
 #   tests/clean-smoke.sh
 #       Fresh state. May pull the pinned image (~600 MB) on first run.
 #
-#   G4C_REUSE_SIF=/path/to/g4install_11.4.0-almalinux-9.4.sif tests/clean-smoke.sh
+#   G4C_REUSE_SIF=/path/to/<sif-from: bin/g4run sif-name> tests/clean-smoke.sh
 #       Symlinks an existing .sif into the sandbox to skip the pull.
 #       Useful for fast iteration; doesn't compromise the test (every
 #       other path is sandboxed).
@@ -249,7 +249,7 @@ grep -q "no cache path" /tmp/g4c_smoke_info.out \
 $(cat /tmp/g4c_smoke_info.out)"
 rm -f /tmp/g4c_smoke_info.out
 
-# --- phase 7b: image-tag single-source check -------------------------------
+# --- phase 6b: image-tag single-source check -------------------------------
 # CLAUDE.md non-negotiable: the tag lives in bin/g4run only. Static docs that
 # DISPLAY it (README, Pages config) must match it; CHANGELOG/design history is
 # point-in-time and intentionally NOT checked here.
