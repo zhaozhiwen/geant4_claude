@@ -84,15 +84,17 @@ environment, so a binary that reads `getenv("RUN_DIR")` will see it.
    *why* this run differs, which is the whole point of capturing lineage.
    If `--from` is absent, both fields are `null`.
 
-5. **Run the executable.** Stream stdout+stderr to `log.txt`. Export
-   `RUN_DIR` and `RUN_ID` for the binary's benefit.
+5. **Run the executable.** Stream stdout+stderr to `log.txt`. Capture the executable's exit status via a sentinel file written outside the immutable run dir (`PIPESTATUS` is unreliable under a tcsh-login shell + subshell, and would let a failed run report as success). Export `RUN_DIR` and `RUN_ID` for the binary's benefit.
    ```bash
+   EXIT_FILE="$(mktemp)"
    START=$(date +%s)
    ( export RUN_DIR RUN_ID
      export GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"
      "${CLAUDE_PLUGIN_ROOT}/bin/g4run" exec "${EXE}" "${resolved_args[@]}"
+     echo $? > "${EXIT_FILE}"
    ) 2>&1 | tee "${RUN_DIR}/log.txt"
-   STATUS=${PIPESTATUS[0]}
+   STATUS="$(cat "${EXIT_FILE}" 2>/dev/null || echo 1)"
+   rm -f "${EXIT_FILE}"
    END=$(date +%s)
    ```
 
