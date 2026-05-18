@@ -222,5 +222,5 @@ Approve the plan and let the orchestrator run. Pass criteria:
 
 ## Pass criteria for the release
 
-All eight phases pass without manual workarounds. Any phase that needed
+All phases pass without manual workarounds. Any phase that needed
 a workaround is a release blocker.

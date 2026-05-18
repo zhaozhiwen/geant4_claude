@@ -120,12 +120,13 @@ spec involves any of:
 - A non-`Hits` output schema (per-track ntuple, dose grid, etc.).
 
 …then the example main alone can't do it. The plan must say so, and
-step 3 of the flow becomes "write a custom `src/main.cc` +
-`src/CMakeLists.txt`" instead of `/geant4-claude:geant4-example` — for
-the optical case this is a recipe-guided in-place edit of
-`src/geant4_claude_main.cc`, not freehand; say so to the user (next
-rule).
-For the Cherenkov example, this is the case — surface it in the plan.
+step 3 of the flow becomes "write a custom `src/<name>.cc` +
+`src/CMakeLists.txt`" instead of `/geant4-claude:geant4-example`. For
+the optical case the file is fixed: it is an in-place recipe edit of
+`src/geant4_claude_main.cc` (the main `geant4-example` drops), not a
+freehand new file — tell the user (see the rule in Step 3).
+
+For a Cherenkov spec, the optical path above applies — surface it explicitly in the plan you present.
 
 When writing the custom `main.cc`, follow the same init-order contract
 the example main uses: do **not** call `runManager->Initialize()` before
@@ -207,7 +208,7 @@ Open questions / risks
 
 Then use `AskUserQuestion` with three options:
 
-1. **Approve and run** — proceed with steps 1–8.
+1. **Approve and run** — proceed with steps 1–9.
 2. **Edit the spec** — user wants to change something; loop back to step 1.
 3. **Just write the plan, don't run yet** — leaves the plan in the chat
    without executing; useful when the user wants a second look.
@@ -248,9 +249,7 @@ a command as documented and must improvise — hand-write what a command
 would generate, skip a step, or work around a failure — say so to the
 user explicitly: name the command you bypassed, what you did instead,
 and why. Never silently substitute your own approach for a documented
-command. (The optical case is a planned, reportable improvisation:
-`src/geant4_claude_main.cc` is regenerated from the recipe instead of
-using `geant4-example` as-is — tell the user that when it happens.)
+command. (For optical specs the documented path is an in-place recipe edit of `src/geant4_claude_main.cc` rather than using `geant4-example` as-is — this is not an improvisation, but still tell the user, since they may expect a fresh file rather than an edited one.)
 
 Maintain the workspace's handoff documents per the rule in
 `templates/workspace/CLAUDE.md` non-negotiable #6 — that file is the
