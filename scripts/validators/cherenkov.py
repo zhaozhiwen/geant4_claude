@@ -94,8 +94,10 @@ def parse_energy_eV(tok: str) -> float:
 
     GDML matrix values may carry an explicit unit, written as a Geant4
     unit expression (`1.5*eV`, `1.5eV`). A *bare* number is in Geant4
-    internal units, where energy is MeV — that is the convention the
-    plugin's own generated GDML uses, so it must keep working.
+    internal units, where energy is MeV — both forms must keep working.
+    `geant4-detector` now generates the explicit `*eV` form (e.g.
+    `1.5*eV 1.00045 6.2*eV 1.00045`), so that is the common case; bare
+    numbers remain valid for hand-written or legacy GDML.
     """
     t = tok.strip().replace("*", "")
     for unit in sorted(_ENERGY_UNITS_EV, key=len, reverse=True):

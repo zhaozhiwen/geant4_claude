@@ -40,6 +40,13 @@ applications that ignore it.
    - which volumes are sensitive (default: any non-world volume the user
      names "detector" or describes as a "block of <material>"; ask if
      unclear).
+   - **Optical refractive index (gate).** If the spec is optical (`--optical`,
+     or mentions Cherenkov/scintillation/optical photons) and the user has not
+     supplied a refractive index `n` (a single value, or an n-vs-energy/wavelength
+     table), **stop and ask** before writing any GDML: request `n`, or an
+     `n(λ)` table as `energy[eV] n` pairs. A NIST material carries no optical
+     properties, so generating without a user-supplied index would silently
+     produce zero photons. Do not guess `n`.
 
    When in doubt, **ask** the user before generating. Don't guess
    geometry that's load-bearing for physics.
@@ -55,6 +62,7 @@ applications that ignore it.
    <?xml version="1.0" encoding="UTF-8"?>
    <gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+     <!-- <define> … </define>  (optional: matrices, e.g. RINDEX for optical) -->
      <solids> … </solids>
      <structure>
        <volume name="..._lv">
@@ -81,7 +89,7 @@ applications that ignore it.
    - All `<box>`, `<tubs>`, etc. carry `lunit="mm"`.
    - Mark every volume the user wants scored with the `auxiliary` tag.
 
-   **Optical path (Cherenkov / scintillation / `--optical`).** When the
+   **Optical path (Cherenkov / scintillation / `--optical`).** This branch applies when `--optical` is passed or the spec mentions Cherenkov, scintillation, or optical photons. When the
    spec involves optical photons, the radiator material needs a `RINDEX`
    optical property or `G4OpticalPhysics` produces zero photons. For an
    optical spec:
@@ -107,19 +115,26 @@ applications that ignore it.
       Use the user-specified refractive index; for a non-dispersive
       radiator repeat the same `n` at both energies.
 
+      The `<composite>` form above defines a molecular material by atom count
+      (right for a gas like CO₂); for a mixture or aerogel use mass
+      `<fraction>` instead. `tests/fixtures/optical/radiator.gdml` is a
+      complete, CI-validated worked example of an optical radiator (CO₂ +
+      RINDEX) — mirror its structure.
+
    2. Add a downstream sensitive backplate placed *after* the radiator
       along the beam axis (positive `z`), with a small gap — never
       inside or face-overlapping the radiator (geometry-sanity check 1
       and 2). Tag the backplate, not the radiator, with the
       `<auxiliary auxtype="sensitive" auxvalue="true"/>`.
 
-   3. **RINDEX gate (mandatory).** Before declaring success, confirm the
-      radiator material has both a `<matrix>` and a
-      `<property name="RINDEX" .../>`. If it does not, **stop** — do not
-      report success. Tell the user the exact material name that is
-      missing RINDEX and that an optical run with it would silently
-      produce zero photons. This gate is the plugin's primary protection
-      against the zero-photon trap.
+   3. **Post-write consistency check.** After writing, confirm the radiator
+      material actually carries both its `<matrix>` and a
+      `<property name="RINDEX" .../>`, and that the `--rindex-material` name
+      you'll cite downstream matches the `<material name="..."/>` you wrote.
+      The primary protection is the parse-time index gate in step 1 (never
+      generate optical GDML without a user-supplied `n`); this is a
+      defense-in-depth double-check. If it fails, stop, name the exact
+      material missing RINDEX, and do not report success.
 
    The optical run also needs a main with `G4OpticalPhysics` + a
    photon-aware SD — that is `src/main.cc` regenerated from the recipe
@@ -141,12 +156,13 @@ applications that ignore it.
      first positional arg —
      `/geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/<name>.gdml macros/<name>.mac {run_dir}/hits.root`;
    - their own main: load it via `G4GDMLParser::Read("geometries/<name>.gdml")`.
-   - optical spec: regenerate `src/main.cc` from the optical recipe in
-     `skills/geant4-physics-list/SKILL.md` (the canned `geant4-example`
-     main has no `G4OpticalPhysics` and its SD discards photons), build,
-     run, then `/geant4-claude:geant4-validate cherenkov runs/<id>
-     --rindex-from-gdml geometries/<name>.gdml --rindex-material
-     <radmat> --radiator-length <L>`.
+   - optical spec: apply the recipe in `skills/geant4-physics-list/SKILL.md`
+     (§ "Recipe: regenerating an optical-photon main") directly to the
+     existing workspace main `src/geant4_claude_main.cc` — edit it in place
+     in the three spots the recipe specifies (physics list, SD class, runtime
+     RINDEX guard); do not emit a new file. Then build, run, and:
+     `/geant4-claude:geant4-validate cherenkov runs/<id> --rindex-from-gdml geometries/<name>.gdml --rindex-material <radmat> --radiator-length <L>`
+     (substitute `<radmat>` with the `<material name="..."/>` you wrote).
 
 ## Outputs
 
