@@ -65,11 +65,17 @@ optional reusable scripts dropped in `analysis/`.
    #     A uv-created venv ships no pip, so install the same way the
    #     SessionStart hook does: uv if present, else the venv's pip.
    else
+     # The SessionStart hook normally seeds the venv. If it didn't run
+     # (not approved / failed / fresh install) the venv may not exist —
+     # create+seed it via the hook itself (idempotent, single source of
+     # venv-creation logic), then re-resolve.
+     bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh" || true
      PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
-     if command -v uv >/dev/null 2>&1; then
-       uv pip install --python "${PY}" -q uproot numpy matplotlib
-     else
-       "${PY}" -m pip install -q uproot numpy matplotlib
+     if ! "${PY}" -c "import uproot, numpy, matplotlib" 2>/dev/null; then
+       echo "analyze: could not provision uproot/numpy/matplotlib in the" \
+            "plugin venv (${PY}). Check hooks/install-deps.sh output and" \
+            "network; do not pip install --user." >&2
+       exit 1
      fi
    fi
    ```
