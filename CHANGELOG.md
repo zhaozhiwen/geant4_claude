@@ -9,7 +9,7 @@ A bump of the pinned container image tag is at minimum a **minor**
 release. A breaking change to the `Hits` TTree schema or to the
 `runs/<id>/config.json` provenance contract is a **major** release.
 
-## [Unreleased]
+## [0.0.6] - 2026-05-18
 
 ### Added
 
@@ -45,6 +45,24 @@ release. A breaking change to the `Hits` TTree schema or to the
   path via `--refractive-index` stays available as fallback when the
   GDML has no optical properties. Summary JSON records source,
   effective-`n`, and the parsed matrix.
+- **Optical-photon (Cherenkov / scintillation) support.**
+  `/geant4-claude:geant4-detector` gained an optical branch: it emits
+  the radiator's `RINDEX` matrix (explicit `*eV` form) plus a
+  downstream sensitive backplate, behind a **parse-time RINDEX gate** —
+  it refuses to generate optical GDML unless the user supplied a
+  refractive index `n`, so a zero-photon run can never be created. No
+  optical C++ template is shipped; `skills/geant4-physics-list/SKILL.md`
+  carries a verbatim recipe (`FTFP_BERT` + `G4OpticalPhysics`, a
+  photon-aware SD writing the same `Hits`/`pdg=-22` schema, a runtime
+  RINDEX guard) applied in place to `src/geant4_claude_main.cc`. A CI
+  fixture (`tests/fixtures/optical/`) proves the chain end-to-end with a
+  deterministic Frank-Tamm closure (clean-smoke phase 4b); a phase-0b
+  drift gate byte-diffs the recipe against the fixture so they cannot
+  silently diverge.
+- **`geant4-validate` in the default flow.** The orchestrator now drives
+  `… → run → analyze → validate`, runs a closure test when an analytic
+  prediction exists (Cherenkov: Frank-Tamm), and stops without a
+  success report if it FAILs.
 
 ### Changed
 
@@ -57,6 +75,19 @@ release. A breaking change to the `Hits` TTree schema or to the
   threading commands belong, and the orchestrator skill's "bring-your-
   own main" guidance warns against the common Geant4-tutorial pattern
   of calling `runManager->Initialize()` in main.
+- **Optical photons are no longer a "bring-your-own-main" case.** The
+  orchestrator routes Cherenkov/scintillation onto the documented
+  `geant4-detector` + recipe path (framed as the documented path, not
+  an "improvisation"); only HP neutrons, non-`Hits` schemas, and
+  hard-coded geometry still force a fully hand-written main. A new
+  ordering/improvisation rule requires the orchestrator to use the
+  slash commands in their documented order and to tell the user
+  explicitly whenever it must deviate from a command.
+- **clean-smoke leakage scan (phase 7) scans git-tracked files only.**
+  It previously recursively grepped the whole working directory, so an
+  untracked local scratch file (e.g. a maintainer's `BUILD_LOG.md`)
+  would fail CI even though it is not committed and absent on a fresh
+  clone. Genuine leaks in tracked files are still hard-blocked.
 
 ### Fixed
 
@@ -95,6 +126,11 @@ release. A breaking change to the `Hits` TTree schema or to the
   no Gemfile. README, DESIGN, CHANGELOG continue to live at the repo
   root and on GitHub; the landing page is a separate one-page
   entry surface for casual visitors.
+- **`geant4-run` exit-status capture.** Replaced
+  `STATUS=${PIPESTATUS[0]}` (empty under a tcsh-login shell + subshell,
+  which let a failed simulation be reported as success) with a
+  shell-agnostic sentinel file written outside the immutable run dir.
+  Added `tests/exit-capture-test.sh`, wired into clean-smoke phase 0.
 
 ## [0.0.4] - 2026-05-14
 

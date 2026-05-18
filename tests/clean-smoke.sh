@@ -239,16 +239,18 @@ $(cat /tmp/g4c_smoke_info.out)"
 rm -f /tmp/g4c_smoke_info.out
 
 # --- phase 7: leakage scan --------------------------------------------------
-# Hard-block: the actual user's home path slipping into committed files. JLab
-# hostnames / shared-FS paths are softer — they sometimes legitimately appear
-# in CHANGELOG/CLAUDE.md as bug-fix narrative; that's pre-publish manual
-# review territory, not a unit test.
-log "leakage: scan plugin checkout for /home/${USER}"
-strays=$(grep -RIl "/home/${USER}" "${PLUGIN_ROOT}" 2>/dev/null \
-         | grep -Ev "(^${PLUGIN_ROOT}/\.git/|wiki/raw/geant4-src/|tests/clean-smoke\.sh\$)" \
-         || true)
+# Hard-block: the actual user's home path slipping into committed files. Scan
+# git-TRACKED files only — an untracked local scratch file (e.g. a maintainer's
+# BUILD_LOG.md) is not a leak, won't exist on a fresh clone, and must not fail
+# CI. .git/ and gitignored content (wiki/raw/geant4-src/) are excluded for
+# free by ls-files. JLab hostnames / shared-FS paths are softer — they
+# sometimes legitimately appear in CHANGELOG/CLAUDE.md as bug-fix narrative;
+# that's pre-publish manual review territory, not a unit test.
+log "leakage: scan tracked files for /home/${USER}"
+strays=$(git -C "${PLUGIN_ROOT}" grep -Il -e "/home/${USER}" -- \
+           ':!tests/clean-smoke.sh' 2>/dev/null || true)
 if [ -n "${strays}" ]; then
-  echo "leaks found in:"
+  echo "leaks found in tracked files:"
   echo "${strays}"
   fail "leakage scan failed — replace with /home/\$USER placeholder"
 fi
