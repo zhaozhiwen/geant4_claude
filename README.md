@@ -81,7 +81,9 @@ in sequence.
 > Create a Cherenkov simulation: a 1×1×1 m CO2 gas radiator at 1 atm,
   1 GeV e- beam along the central axis, ideal downstream flux backplate
   collects photons, ROOT output, then analyze with a 1-D photon-count
-  histogram and a 2-D photon (x, y) distribution.
+  histogram and a 2-D photon (x, y) distribution. Finally use Cherenkov
+  physics analytic calculation to predict the photon distribution and
+  compare to the simulation result.
 
 [Claude reads your request, fills in defaults (FTFP_BERT + optical physics,
 1000 events, 2 m air world), shows a plan, asks for approval, then runs
