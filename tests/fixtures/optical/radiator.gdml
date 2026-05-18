@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+  <define>
+    <matrix name="CO2_RINDEX" coldim="2"
+            values="1.5*eV 1.00045 6.2*eV 1.00045"/>
+  </define>
+
+  <materials>
+    <element name="elC" formula="C" Z="6"> <atom value="12.011"/> </element>
+    <element name="elO" formula="O" Z="8"> <atom value="15.999"/> </element>
+    <material name="CO2gas" formula="CO2">
+      <D value="0.001842" unit="g/cm3"/>
+      <composite n="1" ref="elC"/>
+      <composite n="2" ref="elO"/>
+      <property name="RINDEX" ref="CO2_RINDEX"/>
+    </material>
+  </materials>
+
+  <solids>
+    <box name="world_solid"    x="1200" y="1200" z="1400" lunit="mm"/>
+    <box name="radiator_solid" x="100"  y="100"  z="1000" lunit="mm"/>
+  </solids>
+
+  <structure>
+    <volume name="radiator_lv">
+      <materialref ref="CO2gas"/>
+      <solidref ref="radiator_solid"/>
+      <auxiliary auxtype="sensitive" auxvalue="true"/>
+    </volume>
+    <volume name="world_lv">
+      <materialref ref="G4_AIR"/>
+      <solidref ref="world_solid"/>
+      <physvol>
+        <volumeref ref="radiator_lv"/>
+        <position name="rad_pos" x="0" y="0" z="0" unit="mm"/>
+      </physvol>
+    </volume>
+  </structure>
+
+  <setup name="Default" version="1.0">
+    <world ref="world_lv"/>
+  </setup>
+</gdml>

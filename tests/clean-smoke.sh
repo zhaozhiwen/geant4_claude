@@ -166,6 +166,43 @@ else
   log "         install with: pip install --user uproot numpy matplotlib"
 fi
 
+# --- phase 4b: optical-photon chain (fixture, not a user template) ----------
+log "optical: build fixture optical main"
+OPT="${SCRATCH}/opt"
+mkdir -p "${OPT}/src"
+cp "${PLUGIN_ROOT}/tests/fixtures/optical/main.cc"       "${OPT}/src/main.cc"
+cp "${PLUGIN_ROOT}/tests/fixtures/optical/CMakeLists.txt" "${OPT}/src/CMakeLists.txt"
+cp "${PLUGIN_ROOT}/tests/fixtures/optical/radiator.gdml"  "${OPT}/radiator.gdml"
+cp "${PLUGIN_ROOT}/tests/fixtures/optical/run.mac"        "${OPT}/run.mac"
+cd "${OPT}"
+g4run validate-gdml radiator.gdml >/dev/null
+g4run build src build
+[ -x build/g4c_optical_fixture ] || fail "optical fixture binary not produced"
+
+log "optical: run fixture"
+OPT_RUN="${OPT}/runs/opt"
+mkdir -p "${OPT_RUN}"
+g4run exec ./build/g4c_optical_fixture \
+  radiator.gdml run.mac "${OPT_RUN}/hits.root" \
+  > "${OPT_RUN}/log.txt" 2>&1
+[ -s "${OPT_RUN}/hits.root" ] || fail "optical hits.root not produced or empty"
+
+if python3 -c "import uproot, numpy" 2>/dev/null; then
+  log "optical: Frank-Tamm closure via cherenkov validator"
+  python3 "${PLUGIN_ROOT}/scripts/validators/cherenkov.py" \
+    "${OPT_RUN}" \
+    --radiator-length 1m \
+    --rindex-from-gdml "${OPT}/radiator.gdml" \
+    --rindex-material CO2gas \
+    --beam-beta 1.0 \
+    || fail "cherenkov closure FAILed on the optical fixture"
+  [ -f "${OPT_RUN}/validate_cherenkov.json" ] \
+    || fail "validate_cherenkov.json not written"
+else
+  log "optical: closure SKIPPED — host lacks uproot+numpy"
+fi
+cd "${WS}"
+
 # --- phase 5: idempotency — pull again, .sif must not change ---------------
 log "idempotency: re-pull (must not modify the .sif)"
 sif="${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif"
