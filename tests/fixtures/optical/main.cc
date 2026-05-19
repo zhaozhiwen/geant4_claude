@@ -71,11 +71,14 @@ struct OutputState {
 };
 static OutputState gOut;
 
-// Optical-photon SD: record one Hits row per optical photon at its
-// first step inside a sensitive volume. Counts each photon once per
-// entry into a sensitive volume; a photon absorbed before taking a
-// step in a sensitive volume is not counted (negligible here — the
-// radiator has no ABSLENGTH and photons are born well inside it).
+// Optical-photon SD: record one Hits row per optical photon on the
+// photon's first step of life (pdg = -22). Cherenkov photons are born
+// inside the radiator, so attaching this SD to the radiator counts
+// each photon once *as produced* — a Frank-Tamm yield count. This is
+// NOT topology-independent: the SD must sit on the volume photons are
+// created in (the radiator). A downstream plane would record nothing
+// here, and counting "on entry" elsewhere would measure collected,
+// not produced, photons (not Frank-Tamm-closable).
 class OpticalSD : public G4VSensitiveDetector {
 public:
   explicit OpticalSD(const G4String& name) : G4VSensitiveDetector(name) {}

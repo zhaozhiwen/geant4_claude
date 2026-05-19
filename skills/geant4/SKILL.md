@@ -143,13 +143,19 @@ the issue in **Open questions / risks** with a *concrete fix*, not a
 generic warning. "Risks: none" is almost always wrong on a first pass —
 one of these usually applies.
 
-1. **Sensor in the forward direct-flux path.** If the sensitive volume
+1. **Sensor in the forward direct-flux path.** *Energy-deposit /
+   charged-particle scoring only.* If a non-optical sensitive volume
    sits between the beam origin and the primary active target
-   (radiator, converter, reflector), it records direct primary flux
-   *on top of* whatever the user wanted from the target — usually
-   unphysical. Canonical trap: on-axis sensor for a Cherenkov +
-   reflector geometry. Propose moving the sensor downstream past the
-   target, off-axis, or wrapping the target instead.
+   (converter, absorber), it records direct primary flux *on top of*
+   the signal — usually unphysical. Propose moving it downstream,
+   off-axis, or wrapping the target.
+   **Does not apply to optical-photon (Cherenkov/scintillation)
+   yield:** `OpticalSD` records only optical photons, so the beam
+   primary is never counted wherever the SD sits. A yield spec must
+   tag the **radiator** sensitive (count photons as produced); do
+   *not* propose a downstream sensor for it. A downstream photon
+   plane is only for explicit collection/ring-imaging specs, and
+   those are not Frank-Tamm-closable — say so in the plan.
 2. **Overlapping placements.** Two volumes sharing a face or
    overlapping (e.g., sensor flush against radiator) silently produce
    wrong steps at the boundary. Insert a small gap, or check that the
@@ -233,7 +239,13 @@ Only after the user picks "Approve and run". For each step:
    - `example` (or hand-written main) → `src/main.cc` (or `src/<name>.cc`)
      and `src/CMakeLists.txt` exist.
    - `build` → `build/<binary>` exists and is executable.
-   - `run` → `runs/<id>/{<output>.root, log.txt, config.json}` exist.
+   - `run` → `runs/<id>/{<output>.root, log.txt, config.json}` exist
+     **and the output is non-empty**. A run that exits 0 but recorded
+     zero hits (empty `Hits` TTree) is a failure, not a success —
+     surface it loudly with the likely cause (optical: missing RINDEX,
+     or the SD on the wrong volume — for a Cherenkov *yield* spec the
+     radiator must be the sensitive volume; non-optical: beam missed
+     the target, wrong sensitive tag). Do not proceed to the report.
    - `analyze` → expected `.png` plots exist under `runs/<id>/`.
    - `validate` → `runs/<id>/validate_<topic>.json` exists; the
      validator's PASS/FAIL block is shown to the user verbatim. On FAIL,
@@ -271,7 +283,11 @@ orchestrator-flavored slice of that rule:
   the placeholders. Don't write a new section from scratch — that
   duplicates the entry.
 
-Update `result.md` with the key numbers and plot paths after analysis.
+Update `result.md` with the key numbers and plot paths after analysis,
+and refresh `report.html` to match (`/geant4-claude:geant4-run` and
+`/geant4-claude:geant4-analyze` do this when dispatched as documented;
+if you improvised either step, do the refresh yourself per
+non-negotiable #6 — the browser report must not lag the run).
 The `<!-- ENTRY TEMPLATE -->` comment block at the bottom of `log.md`
 is a reference for future sessions; do not modify or delete it.
 
@@ -284,7 +300,7 @@ Done.
 - Run id:  <id>
 - Output:  runs/<id>/<output>.root
 - Plots:   runs/<id>/<plot1>.png, runs/<id>/<plot2>.png
-- Updated: log.md, result.md
+- Updated: log.md, result.md, report.html
 
 Next: <one concrete suggestion — vary the beam energy, swap the radiator
        material, increase event count, etc.>

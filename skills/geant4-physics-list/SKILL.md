@@ -75,12 +75,18 @@ Add `#include "G4OpticalPhysics.hh"`.
 **2. Photon-aware SD** — the generic `GenericSD` returns `false` on
 `edep <= 0`, which discards every optical photon (they deposit ~0
 energy). Replace it with `OpticalSD`, which records one `Hits` row per
-optical photon at its first step inside a sensitive volume — i.e. once
-per entry into a sensitive volume; a photon absorbed before taking a
-step in a sensitive volume is not counted (negligible for a non-absorbing
-radiator, but note it if the radiator has an ABSLENGTH). The output stays
-the same `Hits` schema (`pdg = -22` for photons) so `geant4-validate
-cherenkov` runs with no extra flags:
+optical photon on the photon's **first step of life** (`pdg = -22`).
+Because Cherenkov/scintillation photons are *born inside the radiator*,
+this counts each photon once *as produced* — a Frank-Tamm **yield**
+count. It is **not** topology-independent: the SD must be attached to
+the radiator (the volume the photons are created in). Tagging a
+downstream plane sensitive instead records nothing — the photon's
+first step is in the radiator, not the plane — and even a corrected
+"on entry" SD would measure *collected* photons (production ×
+acceptance × losses), which is not Frank-Tamm-closable. `geant4-detector`
+tags the radiator for yield specs; keep it that way. The output stays
+the same `Hits` schema so `geant4-validate cherenkov` runs with no
+extra flags:
 
 ```cpp
 class OpticalSD : public G4VSensitiveDetector {

@@ -15,7 +15,9 @@ Two refractive-index modes:
     Reads the RINDEX matrix out of the GDML material, then trapezoidally
     integrates the Frank-Tamm differential
        dN/(dx dE) = (alpha / hbar c) * (1 - 1/(beta^2 * n^2(E)))
-    over the energy window E in [hc/lam_max .. hc/lam_min]. Removes the
+    over the energy window E in [hc/lam_max .. hc/lam_min]. The window
+    defaults to the RINDEX matrix's own energy span (the band Geant4
+    actually radiated) unless --wavelength-min/max are given. Removes the
     2-5% bias of feeding a single index for a real dispersive radiator.
 
 Tolerance is 3 sigma where sigma = sqrt(predicted / n_events) — Poisson
@@ -28,7 +30,7 @@ Usage:
         # ...or:
         --rindex-from-gdml geometries/radiator.gdml --rindex-material G4_CARBON_DIOXIDE
         --radiator-length 1m
-        [--wavelength-min 200nm] [--wavelength-max 800nm]
+        [--wavelength-min …] [--wavelength-max …]  # default: matrix span
         [--beam-beta 1.0]
         [--tree Hits]
         [--root <explicit.root>]
@@ -381,8 +383,12 @@ def main(argv=None) -> int:
                    help="GDML file containing the radiator material's RINDEX matrix.")
     p.add_argument("--rindex-material", default=None,
                    help="Name of the radiator material in --rindex-from-gdml. Required with it.")
-    p.add_argument("--wavelength-min", default="200nm")
-    p.add_argument("--wavelength-max", default="800nm")
+    p.add_argument("--wavelength-min", default=None,
+                   help="Lower edge. Default: the RINDEX matrix energy "
+                        "span with --rindex-from-gdml, else 200nm.")
+    p.add_argument("--wavelength-max", default=None,
+                   help="Upper edge. Default: the RINDEX matrix energy "
+                        "span with --rindex-from-gdml, else 800nm.")
     p.add_argument("--beam-beta", default=1.0, type=float,
                    help="v/c of the primary (default 1.0 — ultra-relativistic)")
     p.add_argument("--tree", default="Hits",
@@ -427,12 +433,6 @@ def main(argv=None) -> int:
         root_path = candidates[0]
 
     L = parse_length(args.radiator_length)
-    lam_min = parse_length(args.wavelength_min)
-    lam_max = parse_length(args.wavelength_max)
-    if lam_min >= lam_max:
-        print(f"[validate-cherenkov] wavelength_min ({lam_min}) "
-              f">= wavelength_max ({lam_max})", file=sys.stderr)
-        return 2
 
     # Resolve refractive-index source.
     using_gdml_rindex = args.rindex_from_gdml is not None
@@ -456,6 +456,29 @@ def main(argv=None) -> int:
         rindex_table = parse_rindex_from_gdml(
             Path(args.rindex_from_gdml), args.rindex_material,
         )
+
+    # Wavelength window. Geant4 radiates Cherenkov over the *full energy
+    # span where RINDEX is defined*; with --rindex-from-gdml the analytic
+    # prediction must integrate that same band, not a fixed 200–800 nm
+    # window (the mismatch yields a spurious ~1% closure FAIL at high
+    # event counts that mimics a real physics error). Explicit
+    # --wavelength-min/max always override; the 200–800 nm fallback
+    # only applies to the constant --refractive-index path.
+    if using_gdml_rindex and rindex_table:
+        e_vals = [e for (e, _) in rindex_table]
+        span_lam_min = _HC_EV_M / max(e_vals)  # higher E ↔ shorter λ
+        span_lam_max = _HC_EV_M / min(e_vals)
+        lam_min = (parse_length(args.wavelength_min)
+                   if args.wavelength_min else span_lam_min)
+        lam_max = (parse_length(args.wavelength_max)
+                   if args.wavelength_max else span_lam_max)
+    else:
+        lam_min = parse_length(args.wavelength_min or "200nm")
+        lam_max = parse_length(args.wavelength_max or "800nm")
+    if lam_min >= lam_max:
+        print(f"[validate-cherenkov] wavelength_min ({lam_min}) "
+              f">= wavelength_max ({lam_max})", file=sys.stderr)
+        return 2
 
     if args.count_branch is not None:
         counts, n_events = read_photons_direct(

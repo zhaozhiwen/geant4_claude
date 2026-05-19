@@ -121,11 +121,28 @@ applications that ignore it.
       complete, CI-validated worked example of an optical radiator (CO₂ +
       RINDEX) — mirror its structure.
 
-   2. Add a downstream sensitive backplate placed *after* the radiator
-      along the beam axis (positive `z`), with a small gap — never
-      inside or face-overlapping the radiator (geometry-sanity check 1
-      and 2). Tag the backplate, not the radiator, with the
-      `<auxiliary auxtype="sensitive" auxvalue="true"/>`.
+   2. **Tag the radiator sensitive** (`<auxiliary auxtype="sensitive"
+      auxvalue="true"/>` on the radiator volume). This is mandatory for
+      a Cherenkov/scintillation **yield** spec (the default): the
+      Frank-Tamm closure test counts photons *as produced*, inside the
+      radiator where they are born and where RINDEX exists. `OpticalSD`
+      already filters to optical photons only, so the beam primary is
+      never recorded regardless of where the SD sits — the
+      forward-flux concern (geometry-sanity gate 1) does **not** apply
+      to optical-photon counting; do not move the sensor off the
+      radiator to "avoid the beam".
+
+      Only if the spec is explicitly about photon **collection /
+      ring imaging** (RICH-style — "photon hit pattern on a detector
+      plane", not "how many photons are produced"), add a downstream
+      sensitive plane after the radiator with a gap, *and* give every
+      volume the photons traverse a flat transport `RINDEX` (n = 1.0
+      at both energies: world, the gap, the detector plane material).
+      Optical photons are killed at the first boundary into a
+      RINDEX-less medium, so without this they never leave the
+      radiator. A collection geometry is **not** Frank-Tamm-closable
+      (it measures production × acceptance × losses); say so in the
+      plan and skip the closure step for it.
 
    3. **Post-write consistency check.** After writing, confirm the radiator
       material actually carries both its `<matrix>` and a

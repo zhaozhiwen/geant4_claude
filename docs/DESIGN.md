@@ -486,6 +486,40 @@ that regenerates the mechanical sections from `runs/*/config.json`
 remains the robust alternative if drift recurs — parked here, not
 built, by maintainer decision.
 
+### 9. Cherenkov-yield topology + validator window correction
+
+**Current (bug):** `geant4-detector` and orchestrator gate #1 steered
+every optical spec to a *downstream sensitive backplate* with the
+radiator left non-sensitive. The Frank-Tamm closure is a
+**production-yield** check, so it can only close when photons are
+counted *as produced* (inside the radiator). A backplate count is
+production × acceptance × losses — never closable. CI passed only
+because the fixture (correctly) tags the radiator sensitive — i.e. CI
+tested a topology the docs told users *not* to build. Independently,
+`cherenkov.py` integrated a fixed 200–800 nm window even with
+`--rindex-from-gdml`, while Geant4 radiates over the full RINDEX-matrix
+energy span → a spurious ~1% FAIL at high stats.
+
+**Fix:** the SD/`OpticalSD` code and the fixture are correct as-is and
+unchanged — the defect was guidance. `geant4-detector` now tags the
+**radiator** sensitive for yield specs; a downstream plane is an
+explicit opt-in for collection/ring-imaging specs only (and there, all
+traversed volumes get a flat transport RINDEX so photons survive
+boundary crossings — the long-standing #2 latent bug for that path).
+Orchestrator gate #1 reworded: the forward-flux concern does not apply
+to `OpticalSD` (it filters to optical photons). `cherenkov.py` now
+defaults the integration window to the RINDEX matrix span when
+`--rindex-from-gdml` is given; explicit `--wavelength-min/max` still
+override; 200–800 nm remains the `--refractive-index` fallback.
+Zero-hit runs are now a surfaced failure (analyze step 5 guard +
+orchestrator postcondition), not a silent empty plot.
+
+**Contract change:** optical specs default to radiator-sensitive (was
+backplate-sensitive); `cherenkov.py` default window is data-derived
+under `--rindex-from-gdml` (was fixed 200–800 nm). The smoke gate is
+unaffected — it passes the window explicitly and the fixture topology
+was already correct.
+
 ## Open questions (parked, do not block MVP)
 
 - **Sensitive detectors via aux tags vs. C++.** Lean: aux tags only for MVP;

@@ -127,6 +127,17 @@ PY
    ```bash
    "${PY}" "${SCRIPT}" "${RUN_DIR}"
    ```
+   **Zero-signal guard.** If the tree is empty / the plotted branch has
+   zero entries, do **not** silently emit a blank plot and proceed.
+   Stop and warn loudly with the likely cause:
+   - optical run (`pdg = -22` expected, none found): the radiator
+     material lacks `RINDEX`, or the SD is on the wrong volume — for a
+     Cherenkov **yield** spec the *radiator* must be sensitive (photons
+     are counted as produced, not at a downstream plane);
+   - non-optical: the beam missed the target, or no volume is tagged
+     sensitive.
+   An empty result is a failure to surface, not a finding to report —
+   skip the doc refresh (step 6) until it's resolved.
 
 6. **Refresh `report.html` and `result.md`** (only if they exist —
    created by `/geant4-claude:geant4-init`). Per workspace `CLAUDE.md`
