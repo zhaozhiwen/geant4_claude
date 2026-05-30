@@ -49,8 +49,8 @@ Two backends ship; pick with `--backend`:
    Stop on failure — surface the parser error and ask the user to fix.
 
 3. **Bootstrap the Python venv** (the default sketch backend renders with
-   matplotlib; Codex has no SessionStart hook, so seed it explicitly — this
-   is an idempotent no-op once the venv is in sync):
+   matplotlib; the venv is seeded explicitly here — an idempotent no-op once
+   the venv is in sync. There is no SessionStart hook on either CLI):
    ```bash
    . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
    ```

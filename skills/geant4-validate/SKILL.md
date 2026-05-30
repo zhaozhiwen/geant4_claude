@@ -100,8 +100,8 @@ stores Cherenkov yield in `Events.n_photons` would run with
    first.
 
 2. **Provision a Python with uproot+numpy.** The validators read the ROOT
-   file with `uproot`, so ensure the managed venv exists (Codex has no
-   SessionStart hook to seed it) and use that interpreter — never bare
+   file with `uproot`, so ensure the managed venv exists (seeded here via
+   ensure_venv.sh) and use that interpreter — never bare
    `python3`, and never `pip install --user` (that pollutes the host
    site-packages):
 

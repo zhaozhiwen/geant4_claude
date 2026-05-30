@@ -37,7 +37,8 @@ optional reusable scripts dropped in `analysis/`.
    first.
 
 2. **Provision the Python venv** (this skill needs uproot/numpy/matplotlib;
-   Codex has no SessionStart hook, so do this explicitly and idempotently):
+   the venv is seeded here (idempotent); there is no SessionStart hook on
+   either CLI):
    ```bash
    . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
    ```

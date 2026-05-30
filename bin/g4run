@@ -379,8 +379,9 @@ EOF
       local py="${PLUGIN_ROOT}/scripts/preview_gdml.py"
       [[ -f "${py}" ]] || die "missing sketch backend: ${py}"
       local python_bin="python3"
-      # Prefer the plugin's managed venv if it exists (the SessionStart hook
-      # installs matplotlib there). Falls back to PATH python3 otherwise.
+      # Prefer the plugin's managed venv if it exists (scripts/ensure_venv.sh,
+      # called by the skills, installs matplotlib there). Falls back to PATH
+      # python3 otherwise.
       if [[ -n "${CLAUDE_PLUGIN_DATA:-}" && -x "${CLAUDE_PLUGIN_DATA}/venv/bin/python" ]]; then
         python_bin="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
       fi

@@ -25,8 +25,10 @@
 #     ~/.claude.json copied so no re-login or first-run setup).
 #   - Plugin install via /plugin marketplace add + /plugin install
 #     (handles the user-scope confirmation prompt).
-#   - Exit + relaunch claude after install so the SessionStart hook fires
-#     and the plugin's pdg venv gets created.
+#   - Exit + relaunch claude after install so the freshly-installed plugin
+#     loads (its commands/skills become available). The pdg venv is created
+#     later, when /geant4-init runs scripts/ensure_venv.sh — there is no
+#     SessionStart hook.
 #   - /geant4-claude:geant4-init, including the AskUserQuestion source-
 #     clone prompt (picks "Yes" — but with the symlink in place, it
 #     detects the existing tree and no-ops).
@@ -222,7 +224,7 @@ if [ -n "${VENV_SRC}" ]; then
   ln -s "${VENV_SRC}" "${PLUGIN_DATA_SANDBOX}/venv"
   note "linked venv: ${VENV_SRC}"
 else
-  note "venv: no host copy; SessionStart hook will pip install pdg (~10-30 s)"
+  note "venv: no host copy; geant4-init will pip install pdg (~10-30 s)"
 fi
 
 # --- tmux launch ------------------------------------------------------------
@@ -295,30 +297,22 @@ grep -q "geant4-claude" "${SANDBOX_CLAUDE}/plugins/installed_plugins.json" \
   || fail "geant4-claude not in installed_plugins.json"
 note "✓ plugin recorded in installed_plugins.json"
 
-# --- phase 2: SessionStart hook (requires exit + restart) -----------------
-# /reload-plugins picks up the new commands but does NOT fire SessionStart
-# hooks. The hook only fires on a fresh `claude` invocation. So: exit and
-# relaunch.
+# --- phase 2: load the freshly-installed plugin (requires exit + restart) --
+# /reload-plugins picks up the new commands but the cleanest way to get the
+# plugin's commands/skills fully loaded is a fresh `claude` invocation. So:
+# exit and relaunch. There is no SessionStart hook anymore — the pdg venv is
+# created later, when /geant4-init runs scripts/ensure_venv.sh (asserted in
+# phase 3).
 #
 # MCP approval: on first install of a new MCP, Claude Code shows an
 # approve-once prompt. In our flow it doesn't fire because the operator's
 # .claude.json (which we copied into the sandbox) already has the deepwiki
 # MCP approval cached. If you re-run after wiping .claude.json, expect a
 # y/n prompt and adapt accordingly.
-log "phase 2: exit + relaunch claude → SessionStart hook → venv creation"
+log "phase 2: exit + relaunch claude → plugin loads"
 send "/exit"
 sleep 4
 launch_claude
-# Give the hook 30 s to finish pip-installing pdg.
-sleep 30
-
-if [ -d "${PLUGIN_DATA_SANDBOX}/venv/bin" ]; then
-  "${PLUGIN_DATA_SANDBOX}/venv/bin/python" -c "import pdg" 2>/dev/null \
-    && note "✓ pdg installed in sandbox venv" \
-    || fail "venv exists but pdg not importable"
-else
-  fail "SessionStart hook did not create venv at ${PLUGIN_DATA_SANDBOX}/venv"
-fi
 
 # --- phase 3: /geant4-claude:geant4-init -----------------------------------
 log "phase 3: /geant4-claude:geant4-init (workspace skeleton + image pull)"
@@ -343,6 +337,17 @@ done
 [ -f "${PLUGIN_DATA_SANDBOX}/cache/sif/${SIF_NAME}" ] || \
   fail ".sif missing (symlink broken?)"
 note "✓ workspace skeleton + cached .sif present"
+
+# geant4-init runs scripts/ensure_venv.sh, which is what now seeds the pdg
+# venv (no SessionStart hook). Give pip a moment if it had to install.
+sleep 5
+if [ -d "${PLUGIN_DATA_SANDBOX}/venv/bin" ]; then
+  "${PLUGIN_DATA_SANDBOX}/venv/bin/python" -c "import pdg" 2>/dev/null \
+    && note "✓ pdg installed in sandbox venv" \
+    || fail "venv exists but pdg not importable"
+else
+  fail "geant4-init did not create venv at ${PLUGIN_DATA_SANDBOX}/venv"
+fi
 
 # --- phase 4a: /geant4-claude:geant4-example -------------------------------
 log "phase 4a: /geant4-claude:geant4-example (drop demo)"

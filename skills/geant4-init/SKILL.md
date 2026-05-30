@@ -65,8 +65,8 @@ Optional: `--force` (overwrite existing workspace files).
    `.g4c/` is gitignored by the workspace `.gitignore`. Every later skill begins
    with `[ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"`.
 
-6. **Bootstrap the Python venv** (Claude's SessionStart hook already does this;
-   on Codex this is the only trigger, so always run it — it's idempotent):
+6. **Bootstrap the Python venv** (idempotent, and always run here — there is no
+   SessionStart hook on either CLI):
    ```bash
    . .g4c/env; "${PLUGIN_ROOT}/scripts/ensure_venv.sh"
    ```

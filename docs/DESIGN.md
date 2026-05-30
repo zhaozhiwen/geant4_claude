@@ -273,8 +273,9 @@ CLI they're on.
 **The constraint (verified on codex v0.135.0):** Codex exposes **no
 plugin-root or plugin-data env var** (no `CLAUDE_PLUGIN_ROOT`/`_DATA`
 equivalent) and **cannot bundle hooks** — its plugin validator rejects a
-`hooks` field outright. So neither the "find `bin/g4run` via env" trick nor the
-"install the venv from a `SessionStart` hook" trick works on Codex.
+`hooks` field outright. So the "find `bin/g4run` via env" trick doesn't work on
+Codex. And since the plugin ships no session-start hook on Claude either, the
+venv bootstrap is skill-driven on both CLIs (see **venv bootstrap** below).
 
 **The solution — a per-workspace pointer, `.g4c/` (gitignored):** the
 `geant4-init` skill resolves the plugin root and data dir *once*
@@ -308,16 +309,21 @@ commands carried. `bin/g4run` itself was not modified for the port.
 
 **venv bootstrap, CLI-neutral.** The dep-install logic lives in
 `scripts/ensure_venv.sh` (reads `GEANT4_CLAUDE_ROOT`/`_DATA` with the same
-fallbacks). On Claude, the `SessionStart` hook (`hooks/install-deps.sh`)
-delegates to it. On Codex there is no hook, so the skills that need Python
-(`geant4-init`, `geant4-analyze`, `geant4-preview`, `geant4-validate`) call
-`ensure_venv.sh` directly; it is idempotent, so the redundant call on Claude is
-a fast no-op.
+fallbacks). There is no session-start hook on either CLI; instead the skills
+that need Python (`geant4-init`, `geant4-analyze`, `geant4-preview`,
+`geant4-validate`) call `ensure_venv.sh` directly on first use. It is
+idempotent, so repeat calls are a fast no-op. This is identical on Claude and
+Codex — the first `geant4-init`/analyze triggers a one-time ~10–30 s install
+instead of paying it at session start.
 
 **The invariant (CI-enforced).** No `skills/*` file may reference a
-`CLAUDE_*`/`CODEX_*` env var or a `/geant4-claude:` slash name. A clean-smoke
-gate (phase 0d) enforces this — it's what keeps the skill set genuinely
-CLI-neutral rather than Claude-shaped with Codex bolted on.
+`CLAUDE_*`/`CODEX_*` env var or a `/geant4-claude:` slash name — with one
+deliberate exception: `geant4-init`, the keystone that *writes* `.g4c/`, must read
+the CLI-native plugin root (`$CLAUDE_PLUGIN_ROOT` on Claude; the injected skill
+dir on Codex) to bootstrap. A clean-smoke gate (phase 0d) enforces this:
+`CLAUDE_*` is allowed only inside `skills/geant4-init/`, and slash names are
+banned everywhere. It's what keeps the skill set genuinely CLI-neutral rather
+than Claude-shaped with Codex bolted on.
 
 ## Workspace conventions
 
@@ -345,8 +351,8 @@ Plugin-internal scripts and templates (live in the plugin checkout,
 
 ```
 geant4_claude/
-├── scripts/ensure_venv.sh   CLI-neutral venv bootstrap. Claude's SessionStart
-│                            hook delegates here; Codex skills call it directly.
+├── scripts/ensure_venv.sh   CLI-neutral venv bootstrap. No session-start hook on
+│                            either CLI; the skills that need Python call it on first use.
 ├── templates/validate/      C++ harness for the in-container GDML parse check.
 │                            Built on first use; cached under GEANT4_CLAUDE_DATA.
 ├── templates/preview/       C++ harness for the alpha RayTracer backend
@@ -739,12 +745,11 @@ for (const auto& a : aux) {
 when they differ — so first call installs, later calls are a ~10 ms no-op. uv is
 preferred when available; falls back to `python3 -m venv` + pip.
 
-Who triggers it depends on the CLI:
-
-| CLI | Trigger |
-|-----|---------|
-| Claude Code | `SessionStart` hook `hooks/install-deps.sh` delegates to `ensure_venv.sh` on every session start. |
-| Codex | No plugin hook exists. The `geant4-init`, `geant4-analyze`, `geant4-preview`, and `geant4-validate` skills call `ensure_venv.sh` directly. Idempotent, so it's a no-op once in sync. |
+What triggers it is identical on both CLIs: the plugin ships **no session-start
+hook**, so the `geant4-init`, `geant4-analyze`, `geant4-preview`, and
+`geant4-validate` skills call `ensure_venv.sh` directly on first use. It's
+idempotent, so it's a no-op once in sync. The first `geant4-init`/analyze pays
+a one-time ~10–30 s install instead of it happening at session start.
 
 The venv path resolves CLI-neutrally: `${GEANT4_CLAUDE_DATA}/venv` (from
 `.g4c/env`), falling back to `${CLAUDE_PLUGIN_DATA}/venv`, then
@@ -792,7 +797,7 @@ both CLIs:
 | File | For | Notes |
 |------|-----|-------|
 | `.claude-plugin/plugin.json` | Claude Code | Standard plugin manifest. |
-| `.codex-plugin/plugin.json` | Codex | Adds an `interface` block (display name, category, default prompts). **No `hooks` field** — Codex's validator rejects it, which is the whole reason `ensure_venv.sh` is called from skills on Codex. |
+| `.codex-plugin/plugin.json` | Codex | Adds an `interface` block (display name, category, default prompts). **No `hooks` field** — Codex's validator rejects it. Neither manifest ships a hook; `ensure_venv.sh` is called from the skills on both CLIs. |
 
 Both are at version **0.1.0** and **must be bumped together** — a single semver
 for the plugin regardless of CLI.

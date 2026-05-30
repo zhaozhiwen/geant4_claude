@@ -2,8 +2,8 @@
 
 A pre-release smoke test that exercises the parts of the plugin that
 `tests/clean-smoke.sh` *can't* reach: Claude Code's slash-command
-dispatch, the `SessionStart` hook, the deepwiki MCP approval prompt,
-the `AskUserQuestion` flow in `/geant4-init`, and namespace lookup.
+dispatch, the deepwiki MCP approval prompt, the `AskUserQuestion` flow
+in `/geant4-init`, and namespace lookup.
 
 **Run this before tagging any release.** ~10 minutes.
 
@@ -59,17 +59,21 @@ Pass:
   exists and has the expected version (`grep version` it).
 - `installed_plugins.json` lists `geant4-claude@geant4-claude`.
 
-## Phase 2 — `SessionStart` side effects
+## Phase 2 — Plugin load + MCP approval
 
-Open Claude Code in **any** directory (a workspace will be made later).
+Exit and relaunch Claude Code so the freshly-installed plugin's
+commands/skills and MCP server load. Open it in **any** directory (a
+workspace will be made later).
 
 Pass:
 - Claude Code prompts once to approve the `deepwiki` MCP server.
   Approve it.
-- `~/.claude/plugins/data/geant4-claude-geant4-claude/venv/bin/python -c "import pdg"`
-  succeeds (the SessionStart hook installed `pdg` into the managed venv).
 - In Claude Code, `mcp__deepwiki__ask_question` is now an available tool
   (verifiable by listing tools or asking Claude to call it).
+
+> The pdg venv is **not** created at session start — there is no
+> SessionStart hook on either CLI. It is seeded later, when
+> `/geant4-init` runs `scripts/ensure_venv.sh` (checked in phase 3).
 
 ## Phase 3 — `/geant4-claude:geant4-init`
 
@@ -86,6 +90,9 @@ In Claude Code:
 Pass:
 - Workspace skeleton appears: `CLAUDE.md`, `.gitignore`, plus empty
   `src/`, `geometries/`, `macros/`, `runs/`, `analysis/`.
+- `~/.claude/plugins/data/geant4-claude-geant4-claude/venv/bin/python -c "import pdg"`
+  succeeds (`/geant4-init` ran `scripts/ensure_venv.sh`, which installed
+  `pdg` into the managed venv).
 - `.sif` lands at
   `~/.claude/plugins/data/geant4-claude-geant4-claude/cache/sif/g4install_11.4.0-almalinux-9.4.sif`.
 - `AskUserQuestion` for the optional Geant4 source clone fires. Pick

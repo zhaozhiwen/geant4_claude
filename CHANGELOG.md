@@ -16,10 +16,9 @@ release. A breaking change to the `Hits` TTree schema or to the
 - **Codex CLI support.** The plugin now runs on both Claude Code and OpenAI
   Codex from one repo. Added `.codex-plugin/plugin.json` (validated by Codex's
   own `validate_plugin.py`) and a `.agents/plugins/marketplace.json` entry.
-- **`scripts/ensure_venv.sh`** — a CLI-neutral, idempotent Python-venv bootstrap.
-  Claude's `SessionStart` hook delegates to it; Codex (which can't bundle a
-  plugin hook) calls it from the `geant4-init`/`analyze`/`preview`/`validate`
-  skills.
+- **`scripts/ensure_venv.sh`** — a CLI-neutral, idempotent Python-venv bootstrap
+  called directly by the skills that need Python (`geant4-init` +
+  `analyze`/`preview`/`validate`), identically on both CLIs.
 - **`AGENTS.md`** symlinks (→ the sibling `CLAUDE.md`) at the repo root,
   `templates/workspace/`, and `wiki/`, so Codex reads the same instructions.
 - **`.g4c/` workspace engine pointer**, written by the `geant4-init` skill:
@@ -35,6 +34,10 @@ release. A breaking change to the `Hits` TTree schema or to the
   former `commands/`.
 - The `geant4-runner` subagent was folded into the `geant4-run` skill
   ("Monitoring long runs"); `agents/` removed.
+- **Removed the `SessionStart` hook** (`hooks/`). The venv now bootstraps via the
+  skills calling `ensure_venv.sh` on first Python use — one identical path on both
+  CLIs. Claude users see a one-time ~30 s install on first `geant4-init`/analyze
+  instead of at session start.
 
 ### Internal
 

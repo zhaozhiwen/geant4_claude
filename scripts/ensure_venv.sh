@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Idempotently install Python deps from requirements.txt into a managed venv.
 #
-# CLI-neutral bootstrap. Claude Code runs this from the SessionStart hook
-# (hooks/install-deps.sh, which exports CLAUDE_PLUGIN_*). Codex has no plugin
-# hook, so the geant4-init skill and the Python-using skills call this directly.
+# Idempotent venv bootstrap, called by the skills that need Python
+# (geant4-init, and geant4-analyze/preview/validate) on both Claude Code and
+# Codex. There is no SessionStart hook.
 #
 # - Diffs bundled requirements.txt against a stored copy under DATA.
 # - On match: silent no-op (~10ms).

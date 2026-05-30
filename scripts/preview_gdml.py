@@ -50,11 +50,10 @@ try:
 except ImportError as e:
     sys.exit(
         f"[preview-gdml] missing dep: {e}. "
-        "Run this through /geant4-claude:geant4-preview, which uses the "
-        "plugin-managed venv. If deps are still missing, re-launch Claude "
-        "Code to fire the SessionStart hook (it seeds the managed venv "
-        "automatically). Do not pip install --user (pollutes host "
-        "site-packages)."
+        "Run this through the geant4-preview skill, which seeds the "
+        "plugin-managed venv via scripts/ensure_venv.sh. If deps are still "
+        "missing, run the geant4-init skill (it seeds the managed venv). "
+        "Do not pip install --user (pollutes host site-packages)."
     )
 
 

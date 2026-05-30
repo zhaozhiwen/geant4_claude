@@ -91,11 +91,19 @@ bash "${PLUGIN_ROOT}/tests/g4run-unit-test.sh" \
 
 # --- phase 0d: skills must stay CLI-neutral (Claude + Codex) ----------------
 # Skills are the one surface both CLIs run. A CLAUDE_* env ref or a
-# /geant4-claude: slash-command name in skills/ breaks the Codex path.
-log "cli-neutral: no CLAUDE_* env or /geant4-claude: slash refs in skills/"
-if git -C "${PLUGIN_ROOT}" grep -nE "CLAUDE_PLUGIN|/geant4-claude:" -- skills/ >/dev/null 2>&1; then
-  git -C "${PLUGIN_ROOT}" grep -nE "CLAUDE_PLUGIN|/geant4-claude:" -- skills/
-  fail "skills/ contains CLAUDE_* env or /geant4-claude: slash refs — must be CLI-neutral"
+# /geant4-claude: slash-command name breaks the Codex path. geant4-init is the
+# ONE exception: as the keystone that *writes* .g4c/, it must read the
+# CLI-native plugin-root env ($CLAUDE_PLUGIN_ROOT) to resolve the plugin root.
+# Every other skill reads .g4c/ and stays neutral. Slash refs are banned anywhere.
+log "cli-neutral: no CLAUDE_* env (outside geant4-init) in skills/"
+if git -C "${PLUGIN_ROOT}" grep -nE "CLAUDE_PLUGIN" -- skills/ ':!skills/geant4-init/' >/dev/null 2>&1; then
+  git -C "${PLUGIN_ROOT}" grep -nE "CLAUDE_PLUGIN" -- skills/ ':!skills/geant4-init/'
+  fail "skills/ (outside geant4-init) references CLAUDE_* env — read .g4c/env instead"
+fi
+log "cli-neutral: no /geant4-claude: slash refs anywhere in skills/"
+if git -C "${PLUGIN_ROOT}" grep -nE "/geant4-claude:" -- skills/ >/dev/null 2>&1; then
+  git -C "${PLUGIN_ROOT}" grep -nE "/geant4-claude:" -- skills/
+  fail "skills/ contains /geant4-claude: slash-command refs"
 fi
 
 # --- phase 0e: ensure_venv.sh works with no CLAUDE_* env (Codex path) -------

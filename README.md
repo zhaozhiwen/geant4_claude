@@ -50,9 +50,9 @@ codex plugin add geant4-claude
 How skills find the engine, CLI-neutrally: the **geant4-init** skill
 scaffolds your workspace and records an engine pointer at `.g4c/` (a
 symlink to `bin/g4run` plus an `env` file), so every other skill locates
-the runtime the same way on either CLI. On Codex, geant4-init also
-bootstraps the Python venv, since Codex plugins can't run a
-`SessionStart` hook the way Claude Code does.
+the runtime the same way on either CLI. On both CLIs, geant4-init also
+bootstraps the Python venv on first scaffold — the plugin ships no
+session-start hook, so the install is skill-driven and lazy.
 
 ## Requirements
 
@@ -87,15 +87,15 @@ git clone https://github.com/zhaozhiwen/geant4_claude.git ~/.claude/plugins/gean
 
 ## What happens when you enable the plugin
 
-Two things install automatically the first time Claude Code loads the plugin — neither needs your action beyond approving once:
+Two things get set up automatically — neither needs your action beyond approving once. The first is registered when the CLI loads the plugin; the second is seeded lazily on first use:
 
 1. **deepwiki MCP server** is registered from `.mcp.json`. Claude Code prompts once to approve the external server (`https://mcp.deepwiki.com/mcp`, no auth, no key); approve it and Claude gains three tools (`mcp__deepwiki__ask_question`, `read_wiki_structure`, `read_wiki_contents`) for asking Geant4 questions in-loop. Used by the plugin as orientation only — answers are LLM-grounded and must be verified against actual Geant4 source before they land in any synthesis. See [docs/DESIGN.md](docs/DESIGN.md) §"deepwiki MCP".
 
-2. **`pdg` Python package** auto-installs into a managed venv at `~/.claude/plugins/data/<plugin-id>/venv/` via a `SessionStart` hook (`hooks/install-deps.sh`). First session takes ~10–30 s while pip pulls `pdg` + `sqlalchemy` (~50 MB on disk); later sessions are a 3 ms diff/no-op. Claude Code may ask you to approve the hook running `pip install` on your machine. The venv lives outside this repo, survives plugin updates, and is deleted automatically when you uninstall the plugin. Used by the plugin to look up PDG particle data on demand. See [docs/DESIGN.md](docs/DESIGN.md) §"Python deps via SessionStart hook".
+2. **`pdg` Python package** is seeded into a managed venv at `~/.claude/plugins/data/<plugin-id>/venv/` by `scripts/ensure_venv.sh`, which the skills that need Python call directly — the first `geant4-init`/analyze/preview/validate triggers it. This works identically on both CLIs: there is no `SessionStart` hook and no session-start pip-approval prompt. The first such call takes ~10–30 s while pip pulls `pdg` + `sqlalchemy` (~50 MB on disk); later calls are a 3 ms diff/no-op. The venv lives outside this repo, survives plugin updates, and is deleted automatically when you uninstall the plugin. Used by the plugin to look up PDG particle data on demand. See [docs/DESIGN.md](docs/DESIGN.md) §"Python deps via `scripts/ensure_venv.sh`".
 
 If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the skills to work.
 
-On **Codex**, there is no `SessionStart` hook, so the venv is instead bootstrapped by the **geant4-init** skill the first time you scaffold a workspace (it's idempotent).
+On both CLIs the venv is bootstrapped by the **geant4-init** skill the first time you scaffold a workspace (it's idempotent), and re-checked by analyze/preview/validate on first use.
 
 The first time you run the **geant4-init** skill it will additionally **ask once** whether to download the Geant4 source tarball (matching the pinned container's version, ~36 MB compressed / ~200 MB extracted) from GitHub releases into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at `<plugin>/wiki/raw/geant4-src` so wiki page references keep working. The data-dir location means the tree survives plugin version bumps. Optional — say *Skip* and the skills still work. Saying *Yes* is what lets the assistant verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run the geant4-init skill later to be asked again.
 
@@ -210,8 +210,8 @@ geant4_claude/
 ├── docs/DESIGN.md                architecture + MVP boundary
 ├── .claude-plugin/plugin.json    plugin manifest
 ├── .mcp.json                     deepwiki MCP server (auto-loaded)
-├── requirements.txt              Python deps (pdg) installed by SessionStart hook
-├── hooks/                        hooks.json + install-deps.sh
+├── requirements.txt              Python deps (pdg) installed by scripts/ensure_venv.sh (called by the skills)
+├── scripts/ensure_venv.sh        CLI-neutral venv bootstrap (no session-start hook)
 ├── bin/g4run                     the only bridge to apptainer
 ├── skills/                       all 12 skills — geant4 (orchestrator), -init, -detector,
 │                                 -example, -preview, -build, -run, -analyze, -validate,
