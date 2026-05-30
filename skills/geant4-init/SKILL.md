@@ -44,8 +44,8 @@ Optional: `--force` (overwrite existing workspace files).
    ```bash
    cp -r "${PLUGIN_ROOT}/templates/workspace/." .
    ```
-   The template ships `CLAUDE.md` (+ an `AGENTS.md` symlink to it so Codex reads
-   the same rules), `.gitignore`, `log.md`, `result.md`, `report.html`,
+   The template ships `AGENTS.md` (+ a `CLAUDE.md` symlink to it so Claude Code
+   reads the same rules), `.gitignore`, `log.md`, `result.md`, `report.html`,
    `embed_html.py`, and the empty `src/ geometries/ macros/ runs/ analysis/`
    dirs. Treat the three handoff docs (log.md / result.md / report.html) as
    load-bearing, not decorative.
@@ -147,7 +147,7 @@ Optional: `--force` (overwrite existing workspace files).
 
 ## Outputs
 
-- A populated workspace under `cwd` (`CLAUDE.md`, `AGENTS.md`→`CLAUDE.md`,
+- A populated workspace under `cwd` (`AGENTS.md`, `CLAUDE.md`→`AGENTS.md`,
   `.gitignore`, `log.md`, `result.md`, `report.html`, `embed_html.py`, and the
   empty `src/ geometries/ macros/ runs/ analysis/` dirs).
 - `.g4c/g4run` (symlink) + `.g4c/env` — the engine pointer the other skills read.

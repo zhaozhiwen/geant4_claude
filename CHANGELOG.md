@@ -19,8 +19,9 @@ release. A breaking change to the `Hits` TTree schema or to the
 - **`scripts/ensure_venv.sh`** — a CLI-neutral, idempotent Python-venv bootstrap
   called directly by the skills that need Python (`geant4-init` +
   `analyze`/`preview`/`validate`), identically on both CLIs.
-- **`AGENTS.md`** symlinks (→ the sibling `CLAUDE.md`) at the repo root,
-  `templates/workspace/`, and `wiki/`, so Codex reads the same instructions.
+- **`AGENTS.md`** is now the canonical instructions file (vendor-neutral) at the
+  repo root, `templates/workspace/`, and `wiki/`; `CLAUDE.md` is a symlink →
+  `AGENTS.md` so both Claude Code and Codex read the same instructions.
 - **`.g4c/` workspace engine pointer**, written by the `geant4-init` skill:
   records the absolute `bin/g4run` and the cache/data dirs so every skill reaches
   the engine CLI-neutrally (Codex exposes no plugin-root env var).

@@ -331,8 +331,8 @@ The `geant4-init` skill writes a **generic skeleton**:
 
 ```
 my-project/
-├── CLAUDE.md            # rules for Claude inside this workspace
-├── AGENTS.md            # symlink → CLAUDE.md (so Codex reads the same rules)
+├── AGENTS.md            # canonical workspace rules (what Codex reads)
+├── CLAUDE.md            # symlink → AGENTS.md (so Claude Code reads the same rules)
 ├── .g4c/                # engine pointer (gitignored): g4run symlink + env (see Dual-CLI engine contract)
 ├── .gitignore           # excludes .g4c/, runs/, *.root, build/, __pycache__/
 ├── log.md               # chronological work log; Claude appends after each run

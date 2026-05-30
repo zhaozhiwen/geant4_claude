@@ -252,8 +252,9 @@ my-project/
 └── analysis/          uproot scripts
 ```
 
-It also writes an `AGENTS.md` symlink to `CLAUDE.md` so Codex reads the
-same in-workspace rules, and records `.g4c/` — the engine pointer every
+It also writes a `CLAUDE.md` symlink to `AGENTS.md` (the canonical
+in-workspace rules) so Claude Code reads the same rules, and records
+`.g4c/` — the engine pointer every
 other skill reads to locate `bin/g4run` and the cache, CLI-neutrally.
 
 The **geant4-example** skill is independent of the manual flow
