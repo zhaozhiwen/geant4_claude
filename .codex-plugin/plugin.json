@@ -1,0 +1,40 @@
+{
+  "name": "geant4-claude",
+  "version": "0.1.0",
+  "description": "Design, run, and analyze Geant4 simulations for user-defined detectors. Geant4 and ROOT run in a pinned apptainer image; analysis runs with uproot. Skill-driven; works on Claude Code and Codex.",
+  "author": {
+    "name": "Zhiwen Zhao"
+  },
+  "homepage": "https://github.com/zhaozhiwen/geant4_claude",
+  "repository": "https://github.com/zhaozhiwen/geant4_claude.git",
+  "license": "MIT",
+  "keywords": [
+    "geant4",
+    "simulation",
+    "physics",
+    "detector",
+    "monte-carlo",
+    "particle-physics",
+    "apptainer",
+    "uproot"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Geant4 Claude",
+    "shortDescription": "Build, run, and analyze Geant4 detector simulations.",
+    "longDescription": "Design a detector, build and run a Geant4 simulation in a pinned apptainer image, and analyze the output with uproot — all through skills. The geant4-init skill scaffolds a workspace and records the engine; geant4-detector/example/preview/build/run/analyze/validate drive the flow.",
+    "developerName": "Zhiwen Zhao",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Set up a Geant4 simulation workspace.",
+      "Simulate a 1 GeV e- on a lead block.",
+      "Analyze my latest Geant4 run."
+    ]
+  }
+}

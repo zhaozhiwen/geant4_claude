@@ -9,6 +9,39 @@ A bump of the pinned container image tag is at minimum a **minor**
 release. A breaking change to the `Hits` TTree schema or to the
 `runs/<id>/config.json` provenance contract is a **major** release.
 
+## [0.1.0] - 2026-05-29
+
+### Added
+
+- **Codex CLI support.** The plugin now runs on both Claude Code and OpenAI
+  Codex from one repo. Added `.codex-plugin/plugin.json` (validated by Codex's
+  own `validate_plugin.py`) and a `.agents/plugins/marketplace.json` entry.
+- **`scripts/ensure_venv.sh`** — a CLI-neutral, idempotent Python-venv bootstrap.
+  Claude's `SessionStart` hook delegates to it; Codex (which can't bundle a
+  plugin hook) calls it from the `geant4-init`/`analyze`/`preview`/`validate`
+  skills.
+- **`AGENTS.md`** symlinks (→ the sibling `CLAUDE.md`) at the repo root,
+  `templates/workspace/`, and `wiki/`, so Codex reads the same instructions.
+- **`.g4c/` workspace engine pointer**, written by the `geant4-init` skill:
+  records the absolute `bin/g4run` and the cache/data dirs so every skill reaches
+  the engine CLI-neutrally (Codex exposes no plugin-root env var).
+
+### Changed (breaking)
+
+- **All slash commands removed; every procedure is now a skill.** Claude users no
+  longer get a `/geant4-*` slash menu — describe the task and the matching skill
+  (e.g. `geant4-build`) triggers. This is the one format both CLIs run identically.
+  The 8 task skills, the `geant4` orchestrator, and 3 reference skills replace the
+  former `commands/`.
+- The `geant4-runner` subagent was folded into the `geant4-run` skill
+  ("Monitoring long runs"); `agents/` removed.
+
+### Internal
+
+- Invariant enforced by `tests/clean-smoke.sh` phase 0d: no `skills/*` file may
+  reference `CLAUDE_*`/`CODEX_*` env or `/geant4-claude:` names. Added phase 0e
+  exercising `ensure_venv.sh` with no `CLAUDE_*` env (the Codex path).
+
 ## [0.0.6] - 2026-05-18
 
 ### Added

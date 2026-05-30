@@ -1,0 +1,20 @@
+{
+  "name": "geant4-claude",
+  "interface": {
+    "displayName": "Geant4 Claude"
+  },
+  "plugins": [
+    {
+      "name": "geant4-claude",
+      "source": {
+        "source": "local",
+        "path": "../.."
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

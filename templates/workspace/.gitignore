@@ -8,3 +8,5 @@ __pycache__/
 .ipynb_checkpoints/
 # derived portable HTML produced by embed_html.py (regenerable)
 *_portable.html
+# engine pointer written by the geant4-init skill (per-workspace, local)
+.g4c/

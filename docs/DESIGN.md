@@ -11,13 +11,21 @@ permalink: /DESIGN/
 
 Let any Claude Code user, on any machine with apptainer and Python, **design
 a Geant4 detector, run a simulation, and analyze the output** without writing
-C++ for the common case. The plugin contributes:
+C++ for the common case. The plugin is **skill-driven and dual-CLI** — it runs
+on both Claude Code and Codex from one shared skill set. It contributes:
 
-- a small set of slash commands that drive the full loop,
+- a set of skills that drive the full loop (no slash commands — every
+  procedure is a skill so it loads on both CLIs),
 - a generic Geant4 main that loads any GDML and writes a flat hits TTree,
 - a single apptainer wrapper (`bin/g4run`) so the runtime is one swap away,
-- focused skills with the syntactic knowledge (GDML, physics lists, uproot)
-  Claude needs to make good choices.
+- focused reference skills with the syntactic knowledge (GDML, physics
+  lists, uproot) Claude needs to make good choices.
+
+> **Codex/Claude port (v0.1.0):** all slash commands and the `commands/` and
+> `agents/` directories were dropped; every procedure is now a skill. See the
+> **Dual-CLI engine contract** subsection for the `.g4c/` pointer mechanism
+> that lets one skill set reach `bin/g4run` on a CLI with no plugin-root env
+> var and no hooks. Antigravity support remains deferred.
 
 ## Non-goals (MVP)
 
@@ -30,40 +38,44 @@ C++ for the common case. The plugin contributes:
 
 ## User journey (the MVP smoke test)
 
+Each step is a skill. The user describes intent in natural language and the
+matching skill loads; there are no slash commands to type on either CLI.
+
 ```
 $ cd ~/projects/my-detector
-$ claude
-> /geant4-claude:geant4-init
-✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
-✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${CLAUDE_PLUGIN_DATA}/cache/sif)
+$ claude          # or: codex
 
-> /geant4-claude:geant4-detector            # optional: NL detector spec → standalone GDML
-  describe your detector: a 1×1×10 cm lead block in an air world,
-                          tag the lead as sensitive
+> set up a Geant4 workspace                       # → geant4-init skill
+✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
+✓ wrote .g4c/ engine pointer (g4run symlink + env)
+✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${GEANT4_CLAUDE_CACHE}/sif)
+
+> design a 1×1×10 cm lead block in an air world,  # → geant4-detector skill
+  tag the lead as sensitive
 ✓ wrote geometries/lead_block.gdml (validated)
 
 # write src/main.cc + src/CMakeLists.txt for your simulation
 # (Claude can draft these from a description of the physics list,
 #  sensitive detectors, and output schema you want)
 
-> /geant4-claude:geant4-build
+> build my source                                 # → geant4-build skill
 ✓ built build/<your-binary>
 
-> /geant4-claude:geant4-run --exe build/<your-binary> -- geometries/lead_block.gdml macros/<your>.mac {run_dir}/<output>.root
+> run it on macros/<your>.mac                      # → geant4-run skill
 ✓ run 20260508-221045-a3f9c0 finished in 8.2 s
   → runs/20260508-221045-a3f9c0/{<output>.root, log.txt, config.json}
 
-> /geant4-claude:geant4-analyze runs/20260508-221045-a3f9c0
+> analyze the latest run                           # → geant4-analyze skill
 ✓ edep_hist.png  (or analysis/<run_id>.py + tailored plot if the
                    schema isn't `Hits`)
 ```
 
-The user journey above is the **manual** path. The `geant4`
-orchestrator skill collapses these steps behind a single
-natural-language request — see Skill split below. The orchestrator adds
+The user journey above is the **manual** path — one skill at a time. The
+`geant4` orchestrator skill collapses these steps behind a single
+natural-language request — see Skill surface below. The orchestrator adds
 `geant4-preview` after `geant4-detector` and `geant4-validate` at the
 end when a closure validator covers the physics (Cherenkov: Frank-Tamm).
-Separately, `/geant4-claude:geant4-example` drops a self-contained smoke
+Separately, the `geant4-example` skill drops a self-contained smoke
 test into the workspace; useful for confirming the toolchain works on a
 fresh install but *not* part of the user's real-simulation journey.
 
@@ -72,19 +84,18 @@ fresh install but *not* part of the user's real-simulation journey.
 ```
                 ┌──────────────────────────────────────────────────────────────┐
                 │                       user's project                        │
-                │  src/   geometries/   macros/   build/   runs/<id>/   analysis/  │
+                │  .g4c/  src/  geometries/  macros/  build/  runs/<id>/  analysis/ │
                 └──▲──────▲──────────────▲───────▲───────▲───────────────▲────┘
                    │      │              │       │       │ reads         │ writes plots
                    │      │              │       │       │               │
   ┌─────────┐  ┌───┴──┐  ┌┴─────────┐  ┌─┴────┐ ┌┴────┐ │           ┌────┴───────────┐
-  │ /init   │  │/det- │  │/build    │  │/run  │ │/run │ │           │ /analyze       │
-  │         │  │ector │  │          │  │      │ │     │ │           │  (Claude)      │
+  │  init   │  │detec-│  │ build    │  │ run  │ │ run │ │           │ analyze        │
+  │ skill   │  │ tor  │  │ skill    │  │skill │ │skill│ │           │  skill (host)  │
   └────┬────┘  └──┬───┘  └────┬─────┘  └──┬───┘ └─┬───┘ │           └────┬───────────┘
        │          │           │            │     │     │                │
-       │  validation          │            │     │     │                │ python (uproot, numpy, mpl)
-       │  via g4run           │            │     │     │                │
-       │  validate-gdml       │            │     │     │                │
-       │                      │            │     │     │                │
+       │  every skill sources .g4c/env, then calls "${G4RUN}" …         │ python
+       │  (.g4c/g4run → abs bin/g4run; GEANT4_CLAUDE_CACHE from env)     │ (uproot,
+       │                      │            │     │     │                │  numpy, mpl)
        │           ┌──────────▼────────────▼─────▼─────┴────────────────┴┐
        │           │  bin/g4run  (apptainer exec sif:                    │
        │           │   source docker-entrypoint.sh; cmake / exec)        │
@@ -99,10 +110,14 @@ fresh install but *not* part of the user's real-simulation journey.
 Three things to notice:
 
 - **`bin/g4run` is the single seam** between the plugin and the simulator.
-  Everything else above the dashed line is Claude prompting + Python.
+  Skills never call it directly by plugin path — they reach it through the
+  per-workspace `.g4c/` pointer the `geant4-init` skill writes (see
+  **Dual-CLI engine contract**). Everything else above the wrapper is Claude
+  prompting + Python.
 - **GDML decouples geometry from rebuilds (when the user opts in).** The
   example main parses GDML at runtime, so geometry changes don't require
-  recompilation. Users with hardcoded geometry rebuild via `/geant4-claude:geant4-build`.
+  recompilation. Users with hardcoded geometry rebuild via the `geant4-build`
+  skill.
 - **Analysis runs on the host**, not in the container. ROOT files are read
   with `uproot`, which requires only `pip install uproot numpy matplotlib`.
 
@@ -129,20 +144,25 @@ change. The default `preview` sketch backend needs no helper — it is
 host-side `scripts/preview_gdml.py`.
 
 `build` and `exec` are content-neutral — `bin/g4run` knows nothing about
-the user's CMake target name, output schema, or argument shape. Slash
-commands carry the workspace conventions; the wrapper just runs the
-container.
+the user's CMake target name, output schema, or argument shape. The skills
+carry the workspace conventions; the wrapper just runs the container.
+
+`bin/g4run` itself is **unchanged by the dual-CLI port** — it still resolves
+its cache from env, with no silent `$HOME` fallback. What changed is *who
+sets the env*: instead of each slash command prepending
+`GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"`, every skill now sources
+the workspace's `.g4c/env` (written once by `geant4-init`), which exports
+`GEANT4_CLAUDE_CACHE` CLI-neutrally. See **Dual-CLI engine contract**.
 
 Internally each subcommand:
 
 1. ensures the `.sif` for the pinned tag exists at `<cache>/sif/…`, pulling
    on first use. The cache resolves to `$GEANT4_CLAUDE_CACHE` (explicit
-   override) or `$CLAUDE_PLUGIN_DATA/cache` (auto-set by Claude Code when
-   the plugin is installed) — both unset is a fatal error rather than a
-   silent fallback to `$HOME`. To insulate against `CLAUDE_PLUGIN_DATA`
-   not being propagated into Bash subshells in some Claude Code
-   configurations, every slash command prepends
-   `GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"` to its g4run call;
+   override, set by `.g4c/env`) or `$CLAUDE_PLUGIN_DATA/cache` (auto-set by
+   Claude Code when the plugin is installed) — both unset is a fatal error
+   rather than a silent fallback to `$HOME`. On Codex, where no
+   `CLAUDE_PLUGIN_DATA` exists, `.g4c/env` is the *only* source of the cache
+   path, which is exactly why `geant4-init` must run first;
 2. invokes `apptainer exec --bind <project>,<cache> <sif> bash -lc
    'source /usr/local/bin/docker-entrypoint.sh && <cmd>'`.
 
@@ -152,13 +172,13 @@ bump for the plugin.
 ### Example main (`templates/example/src/geant4_claude_main.cc`)
 
 Shipped as a **smoke-test fixture** and a piece of reference code,
-not as a workflow component. `/geant4-claude:geant4-example` drops
+not as a workflow component. The `geant4-example` skill drops
 this main + a sample geometry/macro/analysis into a fresh workspace
 so the user can run `init → build → run → analyze` end-to-end on a
 clean install and confirm the toolchain works. It is **not** the
 default binary for users' real simulations — the manual flow
 expects the user to write their own `main.cc`. The orchestrator skill
-*may* compose this main with `/geant4-claude:geant4-detector` output
+*may* compose this main with `geant4-detector` output
 when the spec is simple enough that no custom physics or schema is
 needed; that's an internal optimization of the orchestrator, not a
 documented user-facing path.
@@ -179,8 +199,8 @@ Behavior:
   `event/I, volume/C, edep/D, x/D, y/D, z/D, t/D, pdg/I`.
 - Runs the macro, then writes and closes the TFile.
 
-That schema is the **example's** contract — `/geant4-claude:geant4-analyze` checks for
-it and falls back to a custom-script path when the user's binary writes
+That schema is the **example's** contract — the `geant4-analyze` skill checks
+for it and falls back to a custom-script path when the user's binary writes
 something different.
 
 ### Run record (`runs/<id>/config.json`)
@@ -214,56 +234,109 @@ both fields are populated and the chain is walkable from
 two fields are an additive contract change to the run record — old
 analysis tools that don't read them keep working.
 
-## Slash command surface
+## Skill surface
 
-The four core commands operate on **the user's own simulation** (any
-`main.cc`, any output schema). One additional command drops in a working
-demo, and one helper writes GDML.
+Everything the plugin does is a **skill** — there are no slash commands on
+either CLI. Twelve skills split into one orchestrator, eight procedure skills
+(the workflow steps), and three reference skills (syntax + judgment, loaded on
+demand). Skills auto-load on natural-language triggers; the user never types a
+command name.
 
-| Command | One-line purpose |
-|---------|------------------|
-| `/geant4-claude:geant4-init` | Scaffold an empty workspace skeleton (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md`, `.gitignore`, `log.md`, `result.md`); pull the pinned image. On first run, also offers (one prompt, plugin-wide) to download the Geant4 source tarball from GitHub releases into `${CLAUDE_PLUGIN_DATA}/geant4-src/` for offline citation verification. |
-| `/geant4-claude:geant4-build` | CMake-build the user's source tree (`./src` → `./build` by default) inside the container. |
-| `/geant4-claude:geant4-run` | Execute the user's binary inside the container; allocate `runs/<id>/`; capture generic provenance (executable, args, image, git_sha, duration, exit status). Substitutes `{run_dir}`/`{run_id}` placeholders and exports `RUN_DIR`/`RUN_ID` so the binary can write into the run dir. |
-| `/geant4-claude:geant4-analyze` | Inspect the run's ROOT file. Schema-aware fast-path (canned per-event edep histogram) when a `Hits` TTree matching the example schema is found; otherwise generates a custom analysis script tailored to the actual branches. |
-| `/geant4-claude:geant4-detector` | Translate a natural-language detector spec into a validated standalone GDML file under `geometries/`. The output is consumable by any `main.cc` that calls `G4GDMLParser::Read(...)`. |
-| `/geant4-claude:geant4-preview` | Render three orthographic PNG previews of a GDML file. Default `--backend=sketch` reads `<solids>` + `<structure>` directly and draws projections with matplotlib (no container, ~1 s, box/tube/cone/polycone + rotations). `--backend=raytracer` keeps the Geant4-rendered fallback for exact silhouettes (alpha — currently hangs in v11.4). Orchestrator inserts this step after `geant4-detector`. |
-| `/geant4-claude:geant4-example` | Drop a self-contained smoke test (GDML + macro + a generic GDML-loading `main.cc` + analysis script) into the workspace. Independent of the manual user flow — used once on a fresh install to confirm the toolchain works, or as reference code when writing your own simulation. The orchestrator skill may compose the example main with detector output for simple-physics specs as an internal shortcut, but the manual flow expects the user to bring their own `main.cc`. |
-| `/geant4-claude:geant4-validate` | Run a physics closure test (Frank-Tamm Cherenkov yield in v1) against a `runs/<id>/` directory. Reads the output ROOT file, compares simulated yield to the analytic prediction, prints PASS/FAIL with sigma, writes a machine-readable summary at `runs/<id>/validate_<topic>.json`. Topics live under `scripts/validators/<topic>.py`. |
+| Skill | Kind | One-line purpose |
+|-------|------|------------------|
+| `geant4` | orchestrator | **Full-flow entry point.** Auto-loads on "simulate / build / run / set up a Geant4 …" requests; gap-checks the spec across six fields (goal, geometry, beam, sensitive, output, analysis); presents a brief plan; on approval drives `init → detector → preview → build → run → analyze → validate` in sequence (validate runs when a closure validator covers the physics). The one skill that *drives* a workflow rather than describing one. |
+| `geant4-init` | procedure | Scaffold the generic workspace skeleton (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md`/`AGENTS.md`, `.gitignore`, `log.md`, `result.md`, `report.html`); **write the `.g4c/` engine pointer**; bootstrap the venv (`ensure_venv.sh`); pull the pinned image. On first run, also offers (one prompt, plugin-wide) to download the matching Geant4 source tarball into `${GEANT4_CLAUDE_DATA}/geant4-src/`. The keystone — must run before any other procedure skill. |
+| `geant4-detector` | procedure | Translate a natural-language detector spec into a validated standalone GDML file under `geometries/` (validated in-container). Output is consumable by any `main.cc` that calls `G4GDMLParser::Read(...)`. Optical specs get RINDEX GDML, gated at parse time. |
+| `geant4-example` | procedure | Drop a self-contained smoke test (GDML + macro + generic GDML-loading `main.cc` + analysis script) into the workspace. Used once on a fresh install to confirm the toolchain, or as reference code; also the default binary the orchestrator composes for simple-physics specs. |
+| `geant4-preview` | procedure | Render three orthographic PNG previews (XY/YZ/XZ) of a GDML file. Default sketch backend reads `<solids>` + `<structure>` and draws with matplotlib (no container, ~1 s, box/tube/cone/polycone + rotations); raytracer backend is the alpha Geant4-rendered fallback. Orchestrator inserts this after `geant4-detector`. |
+| `geant4-build` | procedure | CMake-build the user's source tree (`./src` → `./build`) inside the container via `bin/g4run build`. |
+| `geant4-run` | procedure | Execute the user's binary inside the container; allocate `runs/<id>/`; capture generic provenance (executable, args, image, git_sha, duration, exit status). Substitutes `{run_dir}`/`{run_id}` and exports `RUN_DIR`/`RUN_ID`. Includes a **Monitoring long runs** section (the folded-in runner agent) for background runs. |
+| `geant4-analyze` | procedure | Inspect the run's ROOT file. Schema-aware fast-path (canned per-event edep histogram) when a `Hits` TTree matching the example schema is found; otherwise generates a custom analysis script tailored to the actual branches. Runs uproot/numpy/matplotlib on the host. |
+| `geant4-validate` | procedure | Run a physics closure test (Frank-Tamm Cherenkov yield in v1) against a `runs/<id>/` directory. Compares simulated yield to the analytic prediction, prints PASS/FAIL with sigma, writes `runs/<id>/validate_<topic>.json`. Topics live under `scripts/validators/<topic>.py`. |
+| `geant4-geometry` | reference | GDML structure, units, NIST materials, common shapes, placement, validation, `auxiliary sensitive` tags. |
+| `geant4-physics-list` | reference | Choosing among FTFP_BERT / QGSP_BIC / etc.; range/step cuts; EM-only vs hadronic vs optical. Holds the in-place optical-main regeneration recipe `geant4-detector`/orchestrator use. |
+| `geant4-analysis` | reference | `uproot` recipes (read `Hits` TTree → numpy), common plots (edep histogram, hit map, per-volume sums); adapt branch names for custom schemas. |
 
-Each command's full contract lives in its `.md` file under `commands/`.
+Each skill's full contract lives in its `SKILL.md` under `skills/<name>/`. The
+reference skills (geometry, physics-list, analysis) are syntax + judgment,
+never workflow — loaded on demand by a procedure skill or by `geant4` when it
+needs a specific decision. The orchestrator is the one deliberate exception
+that sequences the others into a planned run.
 
-## Skill split
+### Dual-CLI engine contract
 
-| Skill | Owns |
-|-------|------|
-| `geant4` | **Full-flow orchestrator (the highlighted entry point).** Auto-loads on "simulate / build / run a Geant4 …" requests; gap-checks the user's spec across six fields (goal, geometry, beam, sensitive, output, analysis); presents a brief plan; on approval drives `init → detector → preview → build → run → analyze → validate` in sequence (validate runs when a closure validator covers the physics). For optical-photon specs, `geant4-detector` writes RINDEX GDML and gates at parse time; `src/geant4_claude_main.cc` is regenerated in place from the recipe in `skills/geant4-physics-list/SKILL.md` — no optical template is shipped. The only skill in the plugin that drives a workflow rather than describing one. |
-| `geant4-geometry` | GDML structure, units, materials, common shapes, validation, `auxiliary` tags for sensitive detectors. |
-| `geant4-physics-list` | Choosing among FTFP_BERT / QGSP_BIC / etc.; range cuts; what to set for EM-only vs hadronic. |
-| `geant4-analysis` | `uproot` recipes (read `Hits` TTree → numpy), common plots (edep histogram, hit map, per-volume sums). |
+This is the load-bearing design of the v0.1.0 port. The plugin runs on both
+**Claude Code** and **Codex** from one skill set, but the two CLIs expose the
+runtime differently, and the skills must reach `bin/g4run` without caring which
+CLI they're on.
 
-The reference skills (geometry, physics-list, analysis) are syntax +
-judgment, never workflow — they're loaded on demand by the commands or
-by `geant4` itself when it needs to make a specific decision. The
-orchestrator skill is the one deliberate exception: it sequences
-commands so a single user message can fan out into a planned run.
+**The constraint (verified on codex v0.135.0):** Codex exposes **no
+plugin-root or plugin-data env var** (no `CLAUDE_PLUGIN_ROOT`/`_DATA`
+equivalent) and **cannot bundle hooks** — its plugin validator rejects a
+`hooks` field outright. So neither the "find `bin/g4run` via env" trick nor the
+"install the venv from a `SessionStart` hook" trick works on Codex.
+
+**The solution — a per-workspace pointer, `.g4c/` (gitignored):** the
+`geant4-init` skill resolves the plugin root and data dir *once*
+(CLI-neutrally) and writes them into the workspace:
+
+| `.g4c/` entry | What it is |
+|---------------|------------|
+| `.g4c/g4run` | Symlink to the absolute `bin/g4run` in the plugin checkout. |
+| `.g4c/env` | Exports `GEANT4_CLAUDE_ROOT`, `GEANT4_CLAUDE_DATA`, `GEANT4_CLAUDE_CACHE`. Values come from `CLAUDE_PLUGIN_DATA` on Claude, or `${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude` on Codex. |
+
+How `geant4-init` learns the plugin root with no env var on Codex: Codex hands
+the skill its own directory in context, and the root is its parent's parent
+(`…/skills/geant4-init/` → `…/`). On Claude it's just `${CLAUDE_PLUGIN_ROOT}`.
+
+**The preamble.** Every other skill begins with:
+
+```bash
+[ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+```
+
+then calls `"${G4RUN}" …`. This sources the cache/root env and resolves the
+wrapper through the workspace pointer — so the skill bodies are identical on
+both CLIs and never name a CLI-specific env var or path.
+
+**Cache flow keeps `bin/g4run` unchanged.** The wrapper still reads its cache
+from `GEANT4_CLAUDE_CACHE` and still treats an unresolvable cache as a fatal
+error (no silent `$HOME` fallback). `.g4c/env` is simply the new, CLI-neutral
+*source* of that variable, replacing the per-command
+`GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"` prefix the old slash
+commands carried. `bin/g4run` itself was not modified for the port.
+
+**venv bootstrap, CLI-neutral.** The dep-install logic lives in
+`scripts/ensure_venv.sh` (reads `GEANT4_CLAUDE_ROOT`/`_DATA` with the same
+fallbacks). On Claude, the `SessionStart` hook (`hooks/install-deps.sh`)
+delegates to it. On Codex there is no hook, so the skills that need Python
+(`geant4-init`, `geant4-analyze`, `geant4-preview`, `geant4-validate`) call
+`ensure_venv.sh` directly; it is idempotent, so the redundant call on Claude is
+a fast no-op.
+
+**The invariant (CI-enforced).** No `skills/*` file may reference a
+`CLAUDE_*`/`CODEX_*` env var or a `/geant4-claude:` slash name. A clean-smoke
+gate (phase 0d) enforces this — it's what keeps the skill set genuinely
+CLI-neutral rather than Claude-shaped with Codex bolted on.
 
 ## Workspace conventions
 
-`/geant4-claude:geant4-init` writes a **generic skeleton**:
+The `geant4-init` skill writes a **generic skeleton**:
 
 ```
 my-project/
 ├── CLAUDE.md            # rules for Claude inside this workspace
-├── .gitignore           # excludes runs/, *.root, build/, __pycache__/
+├── AGENTS.md            # symlink → CLAUDE.md (so Codex reads the same rules)
+├── .g4c/                # engine pointer (gitignored): g4run symlink + env (see Dual-CLI engine contract)
+├── .gitignore           # excludes .g4c/, runs/, *.root, build/, __pycache__/
 ├── log.md               # chronological work log; Claude appends after each run
 ├── result.md            # per-run findings; Claude updates after a noteworthy analyze
 ├── report.html          # single-page browser-friendly summary (overview + runs table + plots + interpretation); self-contained, derived from log.md + result.md + runs/
 ├── embed_html.py        # stdlib helper: `python3 embed_html.py report.html` → report_portable.html (images base64-embedded for emailing)
-├── src/                 # your main.cc + CMakeLists.txt go here (or `/geant4-claude:geant4-example` fills it for the smoke test)
+├── src/                 # your main.cc + CMakeLists.txt go here (or the geant4-example skill fills it for the smoke test)
 ├── geometries/          # GDML files, one per detector (optional)
 ├── macros/              # Geant4 macro files
-├── runs/                # one subdir per /geant4-claude:geant4-run invocation (gitignored)
+├── runs/                # one subdir per geant4-run invocation (gitignored)
 └── analysis/            # python analysis scripts
 ```
 
@@ -272,19 +345,21 @@ Plugin-internal scripts and templates (live in the plugin checkout,
 
 ```
 geant4_claude/
-├── templates/validate/      C++ harness for /geant4-claude:geant4-validate-gdml.
-│                            Built on first use; cached under CLAUDE_PLUGIN_DATA.
+├── scripts/ensure_venv.sh   CLI-neutral venv bootstrap. Claude's SessionStart
+│                            hook delegates here; Codex skills call it directly.
+├── templates/validate/      C++ harness for the in-container GDML parse check.
+│                            Built on first use; cached under GEANT4_CLAUDE_DATA.
 ├── templates/preview/       C++ harness for the alpha RayTracer backend
-│                            of /geant4-claude:geant4-preview
+│                            of the geant4-preview skill
 │                            (--backend=raytracer; see Hardening backlog).
 │                            Default backend lives in scripts/preview_gdml.py.
-├── scripts/preview_gdml.py  Host-side sketch backend for /geant4-claude:geant4-preview.
+├── scripts/preview_gdml.py  Host-side sketch backend for the geant4-preview skill.
 │                            Stdlib XML + matplotlib. No container call.
-└── scripts/validators/      Python validators driven by /geant4-claude:geant4-validate.
+└── scripts/validators/      Python validators driven by the geant4-validate skill.
     └── cherenkov.py         v1: Frank-Tamm closure test.
 ```
 
-`/geant4-claude:geant4-example` adds the demo on top:
+The `geant4-example` skill adds the demo on top:
 
 ```
 my-project/
@@ -296,7 +371,7 @@ my-project/
 └── analysis/example.py          # uproot → per-event edep histogram
 ```
 
-`/geant4-claude:geant4-build` writes:
+The `geant4-build` skill writes:
 
 ```
 my-project/build/<binary>        # gitignored
@@ -308,7 +383,7 @@ rename these four.
 
 ## Versioning & compatibility
 
-- Plugin version: semver in `.claude-plugin/plugin.json`.
+- Plugin version: semver, kept identical in **both** `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` (bump together). Currently 0.1.0.
 - Image tag is pinned in `bin/g4run`. Bumping it = minor bump (behavior may
   shift inside Geant4 across patch versions).
 - TTree schema change = major bump.
@@ -327,23 +402,23 @@ flow; they're sharp edges around what already works.
 catching XML syntax errors only. Missing materials, malformed
 `<auxiliary>` tags, bad unit names (`mm` vs `millimeter`), and undefined
 volume references slip past and surface as a crash deep inside
-`/geant4-claude:geant4-run`.
+the `geant4-run` skill.
 
 **Fix:** ship a tiny C++ harness (e.g. `templates/validate/main.cc`)
 that does `G4GDMLParser::Read()` against the file, prints any parser
 error, and exits non-zero on failure. Build it on first use inside the
-container, cache the binary at `${CLAUDE_PLUGIN_DATA}/cache/bin/`, and
+container, cache the binary at `${GEANT4_CLAUDE_CACHE}/bin/`, and
 call it from `cmd_validate_gdml` after the xmllint pass.
 
-**Impact:** Geometry errors surface before `/geant4-claude:geant4-build`
-/`-run`, when the fix is "edit the GDML" rather than "read the run log."
+**Impact:** Geometry errors surface before the `geant4-build`/`geant4-run`
+skills, when the fix is "edit the GDML" rather than "read the run log."
 
-### 2. Headless GDML preview (`/geant4-claude:geant4-preview`)
+### 2. Headless GDML preview (the `geant4-preview` skill)
 
 **Status: shipping in the default sketch backend; RayTracer backend
 still alpha.**
 
-**Current:** Two backends behind one command.
+**Current:** Two backends behind one skill.
 
 - `--backend=sketch` (default) — `scripts/preview_gdml.py`, pure host
   Python. Stdlib XML parses `<solids>` + `<structure>`, applies a 3D
@@ -386,12 +461,12 @@ visible at first glance instead of after a 1000-event run. Catching
 one geometry trap saves the cost of a build + run + analyze cycle and
 the user's mental model of "why is the photon count wrong?".
 
-### 3. `/geant4-claude:geant4-run` writes a `log.md` stub
+### 3. The `geant4-run` skill writes a `log.md` stub
 
 **Current:** The orchestrator skill prepends a full dated section to
 `log.md`. Four of the Outcome fields (run id, status, output path,
 duration) are 100% derivable from `runs/<id>/config.json`, so the
-skill hand-types values the command already wrote.
+skill hand-types values the `geant4-run` skill already wrote.
 
 **Fix:** `geant4-run` writes a stub `log.md` block at the top with the
 mechanical fields filled in and the narrative fields left as `<…>`
@@ -416,7 +491,7 @@ to `config.json` → minor version bump.
 **Impact:** Analysis tools and `log.md` readers can walk the chain
 mechanically. The orchestrator can render run trees.
 
-### 5. Physics closure validators (`/geant4-claude:geant4-validate <topic>`)
+### 5. Physics closure validators (the `geant4-validate` skill, `<topic>`)
 
 **Current:** Validation of physics correctness (Frank-Tamm yield for
 Cherenkov, Bethe-Bloch dE/dx for ionization, Compton edge position,
@@ -424,7 +499,7 @@ etc.) happens by hand in `result.md`. The highest-signal part of the
 Cherenkov dogfooding session was that closure check — and it was
 manual.
 
-**Fix:** new command with a library of canned closure tests. v1
+**Fix:** new skill with a library of canned closure tests. v1
 candidates:
 
 - `cherenkov` — Frank-Tamm yield vs. simulated count for a given
@@ -446,41 +521,39 @@ is physically sane before drawing scientific conclusions.
 README troubleshooting table.
 
 **Decision:** accept the gap. Users who want a headless geometry view
-now have `/geant4-claude:geant4-preview` (item 2), which goes through
+now have the `geant4-preview` skill (item 2), which goes through
 Geant4's own viewer and matches what the user sees in interactive vis
 sessions. There's no reason to add a parallel ROOT-based renderer.
 
-### 7. `g4run` discoverability outside slash commands
+### 7. `g4run` discoverability outside an initialized workspace
 
-**Current:** `g4run` lives at `${CLAUDE_PLUGIN_ROOT}/bin/g4run`, which
-is only set inside slash-command execution. Ad-hoc debugging from a
-plain shell requires finding the installed plugin path manually.
-Documented in README troubleshooting now.
+**Largely addressed by the port.** Inside any initialized workspace,
+`.g4c/g4run` is a stable symlink to `bin/g4run` and `.g4c/env` carries the
+cache path, so ad-hoc debugging is just `. .g4c/env; .g4c/g4run shell`. The
+old "the path only exists inside slash-command execution" problem is gone.
 
-**Fix (cheap):** at install time, offer to symlink `g4run` into
-`~/.local/bin/`. The symlink target uses the plugin's stable install
-path (under `~/.claude/plugins/.../geant4-claude/bin/g4run`). Idempotent;
-removed on plugin uninstall.
+**Remaining (cheap):** for use *outside* a workspace, optionally offer at
+install time to symlink `g4run` into `~/.local/bin/` (target: the plugin's
+stable install path). Idempotent; removed on plugin uninstall.
 
-**Impact:** `g4run shell`, `g4run validate-gdml`, and `g4run info` all
-become usable from anywhere — particularly useful when debugging an
-issue raised by a slash command without leaving the failing terminal.
+**Impact:** `g4run shell`, `g4run validate-gdml`, and `g4run info` become
+usable from any directory, not just an initialized workspace.
 
-### 8. `report.html` refresh is command-driven, not deterministic
+### 8. `report.html` refresh is skill-driven, not deterministic
 
 **Current:** `report.html` is a derived presentation layer, but nothing
-refreshed it. `geant4-run` only wrote a `log.md` stub; `geant4-analyze`
-never mentioned `report.html`; the sole "update it" instruction lived
-in the workspace `CLAUDE.md` and was never triggered in the command
-flow. Result: the browser report stayed at placeholders forever.
+refreshed it. The `geant4-run` skill only wrote a `log.md` stub; the
+`geant4-analyze` skill never mentioned `report.html`; the sole "update it"
+instruction lived in the workspace `CLAUDE.md` and was never triggered in
+the skill flow. Result: the browser report stayed at placeholders forever.
 
-**Fix:** `geant4-run` step 8 and `geant4-analyze` step 6 now explicitly
+**Fix:** the `geant4-run` and `geant4-analyze` skills now explicitly
 instruct Claude to refresh `report.html` in place — run fills the Runs
 table / Beam&physics / header date, analyze adds plots / key numbers /
 interpretation. Idempotent (update the row/figure, don't duplicate).
 
 **Tradeoff (accepted):** this is LLM-driven, not a deterministic
-generator. It depends on Claude obeying the command step, so it can
+generator. It depends on Claude obeying the skill step, so it can
 still be skipped under context pressure. A stdlib `build_report.py`
 that regenerates the mechanical sections from `runs/*/config.json`
 remains the robust alternative if drift recurs — parked here, not
@@ -527,10 +600,10 @@ was already correct.
   their own SD without forking the main.
 - **Scoring meshes vs. SD hits.** Lean: SD hits only for MVP. Adding scoring
   meshes would mean a second TTree contract; defer until a real user asks.
-- **Experiment log / sweep command.** Out of MVP. A `/geant4-sweep` that
-  parameterizes one knob across runs is the obvious next command, but it adds
+- **Experiment log / sweep skill.** Out of MVP. A `geant4-sweep` skill that
+  parameterizes one knob across runs is the obvious next step, but it adds
   schema (sweep manifests, joined analysis) and is best added after one real
-  user has lived with the four-command MVP.
+  user has lived with the current MVP.
 
 ## MVP boundary — what real Geant4 apps do that v0.0.1 doesn't
 
@@ -542,9 +615,9 @@ was already correct.
 
 **What we do:** Hard-code `new FTFP_BERT(0)`.
 
-**Impact on users:** Users of the example main with non-standard physics needs (HP neutrons, optical photons, radioactive decay, medical dosimetry) must edit their copy of `src/geant4_claude_main.cc` (placed by `/geant4-claude:geant4-example`) and re-run `/geant4-claude:geant4-build`. Users with their own `main.cc` already wire whatever physics list they need. This friction is the single biggest barrier for new users coming in via `/geant4-claude:geant4-example`.
+**Impact on users:** Users of the example main with non-standard physics needs (HP neutrons, optical photons, radioactive decay, medical dosimetry) must edit their copy of `src/geant4_claude_main.cc` (placed by the `geant4-example` skill) and re-run the `geant4-build` skill. Users with their own `main.cc` already wire whatever physics list they need. This friction is the single biggest barrier for new users coming in via `geant4-example`.
 
-**Upgrade path:** `--physics-list <name>` flag to `geant4-run`, plus `--extra-physics <comma-list>` for additive constructors. Logged in `config.json`. Single CLI surface. Estimated: ~50 lines of C++ + command update.
+**Upgrade path:** `--physics-list <name>` input to the `geant4-run` skill, plus `--extra-physics <comma-list>` for additive constructors. Logged in `config.json`. Single CLI surface. Estimated: ~50 lines of C++ + skill update.
 
 ### 2. Output matching the user's mental level
 
@@ -658,19 +731,34 @@ for (const auto& a : aux) {
 | `scorer` | `edep` / `flux` / `dose` | Use a `G4MultiFunctionalDetector` primitive scorer instead |
 | `filter` | `charged` / `neutral` | Only record tracks passing the filter |
 
-### Python deps via `SessionStart` hook (currently: `pdg`)
+### Python deps via `scripts/ensure_venv.sh` (currently: `pdg`)
 
-`requirements.txt` at the plugin root is installed automatically into `${CLAUDE_PLUGIN_DATA}/venv/` (resolves to `~/.claude/plugins/data/geant4-claude.../venv/`) by `hooks/install-deps.sh` on every Claude Code session start. The hook is idempotent: it diffs the bundled `requirements.txt` against a stored copy in `${CLAUDE_PLUGIN_DATA}` and reinstalls only when they differ — so first session installs, later sessions are a 3 ms no-op. uv is preferred when available; falls back to `python3 -m venv` + pip.
+`requirements.txt` at the plugin root is installed into a managed venv by the
+**CLI-neutral** bootstrap `scripts/ensure_venv.sh`. It diffs the bundled
+`requirements.txt` against a stored copy under the data dir and reinstalls only
+when they differ — so first call installs, later calls are a ~10 ms no-op. uv is
+preferred when available; falls back to `python3 -m venv` + pip.
 
-The venv survives session restarts and plugin updates and is deleted automatically when the plugin is uninstalled (per Claude Code's plugin lifecycle).
+Who triggers it depends on the CLI:
 
-**Calling pattern** for skills, commands, or Bash:
+| CLI | Trigger |
+|-----|---------|
+| Claude Code | `SessionStart` hook `hooks/install-deps.sh` delegates to `ensure_venv.sh` on every session start. |
+| Codex | No plugin hook exists. The `geant4-init`, `geant4-analyze`, `geant4-preview`, and `geant4-validate` skills call `ensure_venv.sh` directly. Idempotent, so it's a no-op once in sync. |
+
+The venv path resolves CLI-neutrally: `${GEANT4_CLAUDE_DATA}/venv` (from
+`.g4c/env`), falling back to `${CLAUDE_PLUGIN_DATA}/venv`, then
+`${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude/venv`. On Claude Code the venv
+survives session restarts and plugin updates and is deleted on uninstall (plugin
+lifecycle).
+
+**Calling pattern** for skills or Bash (after sourcing `.g4c/env`):
 
 ```bash
-"${CLAUDE_PLUGIN_DATA}/venv/bin/python" -c "import pdg; ..."
+"${GEANT4_CLAUDE_DATA}/venv/bin/python" -c "import pdg; ..."
 ```
 
-The current `requirements.txt` carries `pdg>=0.2.2` only. Add a package only when something in `commands/`/`skills/` actually imports it; touching `requirements.txt` triggers reinstall on the next session.
+The current `requirements.txt` carries `pdg>=0.2.2` only. Add a package only when something in `skills/`/`scripts/` actually imports it; touching `requirements.txt` triggers reinstall on the next `ensure_venv.sh` call.
 
 ### deepwiki MCP (Geant4 Q&A in-loop)
 
@@ -696,8 +784,29 @@ Verify any path with `claude mcp list` — expect `deepwiki: https://mcp.deepwik
 
 **Usage rule (echoed in `wiki/CLAUDE.md`):** treat deepwiki answers as **hypotheses to verify** against `wiki/raw/geant4-src/` before citing them in a wiki synthesis page. Citation discipline is weaker than direct grep — in our smoke test the tool gave the correct optical-photon PDG = −22 but did not name `G4OpticalPhoton.cc:67` even when asked. If a deepwiki claim survives a `grep` in the local source tree, it earns a place in a synthesis page — citing the `.cc` file, not deepwiki.
 
-### Distribution: marketplace + optional source-tree clone
+### Distribution: dual manifest + marketplace + optional source-tree clone
 
-**Self-hosted marketplace.** The plugin repo doubles as a single-plugin Claude Code marketplace via `.claude-plugin/marketplace.json` (alongside `plugin.json`). The marketplace entry points back at the same repo with `"source": "./"` so `/plugin marketplace add zhaozhiwen/geant4_claude` + `/plugin install geant4-claude@geant4-claude` is the supported install path; manual `git clone` still works as a fallback. Marketplace name matches the plugin name (`geant4-claude`) — both fields require kebab-case per the Claude Code plugin spec, and keeping them identical means users only have one identifier to remember. Don't change either after release; renaming breaks every existing user's install command.
+**Dual manifest.** The port ships two plugin manifests so one repo installs on
+both CLIs:
 
-**Optional Geant4 source clone.** The wiki's `sources/geant4-code/synthesis/` pages cite `.cc:line` ranges. Those citations are only verifiable if the Geant4 source tree is locally present. The canonical location is `${CLAUDE_PLUGIN_DATA}/geant4-src/` so the tree survives plugin version bumps (the plugin checkout at `${CLAUDE_PLUGIN_ROOT}` is replaced on update; `${CLAUDE_PLUGIN_DATA}` is not). `/geant4-claude:geant4-init` maintains a symlink at `${CLAUDE_PLUGIN_ROOT}/wiki/raw/geant4-src` pointing at the canonical tree so wiki pages can keep using the relative `wiki/raw/geant4-src/...` path; the symlink is recreated on every `/geant4-claude:geant4-init` run because plugin updates wipe the previous checkout. To keep fresh-clone size small, the tree is **gitignored** and not shipped. `/geant4-claude:geant4-init` step 6 detects whether the tree is already there and, if missing, asks the user once whether to download the matching source tarball from GitHub releases (`https://github.com/Geant4/geant4/archive/refs/tags/v<VERSION>.tar.gz`). The tag is derived from `bin/g4run`'s pinned image (single source of truth) so a container bump automatically asks for a matching source bump. Idempotent: subsequent `/geant4-claude:geant4-init` calls in other workspaces detect the existing tree and skip the prompt; pre-relocation installs (real directory at the legacy path) are auto-migrated on the next call when the destination is empty.
+| File | For | Notes |
+|------|-----|-------|
+| `.claude-plugin/plugin.json` | Claude Code | Standard plugin manifest. |
+| `.codex-plugin/plugin.json` | Codex | Adds an `interface` block (display name, category, default prompts). **No `hooks` field** — Codex's validator rejects it, which is the whole reason `ensure_venv.sh` is called from skills on Codex. |
+
+Both are at version **0.1.0** and **must be bumped together** — a single semver
+for the plugin regardless of CLI.
+
+**Self-hosted marketplaces (one per CLI).** The repo doubles as a single-plugin
+marketplace on both:
+
+| File | For | Install path |
+|------|-----|--------------|
+| `.claude-plugin/marketplace.json` | Claude Code | `/plugin marketplace add zhaozhiwen/geant4_claude` + `/plugin install geant4-claude@geant4-claude`. Entry uses `"source": "./"`. |
+| `.agents/plugins/marketplace.json` | Codex | Entry uses a `local` source (`"path": "../.."`). |
+
+Marketplace name matches the plugin name (`geant4-claude`) everywhere — all four
+files require kebab-case, and keeping the identifier identical means users
+remember one name. Don't rename after release; it breaks every existing install.
+
+**Optional Geant4 source clone.** The wiki's `sources/geant4-code/synthesis/` pages cite `.cc:line` ranges. Those citations are only verifiable if the Geant4 source tree is locally present. The canonical location is `${GEANT4_CLAUDE_DATA}/geant4-src/` (resolved CLI-neutrally via `.g4c/env`) so the tree survives plugin version bumps (the plugin checkout is replaced on update; the data dir is not). The `geant4-init` skill maintains a symlink at `${GEANT4_CLAUDE_ROOT}/wiki/raw/geant4-src` pointing at the canonical tree so wiki pages can keep using the relative `wiki/raw/geant4-src/...` path; the symlink is recreated on every `geant4-init` run because plugin updates wipe the previous checkout. To keep fresh-clone size small, the tree is **gitignored** and not shipped. `geant4-init` detects whether the tree is already there and, if missing, asks the user once whether to download the matching source tarball from GitHub releases (`https://github.com/Geant4/geant4/archive/refs/tags/v<VERSION>.tar.gz`). The tag is derived from `bin/g4run`'s pinned image (single source of truth) so a container bump automatically asks for a matching source bump. Idempotent: subsequent `geant4-init` runs in other workspaces detect the existing tree and skip the prompt; pre-relocation installs (real directory at the legacy path) are auto-migrated on the next call when the destination is empty.

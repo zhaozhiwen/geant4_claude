@@ -12,12 +12,12 @@ genuinely needs ROOT (TBrowser, TMVA, RooFit) runs in the container via
 
 The recipes below are written against the **example main's schema**
 (one `Hits` TTree). For user-written mains with different schemas,
-inspect the file first (`/geant4-claude:geant4-analyze` does this automatically) and
+inspect the file first (the **geant4-analyze** skill does this automatically) and
 substitute branch names; the same uproot patterns apply.
 
 ## TTree contract (example main)
 
-When the user runs the example main from `/geant4-claude:geant4-example`,
+When the user runs the example main from the **geant4-example** skill,
 `runs/<id>/hits.root` contains exactly one TTree, `Hits`, with these
 branches:
 
@@ -42,16 +42,19 @@ yourself.
 
 ## Install
 
-`/geant4-claude:geant4-analyze` resolves a Python with `uproot`/`numpy`/
+The **geant4-analyze** skill resolves a Python with `uproot`/`numpy`/
 `matplotlib` automatically: host Python if it already has them, else the
-plugin-managed venv at `${CLAUDE_PLUGIN_DATA}/venv` (seeded by the
-SessionStart hook from `requirements.txt`, or repaired on demand). Never
-`pip install --user` — it pollutes the host site-packages the rest of the
-plugin deliberately avoids. To force a manual repair:
+plugin-managed venv at `${GEANT4_CLAUDE_DATA}/venv` (seeded once, or
+repaired on demand). Never `pip install --user` — it pollutes the host
+site-packages the rest of the plugin deliberately avoids. To ensure /
+repair the venv on demand (env vars come from sourcing `.g4c/env`):
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"
+. .g4c/env
+"${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
 ```
+
+then run the analysis with `${GEANT4_CLAUDE_DATA}/venv/bin/python`.
 
 A separate project venv is a fine alternative if you prefer it isolated
 from the plugin's managed venv:
@@ -63,8 +66,8 @@ pip install uproot numpy matplotlib
 
 ## Recipe: inspect first
 
-Always start by listing what's actually in the file. `/geant4-claude:geant4-analyze`
-does this automatically; standalone:
+Always start by listing what's actually in the file. The **geant4-analyze**
+skill does this automatically; standalone:
 
 ```python
 import uproot

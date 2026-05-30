@@ -1,15 +1,17 @@
 ---
 name: geant4
-description: Orchestrate the full Geant4 simulation flow (init → detector → preview → build → run → analyze) from a single natural-language user request. Load whenever the user asks to "do", "build", "run", "set up", "create", or "simulate" anything in Geant4 — including one-shot setups like "simulate a 1 GeV e- on a lead block" or "Cherenkov yield from a CO2 radiator". Captures the physics spec, asks targeted clarifying questions when anything required is missing, presents a brief plan for approval, then drives the slash commands in sequence. This is the main entry point for any user who hasn't already picked a single step to run.
+description: Orchestrate the full Geant4 simulation flow (init → detector → preview → build → run → analyze) from a single natural-language user request. Load whenever the user asks to "do", "build", "run", "set up", "create", or "simulate" anything in Geant4 — including one-shot setups like "simulate a 1 GeV e- on a lead block" or "Cherenkov yield from a CO2 radiator". Captures the physics spec, asks targeted clarifying questions when anything required is missing, presents a brief plan for approval, then drives the step skills in sequence. This is the main entry point for any user who hasn't already picked a single step to run.
 ---
 
 # geant4 — full-flow orchestrator
 
 Use this skill the moment the user asks for a Geant4 simulation. It is the
-front door for everything else this plugin does. The five core slash
-commands (`/geant4-claude:geant4-init`, `…detector`, `…build`, `…run`,
-`…analyze`) are the *steps*; this skill is the *director* that turns
-"simulate X" into a planned sequence of those steps the user has approved.
+natural-language **front door** for everything else this plugin does — there
+is no slash menu; skills auto-trigger on both Claude Code and Codex. The five
+core step skills (**geant4-init**, **geant4-detector**, **geant4-build**,
+**geant4-run**, **geant4-analyze**) are the *steps*; this skill is the
+*director* that turns "simulate X" into a planned sequence of those steps the
+user has approved.
 
 The default flow this skill drives is the no-C++ path:
 
@@ -17,11 +19,11 @@ The default flow this skill drives is the no-C++ path:
 init → detector → preview → example → (edit macros/run.mac) → build → run → analyze → validate
 ```
 
-`/geant4-claude:geant4-preview` renders three orthographic PNGs of the
+The **geant4-preview** skill renders three orthographic PNGs of the
 GDML (XY/YZ/XZ) via a host-side matplotlib backend — fast (~1 s), no
 container call, supports box/tube/cone/polycone + 3D rotations. The
-orchestrator **does** call it automatically between `geant4-detector`
-and `geant4-build`, because catching a geometry trap visually saves
+orchestrator **does** call it automatically between **geant4-detector**
+and **geant4-build**, because catching a geometry trap visually saves
 the cost of the full build+run cycle. (A second `--backend=raytracer`
 backend wraps Geant4's RayTracer for exact-silhouette rendering of
 boolean solids; it's alpha and currently hangs in v11.4.) Skip the
@@ -46,11 +48,11 @@ Trigger on any of:
 Do **not** load this skill when:
 
 - The user is mid-flow and only wants one step ("just generate GDML for
-  X" → use `/geant4-claude:geant4-detector` alone).
+  X" → use the **geant4-detector** skill alone).
 - A previous run/build is already failing and the user wants to debug —
   that's a debugging task, not a fresh orchestration.
 - The user is iterating on existing geometry/macros for a previous
-  simulation; use the single-step commands directly.
+  simulation; use the single-step skills directly.
 
 ## Step 1 — Capture and gap-check the spec
 
@@ -121,7 +123,7 @@ spec involves any of:
 
 …then the example main alone can't do it. The plan must say so, and
 step 3 of the flow becomes "write a custom `src/<name>.cc` +
-`src/CMakeLists.txt`" instead of `/geant4-claude:geant4-example`. For
+`src/CMakeLists.txt`" instead of the **geant4-example** skill. For
 the optical case the file is fixed: it is an in-place recipe edit of
 `src/geant4_claude_main.cc` (the main `geant4-example` drops), not a
 freehand new file — tell the user (see the rule in Step 3).
@@ -187,20 +189,20 @@ Spec
 - Analysis:  <…>
 
 Steps
-1. /geant4-claude:geant4-init       — scaffold workspace + cache image
-2. /geant4-claude:geant4-detector   — write geometries/<name>.gdml
-3. /geant4-claude:geant4-preview    — three orthographic PNGs of the GDML;
+1. geant4-init       — scaffold workspace + cache image
+2. geant4-detector   — write geometries/<name>.gdml
+3. geant4-preview    — three orthographic PNGs of the GDML;
      eyeball before building. Skip if the user said "no preview".
 4. <one of:>
-     /geant4-claude:geant4-example  — drop in the GDML-loading main + macro
+     geant4-example  — drop in the GDML-loading main + macro
      <or> hand-write src/main.cc + src/CMakeLists.txt for <reason>
 5. edit macros/<name>.mac for beam particle/energy/event count
-6. /geant4-claude:geant4-build
-7. /geant4-claude:geant4-run --exe build/<binary> -- \
+6. geant4-build
+7. geant4-run --exe build/<binary> -- \
      geometries/<name>.gdml macros/<name>.mac {run_dir}/<output>.root
-8. /geant4-claude:geant4-analyze runs/<id>
+8. geant4-analyze runs/<id>
      <one line: canned Hits-TTree plot vs. custom uproot script vs. ROOT macro>
-9. /geant4-claude:geant4-validate <topic> runs/<id> <topic flags>
+9. geant4-validate <topic> runs/<id> <topic flags>
      — closure test when an analytic prediction exists (Cherenkov:
        Frank-Tamm). Skip only if no validator covers the physics.
 
@@ -256,12 +258,12 @@ Only after the user picks "Approve and run". For each step:
    proceed. Do not silently retry, do not paper over the error, do not
    move to the next step.
 
-**Use the slash commands in their documented order.** If you cannot use
-a command as documented and must improvise — hand-write what a command
+**Use the step skills in their documented order.** If you cannot use
+a skill as documented and must improvise — hand-write what a skill
 would generate, skip a step, or work around a failure — say so to the
-user explicitly: name the command you bypassed, what you did instead,
+user explicitly: name the skill you bypassed, what you did instead,
 and why. Never silently substitute your own approach for a documented
-command. (For optical specs the documented path is an in-place recipe edit of `src/geant4_claude_main.cc` rather than using `geant4-example` as-is — this is not an improvisation, but still tell the user, since they may expect a fresh file rather than an edited one.)
+skill. (For optical specs the documented path is an in-place recipe edit of `src/geant4_claude_main.cc` rather than using **geant4-example** as-is — this is not an improvisation, but still tell the user, since they may expect a fresh file rather than an edited one.)
 
 Maintain the workspace's handoff documents per the rule in
 `templates/workspace/CLAUDE.md` non-negotiable #6 — that file is the
@@ -275,7 +277,7 @@ orchestrator-flavored slice of that rule:
 - Capture the user's **decision** (approved as-is, edited spec to …,
   or plan-only).
 - Capture the **outcome** (run id, status, one or two lines on what
-  happened). Note: `/geant4-claude:geant4-run` already prepended a
+  happened). Note: the **geant4-run** skill already prepended a
   stub block to `log.md` with the run id, status, duration, and
   output paths filled in. Your job is to **find that stub** (it's the
   most recent `## YYYY-MM-DD …` block at the top of `log.md`, with
@@ -284,8 +286,8 @@ orchestrator-flavored slice of that rule:
   duplicates the entry.
 
 Update `result.md` with the key numbers and plot paths after analysis,
-and refresh `report.html` to match (`/geant4-claude:geant4-run` and
-`/geant4-claude:geant4-analyze` do this when dispatched as documented;
+and refresh `report.html` to match (the **geant4-run** and
+**geant4-analyze** skills do this when dispatched as documented;
 if you improvised either step, do the refresh yourself per
 non-negotiable #6 — the browser report must not lag the run).
 The `<!-- ENTRY TEMPLATE -->` comment block at the bottom of `log.md`
@@ -311,7 +313,7 @@ plan — the plots and numbers are the recap.
 
 ## Cross-references
 
-- `commands/geant4-detector.md` — natural-language → GDML; this is the
+- `skills/geant4-detector/SKILL.md` — natural-language → GDML; this is the
   step that interprets the geometry portion of the spec.
 - `skills/geant4-geometry/SKILL.md` — GDML reference (units, materials,
   the `auxiliary sensitive` tag convention).
@@ -319,7 +321,7 @@ plan — the plots and numbers are the recap.
   including optical photons (Cherenkov) and HP neutrons.
 - `skills/geant4-analysis/SKILL.md` — `uproot` recipes; ROOT-macro
   template under `analysis/` when the user asks for ROOT.
-- `commands/geant4-validate.md` — physics closure test (Frank-Tamm for
+- `skills/geant4-validate/SKILL.md` — physics closure test (Frank-Tamm for
   Cherenkov); the final step of the default flow when a validator
   covers the physics.
 - `templates/workspace/CLAUDE.md` — the rules that apply once the

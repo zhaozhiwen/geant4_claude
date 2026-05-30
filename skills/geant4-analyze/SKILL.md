@@ -1,9 +1,9 @@
 ---
-description: Inspect a run's output schema, plot/summarize it (canned fast-path for the example, custom script otherwise).
-allowed-tools: Bash, Read, Write, Glob
+name: geant4-analyze
+description: Use when the user wants to inspect a Geant4 run's output schema and plot/summarize it — reads runs/<id>/, dumps the ROOT tree branches, and produces a histogram + summary (canned fast-path for the example schema, generated script otherwise). Runs uproot/numpy/matplotlib. Requires geant4-init to have run.
 ---
 
-# /geant4-claude:geant4-analyze
+# geant4-analyze — inspect a run's output and plot it
 
 ## Purpose
 
@@ -29,7 +29,20 @@ optional reusable scripts dropped in `analysis/`.
 
 ## Steps
 
-1. **Sanity checks.**
+1. **Resolve the engine** (every skill starts with this; written by geant4-init):
+   ```bash
+   [ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+   ```
+   If `.g4c/` is missing, stop and tell the user to run the **geant4-init** skill
+   first.
+
+2. **Provision the Python venv** (this skill needs uproot/numpy/matplotlib;
+   Codex has no SessionStart hook, so do this explicitly and idempotently):
+   ```bash
+   . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
+   ```
+
+3. **Sanity checks.**
    ```bash
    test -d "${RUN_DIR}" || { echo "no such run dir"; exit 1; }
    ```
@@ -48,50 +61,47 @@ optional reusable scripts dropped in `analysis/`.
    test -s "${RF}" || { echo "${RF}: empty"; exit 1; }
    ```
 
-2. **Pick a python with uproot+numpy+matplotlib.** Try in priority order:
+4. **Pick a python with uproot+numpy+matplotlib.** Try in priority order:
 
    ```bash
    # (a) host python (no install needed)
    if python3 -c "import uproot, numpy, matplotlib" 2>/dev/null; then
      PY="$(command -v python3)"
 
-   # (b) plugin's managed venv (no install needed if previously seeded)
-   elif "${CLAUDE_PLUGIN_DATA}/venv/bin/python" \
+   # (b) plugin's managed venv (seeded by ensure_venv.sh in step 2)
+   elif "${GEANT4_CLAUDE_DATA}/venv/bin/python" \
         -c "import uproot, numpy, matplotlib" 2>/dev/null; then
-     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+     PY="${GEANT4_CLAUDE_DATA}/venv/bin/python"
 
-   # (c) install into the plugin venv (preferred — survives plugin updates,
-   #     isolated from system site-packages, cleaned with the plugin).
+   # (c) re-provision the venv (idempotent; single source of venv-creation
+   #     logic), then re-resolve. Reaches here only if step 2 was skipped
+   #     or the venv was removed/broken since.
    else
-     # The SessionStart hook normally seeds the venv. It may be absent
-     # (hook not approved / failed / never ran, or the venv was removed
-     # after a prior run) — create+seed it via the hook itself
-     # (idempotent, single source of venv-creation logic), then re-resolve.
-     bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh" || true
-     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+     . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh" || true
+     PY="${GEANT4_CLAUDE_DATA}/venv/bin/python"
      if ! "${PY}" -c "import uproot, numpy, matplotlib" 2>/dev/null; then
        echo "analyze: could not provision uproot/numpy/matplotlib in the" \
-            "plugin venv (${PY}). Check hooks/install-deps.sh output and" \
+            "plugin venv (${PY}). Check ensure_venv.sh output and" \
             "network; do not pip install --user." >&2
        exit 1
      fi
    fi
    ```
 
-   In normal operation the SessionStart hook has already seeded the venv
-   from `requirements.txt` (which now includes `uproot`), so branch (b)
+   In normal operation step 2's `ensure_venv.sh` has already seeded the venv
+   from `requirements.txt` (which includes `uproot`), so branch (b)
    hits and (c) is the rare network-was-down recovery path.
 
-   Auto-installing into the **plugin venv** is the recommended fallback:
+   Re-provisioning the **plugin venv** is the recommended fallback:
    the venv is per-user, plugin-scoped, and removed when the plugin is
    uninstalled. Do **not** silently `pip install --user` into the host's
    site-packages — that pollutes the user's global environment without
    their consent. If the plugin venv is unavailable for some reason
    (network down, etc.), stop and tell the user the install line.
 
-3. **Inspect the schema** (Python one-liner; preserves the exact branch
+5. **Inspect the schema** (Python one-liner; preserves the exact branch
    types and dtypes for later codegen). Use the `${PY}` resolved in
-   step 2:
+   step 4:
    ```bash
    "${PY}" - "${RF}" <<'PY'
 import sys, uproot
@@ -104,12 +114,12 @@ with uproot.open(sys.argv[1]) as f:
 PY
    ```
 
-4. **Pick the analysis path.**
-   - If `--script` was passed → use it. Skip to step 5.
+6. **Pick the analysis path.**
+   - If `--script` was passed → use it. Skip to step 7.
    - Else if the file has a TTree named `Hits` with branches `event`,
      `edep`, and at least `volume` or `pdg` → **fast path**: use
      `analysis/example.py` if present in the workspace, else materialize
-     a copy from `${CLAUDE_PLUGIN_ROOT}/templates/example/analysis/example.py`.
+     a copy from `${GEANT4_CLAUDE_ROOT}/templates/example/analysis/example.py`.
    - Else → **custom path**: generate a fresh script at
      `analysis/<run_id>.py` that:
      - opens the ROOT file,
@@ -120,9 +130,9 @@ PY
        float-typed branch with name length ≥ 3),
      - writes a PNG into `${RUN_DIR}/`.
 
-   Use the `geant4-analysis` skill for the uproot recipes.
+   Use the **geant4-analysis** skill for the uproot recipes.
 
-5. **Run the script.** Use the resolved `${PY}` so the script picks up
+7. **Run the script.** Use the resolved `${PY}` so the script picks up
    the venv that has `uproot`:
    ```bash
    "${PY}" "${SCRIPT}" "${RUN_DIR}"
@@ -137,10 +147,10 @@ PY
    - non-optical: the beam missed the target, or no volume is tagged
      sensitive.
    An empty result is a failure to surface, not a finding to report —
-   skip the doc refresh (step 6) until it's resolved.
+   skip the doc refresh (step 8) until it's resolved.
 
-6. **Refresh `report.html` and `result.md`** (only if they exist —
-   created by `/geant4-claude:geant4-init`). Per workspace `CLAUDE.md`
+8. **Refresh `report.html` and `result.md`** (only if they exist —
+   created by the **geant4-init** skill). Per workspace `CLAUDE.md`
    non-negotiable #6, a noteworthy analyze must land in the handoff
    docs. Edit in place:
    - `result.md`: add/update the per-run findings section (key numbers,
@@ -156,8 +166,8 @@ PY
    conflict). Idempotent: re-analyzing the same run updates its figures
    and rows instead of duplicating them.
 
-7. **Show the user:**
-   - the schema dump from step 3,
+9. **Show the user:**
+   - the schema dump from step 5,
    - the path to the PNG and any other outputs,
    - the summary printed by the script,
    - a hint:
@@ -171,23 +181,24 @@ PY
 - Possibly a new `analysis/<run_id>.py` on the custom path (versioned;
   user can edit and re-run).
 - If the workspace is `init`-ed: `result.md` and `report.html` refreshed
-  with this run's plots, key numbers, and interpretation (step 6).
+  with this run's plots, key numbers, and interpretation (step 8).
 
 ## Failure modes
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `ModuleNotFoundError: uproot` (after step 2's auto-install path) | Network blocked, or the plugin venv is missing/broken. | Inspect `${CLAUDE_PLUGIN_DATA}/venv/`; repair with `bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"`, or reinstall the plugin. Never `pip install --user` (pollutes host site-packages). |
+| `.g4c/` missing | Workspace not initialized. | Run the geant4-init skill first. |
+| `ModuleNotFoundError: uproot` (after step 4's provisioning path) | Network blocked, or the plugin venv is missing/broken. | Inspect `${GEANT4_CLAUDE_DATA}/venv/`; repair with `. .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"`, or reinstall the plugin. Never `pip install --user` (pollutes host site-packages). |
 | `no .root file in runs/<id>` | Binary didn't produce a ROOT file (or wrote elsewhere). | Inspect `runs/<id>/log.txt`; check the binary's args / `RUN_DIR` handling. |
-| `KeyError: 'Hits'` (custom schema) | The fast-path script was forced on a non-`Hits` file. | Don't pass `--script`; let the command auto-detect, or pass a script that matches your schema. |
+| `KeyError: 'Hits'` (custom schema) | The fast-path script was forced on a non-`Hits` file. | Don't pass `--script`; let the skill auto-detect, or pass a script that matches your schema. |
 | Empty histogram | All entries zero, or selected branch is wrong. | Check the schema dump; explicitly pick the branch via a custom script. |
 
 ## Notes
 
 - The canned `example.py` in `analysis/` is a starting point, not sacred.
-  Edit it freely; the command keeps using it as long as it accepts the
+  Edit it freely; the skill keeps using it as long as it accepts the
   run dir as `argv[1]`.
 - ROOT-specific tools (TBrowser, RooFit) run inside the container via
-  `g4run root <macro.C>` — see the `geant4-analysis` skill.
+  `"${G4RUN}" root <macro.C>` — see the **geant4-analysis** skill.
 - The custom-path script is generated *once per run id*; rerun the
-  command on the same run to overwrite it, or hand-edit it freely.
+  skill on the same run to overwrite it, or hand-edit it freely.

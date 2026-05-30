@@ -6,13 +6,14 @@ generated workspace's own `CLAUDE.md` (see `templates/workspace/CLAUDE.md`).
 
 ## Project
 
-`geant4_claude` is a public Claude Code plugin that helps any user **build,
-run, and analyze their own Geant4 simulation** through a small set of slash
-commands. Geant4 and ROOT are accessed through the apptainer image
+`geant4_claude` is a public plugin for **both Claude Code and OpenAI Codex** that
+helps any user **build, run, and analyze their own Geant4 simulation** through a
+set of skills (no slash commands — skills run on both CLIs). Geant4 and ROOT are
+accessed through the apptainer image
 `docker://ghcr.io/gemc/g4install:11.4.0-almalinux-9.4`. The plugin ships no
-compiled code, only the manifest, commands, skills, a workspace skeleton,
-and an opt-in example (a generic GDML-driven `main.cc` plus a sample
-geometry/macro/analysis) the user copies in with `/geant4-claude:geant4-example`.
+compiled code, only the two manifests, skills, a workspace skeleton, and an
+opt-in example (a generic GDML-driven `main.cc` plus a sample
+geometry/macro/analysis) the user copies in with the `geant4-example` skill.
 
 This repo will be published on GitHub. Treat every commit as if a stranger
 will clone it on a fresh machine.
@@ -40,56 +41,75 @@ will clone it on a fresh machine.
 6. **No leakage.** No JLab-internal hostnames, no absolute home paths, no API
    tokens, no personal email in committed files. Pre-publish check (below)
    enforces this.
-7. **Idempotent commands.** Running any slash command twice in a row must not
-   corrupt state. `/geant4-claude:geant4-init` re-detects existing files and refuses to
+7. **Idempotent skills.** Running any skill twice in a row must not corrupt
+   state. The `geant4-init` skill re-detects existing files and refuses to
    overwrite without `--force`.
+8. **Skills stay CLI-neutral.** The plugin ships for both Claude Code and Codex.
+   Skills are the one surface both run, so **no `skills/*` file may reference
+   `CLAUDE_*`/`CODEX_*` env vars or `/geant4-claude:` slash-command names.** Skills
+   reach the engine only via the `.g4c/` pointer the `geant4-init` skill writes
+   (`[ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"`).
+   `tests/clean-smoke.sh` phase 0d enforces this. Both manifests
+   (`.claude-plugin/` + `.codex-plugin/`) bump version together.
 
 ## Repository conventions
 
 | Path | Role |
 |------|------|
-| `.claude-plugin/plugin.json` | Plugin manifest. Version bumped on every release. |
-| `.mcp.json` | Plugin-shipped MCP servers (currently: deepwiki). Auto-loaded for plugin users; one approval prompt per user. Add servers here only if they are free, no-auth, and clearly useful for Geant4 work. |
-| `requirements.txt` | Python deps installed by the `SessionStart` hook into `${CLAUDE_PLUGIN_DATA}/venv/`. Currently: `pdg` (PDG particle data), `matplotlib`, `numpy` (used by `scripts/preview_gdml.py` and the canned analyze plots). Touch this file to trigger reinstall on next session. Add packages only when something in `commands/`/`skills/`/`scripts/` actually imports them. |
-| `hooks/hooks.json` + `hooks/install-deps.sh` | `SessionStart` hook that idempotently installs `requirements.txt` into a managed venv. uv first, `python3 -m venv` fallback. Silent no-op when in sync. |
-| `commands/` | Slash commands. One file per command, named `geant4-<verb>.md`. |
-| `skills/<name>/SKILL.md` | Focused how-to knowledge loaded on demand. |
-| `agents/` | Subagent definitions for long-running or specialized work. |
+| `.claude-plugin/plugin.json` | Claude Code manifest. Version bumped on every release (in lockstep with `.codex-plugin/`). |
+| `.codex-plugin/plugin.json` | Codex manifest (requires an `interface{}` block, strict semver, no `hooks` field — Codex's validator rejects it). Validate with `~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .`. |
+| `.agents/plugins/marketplace.json` | Codex marketplace entry (`codex plugin marketplace add`). `.claude-plugin/marketplace.json` is the Claude counterpart. |
+| `.mcp.json` | Plugin-shipped MCP servers (currently: deepwiki), bundled by both manifests. Add servers here only if they are free, no-auth, and clearly useful for Geant4 work. |
+| `requirements.txt` | Python deps installed by `scripts/ensure_venv.sh`. Currently: `pdg`, `matplotlib`, `numpy` (used by `scripts/preview_gdml.py` and the canned analyze plots). Touch this file to trigger reinstall. Add packages only when something in `skills/`/`scripts/` actually imports them. |
+| `scripts/ensure_venv.sh` | CLI-neutral, idempotent venv bootstrap (uv first, `python3 -m venv` fallback). Claude's `SessionStart` hook delegates to it; on Codex (no plugin hook) the `geant4-init`/`geant4-analyze`/`geant4-preview`/`geant4-validate` skills call it directly. |
+| `hooks/hooks.json` + `hooks/install-deps.sh` | Claude-only `SessionStart` hook; `install-deps.sh` is a thin shim that `exec`s `scripts/ensure_venv.sh`. Codex plugins cannot bundle hooks. |
+| `skills/<name>/SKILL.md` | The plugin's entire surface — 8 task skills (`geant4-init/detector/example/preview/build/run/analyze/validate`), the `geant4` orchestrator (front door), and 3 reference skills (`geant4-geometry/physics-list/analysis`). No slash commands. |
+| `AGENTS.md` | Symlink → the sibling `CLAUDE.md`, so Codex reads the same rules. One per `CLAUDE.md` (root, `templates/workspace/`, `wiki/`). New `CLAUDE.md` files must add the symlink. |
 | `bin/g4run` | The only allowed bridge to apptainer (and the host-side dispatcher for the sketch preview backend). Subcommands: `pull`, `info`, `shell`, `build <src> <build>`, `exec <executable> [args…]`, `root`, `validate-gdml`, `preview <gdml> [out_dir] [--backend=sketch|raytracer]`, `image-tag`, `sif-name` (echo the pinned tag / `.sif` name — the single-source accessors docs and tests derive from). |
-| `templates/workspace/` | Generic skeleton `/geant4-claude:geant4-init` copies into a user's project (empty `src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md` and `.gitignore`). |
-| `templates/example/` | The opt-in demo `/geant4-claude:geant4-example` copies in (`src/geant4_claude_main.cc` + `src/CMakeLists.txt` + `geometries/example.gdml` + `macros/run.mac` + `analysis/example.py`). |
+| `templates/workspace/` | Generic skeleton the `geant4-init` skill copies into a user's project (empty `src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md` and `.gitignore`). |
+| `templates/example/` | The opt-in demo the `geant4-example` skill copies in (`src/geant4_claude_main.cc` + `src/CMakeLists.txt` + `geometries/example.gdml` + `macros/run.mac` + `analysis/example.py`). |
 | `templates/validate/` | Tiny Geant4 program (`main.cc` + `CMakeLists.txt`) built by `bin/g4run` on first `validate-gdml` call and cached at `${CACHE_DIR}/bin/validate_gdml`. Runs `G4GDMLParser::Read` so semantic errors xmllint misses get caught. |
 | `templates/preview/` | Tiny Geant4 program ditto — built on first `preview --backend=raytracer` call, cached at `${CACHE_DIR}/bin/preview_gdml`. Headless GDML preview via RayTracer. **Alpha** — rendering hangs in the v11.4 container; see DESIGN.md hardening backlog. The default sketch backend (no container call) lives in `scripts/preview_gdml.py`. |
-| `scripts/preview_gdml.py` | Host-side sketch backend for `/geant4-claude:geant4-preview` (default). Stdlib XML parse of `<solids>`/`<structure>` + matplotlib projections. Supports box/tube/cone/polycone + full 3D rotations; unknown solids render as bounding boxes with a "!" badge. |
-| `scripts/validators/` | Host-side Python validators driven by `/geant4-claude:geant4-validate <topic>`. Each is a self-contained `<topic>.py` reading a `runs/<id>/` directory and writing `validate_<topic>.json`. v1: `cherenkov.py` (Frank-Tamm closure). |
+| `scripts/preview_gdml.py` | Host-side sketch backend for the `geant4-preview` skill (default). Stdlib XML parse of `<solids>`/`<structure>` + matplotlib projections. Supports box/tube/cone/polycone + full 3D rotations; unknown solids render as bounding boxes with a "!" badge. |
+| `scripts/validators/` | Host-side Python validators driven by the `geant4-validate` skill (`<topic>`). Each is a self-contained `<topic>.py` reading a `runs/<id>/` directory and writing `validate_<topic>.json`. v1: `cherenkov.py` (Frank-Tamm closure). |
 | `docs/DESIGN.md` | Architecture, contracts, MVP boundary. Update whenever a contract changes. |
 
 Naming:
 
-- Commands: `geant4-<verb>` (`geant4-init`, `geant4-build`, `geant4-run`,
+- Task skills: `geant4-<verb>` (`geant4-init`, `geant4-build`, `geant4-run`,
   `geant4-analyze`, `geant4-detector`, `geant4-example`, `geant4-preview`,
   `geant4-validate`).
-- Skills: `geant4-<topic>` (`geant4-geometry`, `geant4-analysis`).
-- Run IDs: `YYYYMMDD-HHMMSS-<6char>` (UTC). Generated by `/geant4-claude:geant4-run`.
+- Reference skills: `geant4-<topic>` (`geant4-geometry`, `geant4-physics-list`,
+  `geant4-analysis`). Orchestrator: `geant4`.
+- Run IDs: `YYYYMMDD-HHMMSS-<6char>` (UTC). Generated by the `geant4-run` skill.
 - Cached helper binaries (built from `templates/<name>/`): `<name>` →
   `${CACHE_DIR}/bin/<name>`. Currently used for `validate_gdml` and `preview_gdml`.
 
-## When adding a command
+## When adding a task skill
 
-1. File at `commands/geant4-<verb>.md` with YAML frontmatter:
+There are no slash commands — every procedure is a skill (so it runs on both
+Claude Code and Codex).
+
+1. Directory `skills/geant4-<verb>/` with `SKILL.md`. Frontmatter:
    ```yaml
    ---
-   description: <one-line, user-facing>
-   allowed-tools: Read, Edit, Write, Bash, Glob, Grep
+   name: geant4-<verb>
+   description: <a *trigger* — "Use when the user wants to …". Keep it disjoint
+     from sibling skills so triggering is reliable.>
    ---
    ```
-   Trim `allowed-tools` to what the command actually needs.
 2. Body sections, in order: **Purpose**, **Inputs**, **Steps**, **Outputs**,
    **Failure modes**.
-3. Any Geant4/ROOT/CMake call in the steps must be `bin/g4run …`.
-4. Must work from an empty workspace (run `/geant4-claude:geant4-init` first if needed) and
-   from a populated one (do nothing destructive without `--force`).
-5. Update `docs/DESIGN.md`'s **Slash command surface** with the new one-liner.
+3. The first bash step is the engine preamble
+   (`[ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"`); any
+   Geant4/ROOT/CMake call is `"${G4RUN}" …`. No `CLAUDE_*`/`CODEX_*` env, no
+   `/geant4-claude:` names (phase 0d gate).
+4. Skills that run Python must first call
+   `. .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"` and run via
+   `"${GEANT4_CLAUDE_DATA}/venv/bin/python"` (Codex has no venv hook).
+5. Must work from an empty workspace (the `geant4-init` skill runs first) and
+   from a populated one (nothing destructive without `--force`).
+6. Update `docs/DESIGN.md`'s **Skill surface** with the new one-liner.
 
 ## When adding a skill
 
@@ -117,12 +137,14 @@ Three layers, in order of cost.
 ### 1. `tests/clean-smoke.sh` — fast plumbing test (~3–8 min)
 
 **Use:** every commit that touches `bin/g4run`, `templates/`, the
-example main, or any `commands/*.md`.
+example main, `scripts/ensure_venv.sh`, or any `skills/*/SKILL.md`.
 
 Exercises `bin/g4run` + the workspace/example templates end-to-end
-against a sandboxed `CLAUDE_PLUGIN_DATA`. Doesn't go through Claude
-Code, so it doesn't catch slash-dispatch / SessionStart / MCP /
-AskUserQuestion regressions — those need layer 2 or 3. Catches
+against a sandboxed `CLAUDE_PLUGIN_DATA`, plus the pure-bash gates
+(incl. phase 0d's CLI-neutral skills check and phase 0e's `ensure_venv.sh`).
+Doesn't go through Claude Code or Codex, so it doesn't catch
+skill-dispatch / SessionStart / MCP / AskUserQuestion regressions —
+those need layer 2 or 3. Catches
 everything else (wrapper plumbing, build, run, schema-detection,
 idempotency, the no-fallback cache resolution, the tracked-files
 `/home/$USER` leakage scan, the optical fixture's Frank-Tamm closure,
@@ -149,7 +171,7 @@ auto-clicked unknown prompt is exactly what you don't want.
 Spawns a sandboxed Claude Code in tmux (HOME-overridden so the real
 `~/.claude` is untouched), drives `/plugin marketplace add` →
 `/plugin install` → exit/relaunch (to fire the SessionStart hook) →
-`/geant4-claude:geant4-init` → `…example` → `…build` → `…run` →
+`geant4-init` → `…example` → `…build` → `…run` →
 `…analyze`, and verifies on-disk post-conditions at each gate.
 Symlinks the host's `.sif` and (if present) `geant4-src` and `venv`
 into the sandbox to skip downloads.

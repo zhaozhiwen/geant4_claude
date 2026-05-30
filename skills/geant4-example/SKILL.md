@@ -1,9 +1,9 @@
 ---
-description: Drop the GDML-loading main + sample geometry/macro/analysis into the workspace (default consumer for /geant4-claude:geant4-detector output).
-allowed-tools: Bash, Read, Write, Glob
+name: geant4-example
+description: Use when the user wants to drop a working end-to-end sample (GDML-loading main + sample geometry/macro/analysis) into the workspace — the default binary for the natural-language detector flow. Copies from the plugin's example template and validates the GDML. Requires geant4-init to have run.
 ---
 
-# /geant4-claude:geant4-example
+# geant4-example — drop the GDML-loading main + sample into the workspace
 
 ## Purpose
 
@@ -14,11 +14,11 @@ volumes tagged `<auxiliary auxtype="sensitive" auxvalue="true"/>`, and
 writes a flat `Hits` TTree. The companion `geometries/example.gdml` /
 `macros/run.mac` / `analysis/example.py` give the workspace a working
 end-to-end pipeline out of the box, but the main is designed to consume
-arbitrary GDML — including whatever `/geant4-claude:geant4-detector`
-just wrote.
+arbitrary GDML — including whatever the **geant4-detector** skill just
+wrote.
 
 Run this once per workspace as part of the default flow. The
-**alternative** is to skip this command and bring your own `src/main.cc`
+**alternative** is to skip this and bring your own `src/main.cc`
 + `src/CMakeLists.txt` — useful when you need hard-coded geometry,
 custom physics, or an output schema that isn't `Hits`.
 
@@ -29,18 +29,25 @@ custom physics, or an output schema that isn't `Hits`.
 
 ## Steps
 
-1. **Refuse to run on an empty workspace.** This command builds on the
-   skeleton from `/geant4-claude:geant4-init`:
+1. **Resolve the engine** (every skill starts with this; written by geant4-init):
+   ```bash
+   [ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+   ```
+   If `.g4c/` is missing, stop and tell the user to run the **geant4-init**
+   skill first.
+
+2. **Refuse to run on an empty workspace.** This builds on the
+   skeleton from the **geant4-init** skill:
    ```bash
    for d in src geometries macros analysis runs; do
-     test -d "${d}" || { echo "no ${d}/; run /geant4-claude:geant4-init first"; exit 1; }
+     test -d "${d}" || { echo "no ${d}/; run the geant4-init skill first"; exit 1; }
    done
    ```
 
-2. **Detect collisions.** List files in `templates/example/` that would
+3. **Detect collisions.** List files in `templates/example/` that would
    land on top of existing workspace files:
    ```bash
-   ( cd "${CLAUDE_PLUGIN_ROOT}/templates/example" \
+   ( cd "${GEANT4_CLAUDE_ROOT}/templates/example" \
        && find . -type f -printf '%P\n' ) \
      | while read -r rel; do test -e "./${rel}" && echo "${rel}"; done
    ```
@@ -48,31 +55,30 @@ custom physics, or an output schema that isn't `Hits`.
      ask the user whether to re-run with `--force`.
    - Otherwise proceed.
 
-3. **Copy the example.** This drops:
+4. **Copy the example.** This drops:
    - `src/geant4_claude_main.cc` and `src/CMakeLists.txt`,
    - `geometries/example.gdml` (1×1×10 cm Pb block in a 50 cm air world,
      sensitive),
    - `macros/run.mac` (1 GeV e- gun, 1000 events),
    - `analysis/example.py` (per-event edep histogram via uproot).
    ```bash
-   cp -r "${CLAUDE_PLUGIN_ROOT}/templates/example/." .
+   cp -r "${GEANT4_CLAUDE_ROOT}/templates/example/." .
    ```
    With `--force`, prefix with `cp -rf` to overwrite.
 
-4. **Validate the GDML** to confirm everything copied cleanly:
+5. **Validate the GDML** to confirm everything copied cleanly:
    ```bash
-   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
-     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml geometries/example.gdml
+   "${G4RUN}" validate-gdml geometries/example.gdml
    ```
 
-5. **Tell the user the next three commands**, in order:
+6. **Tell the user the next three steps**, in order:
    ```
    ✓ example dropped into ./{src,geometries,macros,analysis}/
 
    Next:
-     /geant4-claude:geant4-build
-     /geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
-     /geant4-claude:geant4-analyze runs/<the-id-from-/geant4-claude:geant4-run>
+     the geant4-build skill
+     the geant4-run skill: --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
+     the geant4-analyze skill: runs/<the-id-from-the-geant4-run-skill>
    ```
 
 ## Outputs
@@ -85,7 +91,8 @@ untouched.
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `no src/; run /geant4-claude:geant4-init first` | The workspace skeleton isn't there. | `/geant4-claude:geant4-init`. |
+| `.g4c/` missing | Workspace not initialized. | Run the geant4-init skill first. |
+| `no src/; run the geant4-init skill first` | The workspace skeleton isn't there. | Run the geant4-init skill. |
 | Collision: `src/main.cc` already exists | The workspace already has user code. | Pass `--force` only after confirming with the user that the file is safe to overwrite — most likely they want to keep their own. |
 | `validate-gdml` fails | The example template is corrupted. | Re-install the plugin. |
 
@@ -93,7 +100,7 @@ untouched.
 
 - The example main is the default binary for the NL-detector flow; in
   most cases you don't need to edit it — point it at any GDML
-  (yours or `/geant4-claude:geant4-detector`'s output). Treat the
+  (yours or the **geant4-detector** skill's output). Treat the
   copied files as your own to rename, edit, or delete when you outgrow
   them.
 - The `geant4_claude_main.cc` in this template is intentionally

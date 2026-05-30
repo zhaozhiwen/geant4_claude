@@ -1,9 +1,9 @@
 ---
-description: Run a physics closure test against a finished run — compares simulated output to a known analytic prediction and emits PASS/FAIL.
-allowed-tools: Bash, Read, Glob
+name: geant4-validate
+description: Use when the user wants to physics-validate a finished run — run a closure test that compares simulated output against a known analytic prediction (e.g. Frank-Tamm Cherenkov yield) and emit PASS/FAIL with numbers and tolerance.
 ---
 
-# /geant4-claude:geant4-validate
+# geant4-validate — physics closure test against a finished run
 
 ## Purpose
 
@@ -92,57 +92,54 @@ stores Cherenkov yield in `Events.n_photons` would run with
 
 ## Steps
 
-1. **Resolve a Python with uproot+numpy.** The validators read the ROOT
-   file with `uproot`, so use the *same* resolution as
-   `/geant4-claude:geant4-analyze` step 2 — never bare `python3`, and
-   never `pip install --user` (that pollutes the host site-packages):
+1. **Resolve the engine** (every skill starts with this; written by geant4-init):
+   ```bash
+   [ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+   ```
+   If `.g4c/` is missing, stop and tell the user to run the **geant4-init** skill
+   first.
+
+2. **Provision a Python with uproot+numpy.** The validators read the ROOT
+   file with `uproot`, so ensure the managed venv exists (Codex has no
+   SessionStart hook to seed it) and use that interpreter — never bare
+   `python3`, and never `pip install --user` (that pollutes the host
+   site-packages):
 
    ```bash
-   # (a) host python   (b) plugin venv   (c) install into the plugin venv
-   if python3 -c "import uproot, numpy" 2>/dev/null; then
-     PY="$(command -v python3)"
-   elif "${CLAUDE_PLUGIN_DATA}/venv/bin/python" -c "import uproot, numpy" 2>/dev/null; then
-     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
-   else
-     # The SessionStart hook normally seeds the venv. It may be absent
-     # (hook not approved / failed / never ran, or the venv was removed
-     # after a prior run) — create+seed it via the hook itself
-     # (idempotent, single source of venv-creation logic), then re-resolve.
-     bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh" || true
-     PY="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
-     if ! "${PY}" -c "import uproot, numpy" 2>/dev/null; then
-       echo "validate: could not provision uproot/numpy in the plugin" \
-            "venv (${PY}). Check hooks/install-deps.sh output and" \
-            "network; do not pip install --user." >&2
-       exit 2
-     fi
+   . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
+   PY="${GEANT4_CLAUDE_DATA}/venv/bin/python"
+   if ! "${PY}" -c "import uproot, numpy" 2>/dev/null; then
+     echo "validate: could not provision uproot/numpy in the plugin" \
+          "venv (${PY}). Check scripts/ensure_venv.sh output and" \
+          "network; do not pip install --user." >&2
+     exit 2
    fi
    ```
 
-   In normal operation the SessionStart hook already seeded the venv
-   from `requirements.txt`, so (b) hits.
+   `ensure_venv.sh` is idempotent — it creates and seeds the venv from
+   `requirements.txt` on first run and no-ops when already in sync.
 
-2. **Run the topic-specific validator** with the resolved `${PY}`:
+3. **Run the topic-specific validator** with the resolved `${PY}`:
 
    ```bash
-   "${PY}" "${CLAUDE_PLUGIN_ROOT}/scripts/validators/<topic>.py" <run_dir> <flags…>
+   "${PY}" "${GEANT4_CLAUDE_ROOT}/scripts/validators/<topic>.py" <run_dir> <flags…>
    ```
 
    For `cherenkov`:
 
    ```bash
-   "${PY}" "${CLAUDE_PLUGIN_ROOT}/scripts/validators/cherenkov.py" \
+   "${PY}" "${GEANT4_CLAUDE_ROOT}/scripts/validators/cherenkov.py" \
      runs/<id> \
      --radiator-length 1m \
      --refractive-index 1.000449 \
      --beam-beta 1.0
    ```
 
-3. **Echo the validator's output back** to the user. The script prints
+4. **Echo the validator's output back** to the user. The script prints
    the predicted/observed/sigma/result block to stdout; show that
    verbatim. Don't paraphrase.
 
-4. **On FAIL**, do not silently continue. Surface the result, suggest a
+5. **On FAIL**, do not silently continue. Surface the result, suggest a
    follow-up (likely an investigation — wrong material properties,
    wrong physics list, sensor geometry) and stop. The user decides
    whether to re-run with different parameters or to dig in.
@@ -158,8 +155,9 @@ stores Cherenkov yield in `Events.n_photons` would run with
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `missing dep: uproot` | Neither host Python nor the plugin venv has uproot/numpy (SessionStart hook hasn't run, or its install failed). | Re-resolve `${PY}` via step 1 (installs into the plugin venv). Never `pip install --user` — it pollutes the host site-packages. |
-| `tree 'Hits' not in <root>` | Output schema isn't the example schema. | Pass `--tree <name>`; check available trees with `python3 -c "import uproot; print(uproot.open('<root>').keys())"`. |
+| `.g4c/` missing | Workspace not initialized. | Run the geant4-init skill first. |
+| `missing dep: uproot` | The plugin venv lacks uproot/numpy (ensure_venv.sh failed or network down). | Re-run step 2's `ensure_venv.sh`; check its output and network. Never `pip install --user` — it pollutes the host site-packages. |
+| `tree 'Hits' not in <root>` | Output schema isn't the example schema. | Pass `--tree <name>`; check available trees with `"${PY}" -c "import uproot; print(uproot.open('<root>').keys())"`. |
 | `predicted yield is 0 — beam is below Cherenkov threshold` | `beta * n` <= 1. | Use a more relativistic beam or a higher-`n` radiator; sanity-check inputs. |
 | FAIL by many sigma | Wrong material properties, missing `G4OpticalPhysics`, sensor outside the forward cone, wrong wavelength range. | Investigate — that's the whole point of the test. Don't reach for a wider tolerance. |
 
@@ -175,3 +173,5 @@ stores Cherenkov yield in `Events.n_photons` would run with
   predictions then carry a 2-5% bias on the upper bound.
 - Validators read `.root` files but **never** modify the run dir except
   to write their `validate_<topic>.json` summary. Re-running is safe.
+</content>
+</invoke>

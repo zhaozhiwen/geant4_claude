@@ -89,6 +89,27 @@ log "g4run-unit: path containment + tag accessors"
 bash "${PLUGIN_ROOT}/tests/g4run-unit-test.sh" \
   || fail "g4run-unit-test.sh failed"
 
+# --- phase 0d: skills must stay CLI-neutral (Claude + Codex) ----------------
+# Skills are the one surface both CLIs run. A CLAUDE_* env ref or a
+# /geant4-claude: slash-command name in skills/ breaks the Codex path.
+log "cli-neutral: no CLAUDE_* env or /geant4-claude: slash refs in skills/"
+if git -C "${PLUGIN_ROOT}" grep -nE "CLAUDE_PLUGIN|/geant4-claude:" -- skills/ >/dev/null 2>&1; then
+  git -C "${PLUGIN_ROOT}" grep -nE "CLAUDE_PLUGIN|/geant4-claude:" -- skills/
+  fail "skills/ contains CLAUDE_* env or /geant4-claude: slash refs — must be CLI-neutral"
+fi
+
+# --- phase 0e: ensure_venv.sh works with no CLAUDE_* env (Codex path) -------
+log "ensure-venv: bootstraps under GEANT4_CLAUDE_DATA without CLAUDE_* env"
+EV_DATA="${SCRATCH}/ev-data"
+if env -u CLAUDE_PLUGIN_ROOT -u CLAUDE_PLUGIN_DATA \
+     GEANT4_CLAUDE_ROOT="${PLUGIN_ROOT}" GEANT4_CLAUDE_DATA="${EV_DATA}" \
+     bash "${PLUGIN_ROOT}/scripts/ensure_venv.sh" >/dev/null 2>&1; then
+  [ -x "${EV_DATA}/venv/bin/python" ] \
+    || fail "ensure_venv.sh did not create a venv under GEANT4_CLAUDE_DATA"
+else
+  log "ensure-venv: SKIPPED venv creation (no uv/python3 venv support here)"
+fi
+
 # --- phase 1: init equivalent ----------------------------------------------
 log "init: copy workspace skeleton from templates/workspace/"
 WS="${SCRATCH}/ws"

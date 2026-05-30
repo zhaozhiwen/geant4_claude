@@ -1,9 +1,9 @@
 ---
-description: Render headless preview images of a GDML file — three orthographic projections to spot geometry mistakes before running a simulation.
-allowed-tools: Read, Bash, Glob
+name: geant4-preview
+description: Use when the user wants to visually inspect a GDML geometry before running — render three headless orthographic projection images (XY/YZ/XZ) to catch overlaps, off-axis offsets, missing volumes, or a sensor in the forward-flux path. Requires geant4-init to have run.
 ---
 
-# /geant4-claude:geant4-preview
+# geant4-preview — headless GDML projection previews
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Two backends ship; pick with `--backend`:
   they exist without seeing their exact silhouette.
 - **`raytracer` (alpha)** — Geant4 RayTracer via a cached C++ helper.
   Currently hangs in the v11.4 container; opt-in for when we crack
-  that. See [docs/DESIGN.md §Hardening backlog](../docs/DESIGN.md).
+  that. See [docs/DESIGN.md §Hardening backlog](../../docs/DESIGN.md).
 
 ## Inputs
 
@@ -35,34 +35,53 @@ Two backends ship; pick with `--backend`:
 
 ## Steps
 
-1. **Validate first.** A broken GDML can't be previewed.
+1. **Resolve the engine** (every skill starts with this; written by geant4-init):
    ```bash
-   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
-     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" validate-gdml <file.gdml>
+   [ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+   ```
+   If `.g4c/` is missing, stop and tell the user to run the **geant4-init**
+   skill first.
+
+2. **Validate first.** A broken GDML can't be previewed.
+   ```bash
+   "${G4RUN}" validate-gdml <file.gdml>
    ```
    Stop on failure — surface the parser error and ask the user to fix.
 
-2. **Render the previews.**
+3. **Bootstrap the Python venv** (the default sketch backend renders with
+   matplotlib; Codex has no SessionStart hook, so seed it explicitly — this
+   is an idempotent no-op once the venv is in sync):
    ```bash
-   GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache" \
-     "${CLAUDE_PLUGIN_ROOT}/bin/g4run" preview <file.gdml> [out_dir]
+   . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
    ```
-   The default `sketch` backend reads `<solids>` + `<structure>` with
-   the stdlib XML parser, projects each placed physvol onto three
-   planes, and writes PNGs via matplotlib. Matplotlib + numpy live in
-   the plugin venv (installed by the `SessionStart` hook from
-   `requirements.txt`); the wrapper picks them up automatically.
 
-   To use the RayTracer backend instead, add `--backend=raytracer`.
+4. **Render the previews.** The default `sketch` backend is host-side
+   Python — run it with the managed venv's interpreter (where
+   `ensure_venv.sh` installed matplotlib + numpy) on the bundled script.
+   The script takes the GDML and an explicit output dir (when the user
+   omits one, use the default `<file.gdml>.preview/` next to the GDML):
+   ```bash
+   "${GEANT4_CLAUDE_DATA}/venv/bin/python" \
+     "${GEANT4_CLAUDE_ROOT}/scripts/preview_gdml.py" <file.gdml> <out_dir>
+   ```
+   It reads `<solids>` + `<structure>` with the stdlib XML parser,
+   projects each placed physvol onto three planes, and writes PNGs via
+   matplotlib.
 
-3. **Show the user** the three image paths with one short sentence each:
+   To use the RayTracer backend instead, go through the runtime bridge —
+   it builds and caches the C++ helper on first use:
+   ```bash
+   "${G4RUN}" preview <file.gdml> [out_dir] --backend=raytracer
+   ```
+
+5. **Show the user** the three image paths with one short sentence each:
    - `preview_xy.png` — end view, camera at +z; see beam-axis projection.
    - `preview_yz.png` — side view, camera at +x; see beam-direction layout.
    - `preview_xz.png` — top view,  camera at +y; catches left-right asymmetries.
    If the geometry is small relative to the world volume, note that
    the world box is suppressed automatically (only daughters draw).
 
-4. **Sanity-check the result.** If the spec involved a sensor in the
+6. **Sanity-check the result.** If the spec involved a sensor in the
    forward direction of a beam, this is your last chance to catch a
    forward-flux trap before running. The `yz` view is usually the
    right one for that.
@@ -86,8 +105,9 @@ solid type with a legend.
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
+| `.g4c/` missing | Workspace not initialized. | Run the geant4-init skill first. |
 | `validate-gdml` step fails | GDML has a parse error. | Fix the GDML and retry. |
-| `missing dep: matplotlib` | Plugin venv not yet populated. | Re-launch Claude Code to fire the `SessionStart` hook (seeds the managed venv automatically); or run `bash "${CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"`. Do not `pip install --user`. |
+| `missing dep: matplotlib` | Managed venv not yet populated. | Re-run the venv bootstrap: `. .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"`. Do not `pip install --user`. |
 | `unsupported solid drawn as bounding box` notice | Geometry uses booleans, replicas, or solids the sketch backend doesn't know. | Acceptable for layout sanity-check; switch to `--backend=raytracer` (once unhung) for exact silhouettes. |
 | Sketch output looks empty | The world volume is gigantic and the daughters are 1000× smaller — the world is suppressed automatically, but if it's the only volume there's nothing left to draw. | Confirm `<structure>` has at least one daughter `physvol`. |
 | RayTracer hang on `--backend=raytracer` | Known issue with the v11.4 container; see DESIGN.md. | Use the default sketch backend; track the hardening backlog. |
@@ -100,7 +120,6 @@ solid type with a legend.
   cross-section, then draws the 2D convex hull per silhouette. This
   is a layout sanity check, not a CAD viewer — for exact curved
   surfaces, use `--backend=raytracer`.
-- The orchestrator skill (`skills/geant4`) inserts a preview step
-  between `/geant4-claude:geant4-detector` and
-  `/geant4-claude:geant4-build` by default. Skip it with
-  `--no-preview` if you've already eyeballed the geometry.
+- The full-flow **geant4** orchestrator skill inserts a preview step
+  between the **geant4-detector** and **geant4-build** skills by default.
+  Skip it with `--no-preview` if you've already eyeballed the geometry.

@@ -1,53 +1,86 @@
 # geant4_claude
 
-A Claude Code plugin that lets you **build, run, and analyze your
-own Geant4 simulation** through eight slash commands plus a `geant4`
-orchestrator skill that turns a natural-language description of a
-simulation into a planned end-to-end run. Geant4 and ROOT live in a
+A plugin that lets you **build, run, and analyze your own Geant4
+simulation** by describing what you want in plain language — no slash
+commands, no menu. You say "set up a Geant4 workspace" or "simulate a
+1 GeV e⁻ on a lead block" and the matching **skill** auto-triggers.
+Works on **both Claude Code and OpenAI Codex CLI** with the same skills,
+the same engine, and the same analysis stack. Geant4 and ROOT live in a
 pinned apptainer image; analysis runs on the host with
 [`uproot`](https://github.com/scikit-hep/uproot5).
 
-> Status: **v0.0.6**. Eight commands (`init`, `detector`, `preview`,
-> `example`, `build`, `run`, `analyze`, `validate`) are content-neutral —
-> they accept any user-supplied `main.cc` and any output schema.
-> `/geant4-claude:geant4-detector` writes standalone GDML (including an
-> optical/RINDEX path) for use with whatever `main.cc` you bring.
-> `/geant4-claude:geant4-example` is a self-contained smoke test that
-> drops a working demo into the workspace so you can confirm the
-> toolchain works on your machine before writing any of your own code.
+> Status: **v0.1.0**. Everything is a skill now — the plugin ships no
+> slash commands. Twelve skills cover the flow: **geant4** (the
+> orchestrator / front door), **geant4-init**, **geant4-detector**,
+> **geant4-example**, **geant4-preview**, **geant4-build**,
+> **geant4-run**, **geant4-analyze**, **geant4-validate**, plus the
+> reference skills **geant4-geometry**, **geant4-physics-list**, and
+> **geant4-analysis**. The procedural skills are content-neutral — they
+> accept any user-supplied `main.cc` and any output schema. The
+> geant4-detector skill writes standalone GDML (including an
+> optical/RINDEX path) for use with whatever `main.cc` you bring. The
+> geant4-example skill is a self-contained smoke test that drops a
+> working demo into the workspace so you can confirm the toolchain works
+> on your machine before writing any of your own code.
 
-## Requirements
+## Works on Claude Code and Codex CLI
 
-- [apptainer](https://apptainer.org) ≥ 1.4 on Linux.
-- Python 3.9+ on the host with `uproot numpy matplotlib`
-  (only needed for `/geant4-claude:geant4-analyze`).
-- ~2.5 GB of disk for the cached container image.
-- Claude Code with plugin support.
+Same skills, same engine (`bin/g4run` via apptainer), same host-side
+`uproot` analysis. You drive the plugin by describing tasks in natural
+language; the relevant skill triggers on its own.
 
-The plugin will pull
-`docker://ghcr.io/gemc/g4install:11.4.0-almalinux-9.4` on first use; tag
-is pinned in [`bin/g4run`](bin/g4run).
-
-## Install
-
-### Option A — via Claude Code marketplace (recommended)
-
-In Claude Code:
+**Claude Code:**
 
 ```text
 /plugin marketplace add zhaozhiwen/geant4_claude
 /plugin install geant4-claude@geant4-claude
 ```
 
-The first command registers this repo as a marketplace (it ships
-`.claude-plugin/marketplace.json` alongside the plugin manifest). The
-second installs the plugin from it. `/plugin update` handles upgrades.
+**Codex CLI:**
 
-### Option B — manual git clone
+```text
+codex plugin marketplace add zhaozhiwen/geant4_claude
+codex plugin add geant4-claude
+```
+
+> Codex plugin support is in preview — confirm the exact
+> `codex plugin marketplace add` / `codex plugin add` invocation against
+> your installed Codex version, as the command surface may differ.
+
+How skills find the engine, CLI-neutrally: the **geant4-init** skill
+scaffolds your workspace and records an engine pointer at `.g4c/` (a
+symlink to `bin/g4run` plus an `env` file), so every other skill locates
+the runtime the same way on either CLI. On Codex, geant4-init also
+bootstraps the Python venv, since Codex plugins can't run a
+`SessionStart` hook the way Claude Code does.
+
+## Requirements
+
+- [apptainer](https://apptainer.org) ≥ 1.4 on Linux.
+- Python 3.9+ on the host with `uproot numpy matplotlib`
+  (only needed for the geant4-analyze skill).
+- ~2.5 GB of disk for the cached container image.
+- Claude Code or OpenAI Codex CLI with plugin support.
+
+The plugin will pull
+`docker://ghcr.io/gemc/g4install:11.4.0-almalinux-9.4` on first use; the
+tag is pinned in [`bin/g4run`](bin/g4run) and nowhere else (read it back
+with `bin/g4run image-tag`).
+
+## Install
+
+See [**Works on Claude Code and Codex CLI**](#works-on-claude-code-and-codex-cli)
+above for the install lines. On Claude Code, the marketplace-add command
+registers this repo as a marketplace (it ships
+`.claude-plugin/marketplace.json` alongside the plugin manifest) and the
+install command pulls the plugin from it; `/plugin update` handles
+upgrades.
+
+Manual git clone (either CLI):
 
 ```bash
 git clone https://github.com/zhaozhiwen/geant4_claude.git ~/.claude/plugins/geant4_claude
-# then enable it in Claude Code's plugin manager
+# then enable it in your CLI's plugin manager
 ```
 
 > If you cloned a fork, replace `zhaozhiwen` accordingly. The plugin manifest is at `.claude-plugin/plugin.json`.
@@ -60,22 +93,25 @@ Two things install automatically the first time Claude Code loads the plugin —
 
 2. **`pdg` Python package** auto-installs into a managed venv at `~/.claude/plugins/data/<plugin-id>/venv/` via a `SessionStart` hook (`hooks/install-deps.sh`). First session takes ~10–30 s while pip pulls `pdg` + `sqlalchemy` (~50 MB on disk); later sessions are a 3 ms diff/no-op. Claude Code may ask you to approve the hook running `pip install` on your machine. The venv lives outside this repo, survives plugin updates, and is deleted automatically when you uninstall the plugin. Used by the plugin to look up PDG particle data on demand. See [docs/DESIGN.md](docs/DESIGN.md) §"Python deps via SessionStart hook".
 
-If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the commands to work.
+If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the skills to work.
 
-The first `/geant4-claude:geant4-init` you run will additionally **ask once** whether to download the Geant4 source tarball (matching the pinned container's version, ~36 MB compressed / ~200 MB extracted) from GitHub releases into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at `<plugin>/wiki/raw/geant4-src` so wiki page references keep working. The data-dir location means the tree survives plugin version bumps. Optional — say *Skip* and the commands still work. Saying *Yes* is what lets Claude verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run `/geant4-claude:geant4-init` later to be asked again.
+On **Codex**, there is no `SessionStart` hook, so the venv is instead bootstrapped by the **geant4-init** skill the first time you scaffold a workspace (it's idempotent).
 
-## Quickstart
+The first time you run the **geant4-init** skill it will additionally **ask once** whether to download the Geant4 source tarball (matching the pinned container's version, ~36 MB compressed / ~200 MB extracted) from GitHub releases into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at `<plugin>/wiki/raw/geant4-src` so wiki page references keep working. The data-dir location means the tree survives plugin version bumps. Optional — say *Skip* and the skills still work. Saying *Yes* is what lets the assistant verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run the geant4-init skill later to be asked again.
 
-The plugin offers three independent paths to a working simulation —
-pick whichever matches what you're trying to do.
+## Quickstart — describe the task, the skill runs
+
+There is no slash menu and no command to memorize. You describe what you
+want in plain language; the matching skill auto-triggers (on both Claude
+Code and Codex). The **geant4** orchestrator skill is the front door for
+any "simulate / build / run a Geant4 …" request — it captures the spec,
+asks targeted clarifying questions if anything's missing, shows a brief
+plan for your approval, and then drives the step skills in sequence:
+`init → detector → preview → build → run → analyze → validate`.
 
 ### A. Describe what you want to simulate (recommended)
 
-Tell Claude what you want — the `geant4` skill auto-loads on any
-"simulate / build / run a Geant4 …" request, asks targeted clarifying
-questions if the spec is incomplete, shows a brief plan for your
-approval, and then drives `init → detector → build → run → analyze`
-in sequence.
+Just say what you want. Example prompt:
 
 ```text
 > Create a Cherenkov simulation: a 1×1×1 m CO2 gas radiator at 1 atm,
@@ -85,9 +121,9 @@ in sequence.
   physics analytic calculation to predict the photon distribution and
   compare to the simulation result.
 
-[Claude reads your request, fills in defaults (FTFP_BERT + optical physics,
-1000 events, 2 m air world), shows a plan, asks for approval, then runs
-the flow end-to-end.]
+[The geant4 orchestrator skill loads, fills in defaults (FTFP_BERT +
+optical physics, 1000 events, 2 m air world), shows a plan, asks for
+approval, then runs the flow end-to-end by triggering each step skill.]
 ```
 
 A clear input is what makes the difference between a working sim and a
@@ -98,30 +134,36 @@ before doing anything destructive.
 
 ### B. Try the shipped example end-to-end (smoke test)
 
-The shortest path to seeing all five commands work. Drops a complete,
+The shortest path to seeing the whole flow work. Drops a complete,
 runnable demo (1 × 1 × 10 cm lead block, 1 GeV e⁻ beam, edep
 histogram) into a fresh workspace and runs it as-is. Useful **once**
 on a clean install to confirm apptainer, the cached image, and the
 host-side Python stack all work; not a flow you'd use for your real
-simulation.
+simulation. Just describe each step — the named skill triggers:
 
 ```text
-> /geant4-claude:geant4-init
+> Set up a Geant4 workspace.
+  → the geant4-init skill runs
 ✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md, report.html)
+✓ recorded engine pointer .g4c/  (symlink to bin/g4run + env)
 ✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
 
-> /geant4-claude:geant4-example
+> Drop in the shipped example.
+  → the geant4-example skill runs
 ✓ wrote src/{geant4_claude_main.cc, CMakeLists.txt}, geometries/example.gdml,
   macros/run.mac, analysis/example.py
 
-> /geant4-claude:geant4-build
+> Build it.
+  → the geant4-build skill runs
 ✓ build/geant4_claude_main
 
-> /geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
+> Run it.
+  → the geant4-run skill runs
 [g4c] attached SD to 1 sensitive volume(s)
 [g4c] run ended: 1000 events written to runs/<run_id>/hits.root
 
-> /geant4-claude:geant4-analyze runs/<run_id>
+> Analyze the latest run.
+  → the geant4-analyze skill runs
 ✓ runs/<run_id>/edep_hist.png
   events = 1000, total hits = 1.2M, mean edep = 640 MeV/event
 ```
@@ -132,33 +174,33 @@ delete them when you start writing your own.
 ### C. Build your own simulation manually
 
 For your real simulation. Write the `main.cc` that implements your
-physics; let `/geant4-claude:geant4-detector` handle the geometry if
-you want a natural-language detector spec.
+physics; ask for geometry from a natural-language detector spec and the
+**geant4-detector** skill handles it. Name the steps explicitly, or let
+the **geant4** orchestrator sequence them for you:
 
 ```text
-> /geant4-claude:geant4-init                        # one-time: skeleton + image pull
+> Set up a Geant4 workspace.          → geant4-init (one-time: skeleton + .g4c/ + image pull)
 
-> /geant4-claude:geant4-detector                    # optional: NL spec → geometries/<name>.gdml
+> Build a detector: <plain-English geometry spec>.   → geant4-detector writes geometries/<name>.gdml
 # write src/main.cc + src/CMakeLists.txt for your simulation
-# (you can ask Claude to draft these from a description of the
+# (you can ask the assistant to draft these from a description of the
 #  physics list, sensitive detectors, and output schema you want)
 
-> /geant4-claude:geant4-build
-> /geant4-claude:geant4-run --exe build/<your-binary> -- <your args> {run_dir}/<output>.root
-> /geant4-claude:geant4-analyze runs/<run_id>
+> Build my simulation.                → geant4-build
+> Run it on <your args>.              → geant4-run
+> Analyze the latest run.             → geant4-analyze
 ```
 
-`/geant4-claude:geant4-detector` writes standalone GDML that any
-Geant4 application can load via `G4GDMLParser::Read`.
-`/geant4-claude:geant4-run` is content-neutral: it allocates
-`runs/<id>/`, exports `RUN_DIR`/`RUN_ID`, substitutes `{run_dir}` /
-`{run_id}` placeholders in your args, captures provenance, and runs
-whatever binary you point it at inside the pinned container.
-`/geant4-claude:geant4-analyze` inspects the resulting ROOT file's
-schema and either uses the canned `Hits`-TTree plot (if your `main.cc`
-happens to use that schema) or generates a custom analysis script in
-`analysis/<run_id>.py` tailored to whatever branches it actually
-found.
+The **geant4-detector** skill writes standalone GDML that any Geant4
+application can load via `G4GDMLParser::Read`. The **geant4-run** skill
+is content-neutral: it allocates `runs/<id>/`, exports `RUN_DIR`/`RUN_ID`,
+substitutes `{run_dir}` / `{run_id}` placeholders in your args, captures
+provenance, and runs whatever binary you point at inside the pinned
+container. The **geant4-analyze** skill inspects the resulting ROOT
+file's schema and either uses the canned `Hits`-TTree plot (if your
+`main.cc` happens to use that schema) or generates a custom analysis
+script in `analysis/<run_id>.py` tailored to whatever branches it
+actually found.
 
 ## Layout
 
@@ -171,22 +213,23 @@ geant4_claude/
 ├── requirements.txt              Python deps (pdg) installed by SessionStart hook
 ├── hooks/                        hooks.json + install-deps.sh
 ├── bin/g4run                     the only bridge to apptainer
-├── commands/                     /geant4-{init, build, run, analyze, detector, example}
-├── skills/                       geant4 (full-flow orchestrator), geant4-geometry, -physics-list, -analysis
+├── skills/                       all 12 skills — geant4 (orchestrator), -init, -detector,
+│                                 -example, -preview, -build, -run, -analyze, -validate,
+│                                 + reference: -geometry, -physics-list, -analysis
 ├── agents/geant4-runner.md       subagent for long sims
-├── templates/workspace/          empty skeleton /geant4-claude:geant4-init copies in
-├── templates/example/            opt-in demo /geant4-claude:geant4-example copies in
+├── templates/workspace/          empty skeleton the geant4-init skill copies in
+├── templates/example/            opt-in demo the geant4-example skill copies in
 │   └── src/                      geant4_claude_main.cc + CMakeLists.txt
 └── wiki/                         Geant4 + physics knowledge base (Obsidian vault)
 ```
 
 ## Knowledge base (`wiki/`)
 
-The plugin ships a curated knowledge base on Geant4 mechanics and the physics it implements (toolkit lifecycle, GDML wiring, sensitive-detector dispatch, EM/optical/hadronic processes, the PDG "Passage of Particles Through Matter" review chapter mapped to specific Geant4 model classes, and more). It's structured as an Obsidian vault: open `wiki/` in [Obsidian](https://obsidian.md) to get backlinks, graph view, and `[[wikilink]]` autocomplete; or read it as plain markdown. See `wiki/index.md` for the full catalog. Claude pulls from this wiki when answering Geant4 questions through any of the slash commands.
+The plugin ships a curated knowledge base on Geant4 mechanics and the physics it implements (toolkit lifecycle, GDML wiring, sensitive-detector dispatch, EM/optical/hadronic processes, the PDG "Passage of Particles Through Matter" review chapter mapped to specific Geant4 model classes, and more). It's structured as an Obsidian vault: open `wiki/` in [Obsidian](https://obsidian.md) to get backlinks, graph view, and `[[wikilink]]` autocomplete; or read it as plain markdown. See `wiki/index.md` for the full catalog. The assistant pulls from this wiki when answering Geant4 questions through any of the skills.
 
 ## What goes in the user's project
 
-`/geant4-claude:geant4-init` scaffolds an empty skeleton:
+The **geant4-init** skill scaffolds an empty skeleton:
 
 ```
 my-project/
@@ -199,11 +242,16 @@ my-project/
 ├── src/               your main.cc + CMakeLists.txt go here
 ├── geometries/        GDML files (optional; if you load geometry at runtime)
 ├── macros/            Geant4 .mac files
-├── runs/              one sub-dir per /geant4-claude:geant4-run (gitignored)
+├── .g4c/              engine pointer (symlink to bin/g4run + env; gitignored)
+├── runs/              one sub-dir per geant4-run (gitignored)
 └── analysis/          uproot scripts
 ```
 
-`/geant4-claude:geant4-example` is independent of the manual flow
+It also writes an `AGENTS.md` symlink to `CLAUDE.md` so Codex reads the
+same in-workspace rules, and records `.g4c/` — the engine pointer every
+other skill reads to locate `bin/g4run` and the cache, CLI-neutrally.
+
+The **geant4-example** skill is independent of the manual flow
 above. It drops a self-contained demo (GDML + macro + a generic
 GDML-loading `main.cc` + analysis script) into the workspace, useful
 for confirming the toolchain works on your machine before you write
@@ -211,26 +259,29 @@ any of your own code. Treat the dropped files as smoke-test fixtures
 or reference material — when you're ready, write your own
 `src/main.cc` and your own `analysis/*.py`.
 
-The directory layout is opinionated — skills and commands assume those
+The directory layout is opinionated — the skills assume those
 names. `log.md`, `result.md`, and `report.html` are starter handoff
-documents Claude maintains as the project evolves: the two markdown
-files are the authoritative records (versioned, easy to diff);
+documents the assistant maintains as the project evolves: the two
+markdown files are the authoritative records (versioned, easy to diff);
 `report.html` is the browser-friendly presentation layer derived from
 them — open it locally with `file://` to share a snapshot of the
-project with a collaborator who isn't in Claude Code.
+project with a collaborator who isn't in the CLI.
 
 ## Design highlights
 
+- **Everything is a skill — no slash commands.** You describe the task in
+  natural language and the matching skill auto-triggers, identically on
+  Claude Code and Codex. The `.g4c/` engine pointer written by geant4-init
+  is what lets every skill find `bin/g4run` CLI-neutrally.
 - **`geant4` orchestrator skill is the highlighted entry point.** Auto-loads
   on natural-language simulation requests; gap-checks the user's spec across
   six fields (goal, geometry, beam, sensitive, output, analysis); presents
-  a brief plan; on approval drives the five commands end-to-end with
+  a brief plan; on approval drives the step skills end-to-end with
   stop-on-failure post-condition checks at each step.
-- **NL-driven geometry as a first-class step.**
-  `/geant4-claude:geant4-detector` turns a plain-English detector spec
-  into a standalone, validated GDML file that any Geant4 `main.cc` can
-  `G4GDMLParser::Read`. Geometry edits don't trigger a rebuild — change
-  the GDML, re-run.
+- **NL-driven geometry as a first-class step.** The **geant4-detector**
+  skill turns a plain-English detector spec into a standalone, validated
+  GDML file that any Geant4 `main.cc` can `G4GDMLParser::Read`. Geometry
+  edits don't trigger a rebuild — change the GDML, re-run.
 - **Single runtime seam.** Every Geant4, ROOT, CMake, or g++ call goes
   through `bin/g4run`. The container tag lives in that script alone.
 - **Content-neutral wrapper.** `bin/g4run` knows nothing about the user's
@@ -240,8 +291,8 @@ project with a collaborator who isn't in Claude Code.
 - **Per-user data dir.** The runtime cache (`.sif`) and any optional
   Geant4 source clone live under `${CLAUDE_PLUGIN_DATA}/`, so they
   survive plugin version bumps.
-- **Schema-aware analysis.** `/geant4-claude:geant4-analyze` inspects the ROOT file
-  and either uses the canned `Hits`-TTree plot (example schema) or
+- **Schema-aware analysis.** The **geant4-analyze** skill inspects the ROOT
+  file and either uses the canned `Hits`-TTree plot (example schema) or
   generates a custom analysis script tailored to the actual branches.
 - **Analysis on the host with `uproot`.** No host-side ROOT install
   required. ROOT remains available inside the container via
@@ -256,12 +307,12 @@ For the full architecture, see [docs/DESIGN.md](docs/DESIGN.md).
 | `apptainer: command not found` | Install apptainer first. |
 | `pull` hangs or 401 | Check network; `ghcr.io/gemc/g4install` is public. |
 | `G4GDML: ERROR: ...` | `g4run validate-gdml <file>`; consult the `geant4-geometry` skill. |
-| `ModuleNotFoundError: uproot` (analyze step) | Re-run `/geant4-claude:geant4-analyze` — it seeds the plugin-managed venv (`${CLAUDE_PLUGIN_DATA}/venv`) automatically. Do not `pip install --user` (pollutes host site-packages). |
+| `ModuleNotFoundError: uproot` (analyze step) | Re-run the geant4-analyze skill — it seeds the plugin-managed venv (`${CLAUDE_PLUGIN_DATA}/venv`) automatically. On Codex, re-run geant4-init to bootstrap the venv. Do not `pip install --user` (pollutes host site-packages). |
 | Empty `Hits` tree | No volume has the sensitive aux tag, or gun energy is zero. |
 | Build fails | `g4run shell` and try `cmake -S /…/src -B /tmp/build` manually to see the real cmake error. |
 | `TGeoManager::Import` returns null in container ROOT | The pinned image's ROOT 6.38 is built without `root-geom`. To preview geometry, load the GDML inside Geant4's own viewer via `g4run shell` and a `vis.mac` macro, not via ROOT. |
-| `g4run: command not found` outside slash commands | `g4run` lives at `${CLAUDE_PLUGIN_ROOT}/bin/g4run` (set only inside Claude Code's command context); the plugin doesn't touch your shell `$PATH`. For ad-hoc use, find the installed path with `claude plugin list` and either invoke it by full path or symlink it to `~/.local/bin/g4run`. |
-| `g4run validate-gdml` passes but `geant4-run` crashes on the GDML | The validator does an xmllint pass plus a `G4GDMLParser::Read` pass, but the parser does not do schema validation (the schema is hosted on the web and not always reachable in sandboxes), so a typo'd unit name like `unit="milimeter"` can still slip through as a warning. Check `runs/<id>/log.txt` for the underlying Geant4 message. |
+| `g4run: command not found` in a plain shell | The plugin doesn't touch your shell `$PATH`. Inside a workspace, the geant4-init skill records `.g4c/g4run` (a symlink to the installed `bin/g4run`); skills resolve it from there. For ad-hoc use, invoke `.g4c/g4run` by path or symlink it to `~/.local/bin/g4run`. |
+| `g4run validate-gdml` passes but the run crashes on the GDML | The validator does an xmllint pass plus a `G4GDMLParser::Read` pass, but the parser does not do schema validation (the schema is hosted on the web and not always reachable in sandboxes), so a typo'd unit name like `unit="milimeter"` can still slip through as a warning. Check `runs/<id>/log.txt` for the underlying Geant4 message. |
 
 ## License
 
