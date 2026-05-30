@@ -40,12 +40,17 @@ language; the relevant skill triggers on its own.
 
 ```text
 codex plugin marketplace add zhaozhiwen/geant4_claude
-codex plugin add geant4-claude
+codex plugin add geant4-claude@geant4-claude
 ```
 
-> Codex plugin support is in preview — confirm the exact
-> `codex plugin marketplace add` / `codex plugin add` invocation against
-> your installed Codex version, as the command surface may differ.
+> **Codex one-command install is a work in progress.** Codex's marketplace only
+> packages a plugin from a `plugins/<name>/` subdirectory of *real files*, and
+> this plugin currently lives at the repo root — so the `plugin add` above won't
+> snapshot it as-is. Until a Codex packaging step lands, install by copying the
+> plugin into a subdir the marketplace points at (`plugins/geant4-claude/`).
+> **Once installed, the plugin runs fully on Codex** — skill discovery, the
+> `.g4c/` engine pointer, and the `ensure_venv.sh` venv bootstrap are all
+> verified on `codex` v0.135.0.
 
 How skills find the engine, CLI-neutrally: the **geant4-init** skill
 scaffolds your workspace and records an engine pointer at `.g4c/` (a

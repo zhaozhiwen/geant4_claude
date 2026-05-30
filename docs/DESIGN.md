@@ -808,10 +808,23 @@ marketplace on both:
 | File | For | Install path |
 |------|-----|--------------|
 | `.claude-plugin/marketplace.json` | Claude Code | `/plugin marketplace add zhaozhiwen/geant4_claude` + `/plugin install geant4-claude@geant4-claude`. Entry uses `"source": "./"`. |
-| `.agents/plugins/marketplace.json` | Codex | Entry uses a `local` source (`"path": "../.."`). |
+| `.agents/plugins/marketplace.json` | Codex | Entry uses a `local` source (`"path": "."`). |
 
 Marketplace name matches the plugin name (`geant4-claude`) everywhere — all four
 files require kebab-case, and keeping the identifier identical means users
 remember one name. Don't rename after release; it breaks every existing install.
+
+**Known limitation — Codex one-command install (deferred).** Codex's marketplace
+packages a plugin only from a `plugins/<name>/` **subdirectory of real files**
+(its snapshot copies the subdir and silently skips symlinks; it refuses to
+snapshot the marketplace root itself). This plugin lives at the repo root, so
+`codex plugin add geant4-claude@geant4-claude` won't snapshot it as-is — the
+`.agents/plugins/marketplace.json` `path: "."` documents intent but doesn't
+package. The **runtime is fully validated** on `codex` v0.135.0 (skill discovery,
+plugin-root resolution from the injected skill dir, the `.g4c/` pointer, and the
+`ensure_venv.sh` bootstrap all work once installed). Closing the gap needs either
+a release step that materializes `plugins/geant4-claude/` (real files) for Codex,
+or moving the plugin into that subdir and pointing both marketplaces at it. See
+the spec's "Codex packaging" decision.
 
 **Optional Geant4 source clone.** The wiki's `sources/geant4-code/synthesis/` pages cite `.cc:line` ranges. Those citations are only verifiable if the Geant4 source tree is locally present. The canonical location is `${GEANT4_CLAUDE_DATA}/geant4-src/` (resolved CLI-neutrally via `.g4c/env`) so the tree survives plugin version bumps (the plugin checkout is replaced on update; the data dir is not). The `geant4-init` skill maintains a symlink at `${GEANT4_CLAUDE_ROOT}/wiki/raw/geant4-src` pointing at the canonical tree so wiki pages can keep using the relative `wiki/raw/geant4-src/...` path; the symlink is recreated on every `geant4-init` run because plugin updates wipe the previous checkout. To keep fresh-clone size small, the tree is **gitignored** and not shipped. `geant4-init` detects whether the tree is already there and, if missing, asks the user once whether to download the matching source tarball from GitHub releases (`https://github.com/Geant4/geant4/archive/refs/tags/v<VERSION>.tar.gz`). The tag is derived from `bin/g4run`'s pinned image (single source of truth) so a container bump automatically asks for a matching source bump. Idempotent: subsequent `geant4-init` runs in other workspaces detect the existing tree and skip the prompt; pre-relocation installs (real directory at the legacy path) are auto-migrated on the next call when the destination is empty.

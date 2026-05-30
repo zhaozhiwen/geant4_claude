@@ -8,7 +8,7 @@
       "name": "geant4-claude",
       "source": {
         "source": "local",
-        "path": "../.."
+        "path": "."
       },
       "policy": {
         "installation": "AVAILABLE",
