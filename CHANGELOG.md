@@ -9,7 +9,7 @@ A bump of the pinned container image tag is at minimum a **minor**
 release. A breaking change to the `Hits` TTree schema or to the
 `runs/<id>/config.json` provenance contract is a **major** release.
 
-## [0.1.0] - 2026-05-29
+## [0.0.7] - 2026-05-29
 
 ### Added
 

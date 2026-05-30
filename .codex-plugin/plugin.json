@@ -1,6 +1,6 @@
 {
   "name": "geant4-claude",
-  "version": "0.1.0",
+  "version": "0.0.7",
   "description": "Design, run, and analyze Geant4 simulations for user-defined detectors. Geant4 and ROOT run in a pinned apptainer image; analysis runs with uproot. Skill-driven; works on Claude Code and Codex.",
   "author": {
     "name": "Zhiwen Zhao"
