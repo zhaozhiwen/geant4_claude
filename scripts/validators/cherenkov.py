@@ -119,7 +119,7 @@ def _import_uproot():
     except ImportError as e:
         raise SystemExit(
             f"[validate-cherenkov] missing dep: {e}. "
-            "Run this through /geant4-claude:geant4-validate, which resolves "
+            "Run this through the geant4-validate skill, which resolves "
             "a Python with uproot+numpy (host or the plugin-managed venv). "
             "Do not pip install --user."
         )

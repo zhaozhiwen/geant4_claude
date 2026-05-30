@@ -3,6 +3,8 @@ layout: home
 title: geant4_claude
 ---
 
+The plugin now runs on **both Claude Code and the Codex CLI**, and it's **skill-driven — no slash commands**: you describe the task in plain language and the matching skill loads itself.
+
 ## Worked example {#cherenkov}
 
 A full Cherenkov closure study — exactly the kind of run the [Quickstart](#quickstart) prompt below produces — written up as a single self-contained HTML page:
@@ -27,25 +29,25 @@ The skill asks any missing-spec questions, shows a brief plan, runs it on approv
 Three independent paths to a working simulation:
 
 - **Describe it** — the orchestrator drives `init → detector → build → run → analyze` end-to-end.
-- **Try the shipped example** — `/geant4-claude:geant4-example` drops a lead-block demo into your workspace as a one-shot smoke test.
+- **Try the shipped example** — the **geant4-example** skill drops a lead-block demo into your workspace as a one-shot smoke test (just ask for the example).
 - **Bring your own `main.cc`** — when you need custom physics (optical photons, HP neutrons, polarization), hard-coded geometry, or a non-`Hits` output schema.
 
 Full walkthroughs in the [README](https://github.com/zhaozhiwen/geant4_claude#quickstart).
 
 ## What it does
 
-- **NL-driven geometry as a first-class step.** `/geant4-claude:geant4-detector` translates a plain-English detector spec into a validated standalone GDML file. Edit the file or re-describe to iterate — no rebuild required.
+- **NL-driven geometry as a first-class step.** The **geant4-detector** skill translates a plain-English detector spec into a validated standalone GDML file. Edit the file or re-describe to iterate — no rebuild required.
 - **Single runtime seam.** All Geant4 / ROOT / CMake calls go through `bin/g4run`. The container tag is pinned in one place. The plugin contributes no compiled code — every binary is the user's binary, built inside the container.
-- **Schema-aware analysis.** `/geant4-claude:geant4-analyze` inspects the ROOT file and either uses the canned `Hits`-TTree plot or generates a custom analysis script tailored to whatever branches it actually finds.
+- **Schema-aware analysis.** The **geant4-analyze** skill inspects the ROOT file and either uses the canned `Hits`-TTree plot or generates a custom analysis script tailored to whatever branches it actually finds.
 
 Architecture, contracts, and the post-v0.0.3 hardening backlog: [DESIGN.md](DESIGN/).
 
 ## Requirements
 
 - [Apptainer](https://apptainer.org) ≥ 1.4 on Linux.
-- Python 3.9+ on the host with `uproot numpy matplotlib` (only for `/geant4-claude:geant4-analyze`; auto-installed into the plugin's managed venv on first analyze).
+- Python 3.9+ on the host with `uproot numpy matplotlib` (only for the **geant4-analyze** skill; auto-installed into the plugin's managed venv on first analyze).
 - ~2.5 GB of disk for the cached container image.
-- Claude Code with plugin support.
+- Claude Code or OpenAI Codex CLI with plugin support.
 
 ## Links
 

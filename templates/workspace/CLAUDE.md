@@ -1,27 +1,30 @@
 # CLAUDE.md — Geant4 workspace
 
-Rules for Claude when working in this Geant4 simulation workspace. The
-`geant4_claude` plugin scaffolded these directories. The plugin's slash
-commands (`/geant4-claude:geant4-build`, `/geant4-claude:geant4-run`, `/geant4-claude:geant4-analyze`,
-`/geant4-claude:geant4-detector`) operate on the layout below.
+Rules for the AI assistant when working in this Geant4 simulation
+workspace (works on both Claude Code and OpenAI Codex). The
+`geant4_claude` plugin scaffolded these directories. The plugin's
+skills (**geant4-build**, **geant4-run**, **geant4-analyze**,
+**geant4-detector**) operate on the layout below. There are no slash
+commands — describe what you want in natural language and the matching
+skill runs.
 
-The default flow uses `/geant4-claude:geant4-detector` to turn a
+The default flow uses the **geant4-detector** skill to turn a
 natural-language detector description into standalone GDML, paired with
-the GDML-loading `main.cc` from `/geant4-claude:geant4-example`. No C++
+the GDML-loading `main.cc` from the **geant4-example** skill. No C++
 edits required to change the geometry — describe a new detector, run
 again. The alternative is to bring your own `src/main.cc` (with
 hard-coded geometry, custom physics, or a non-`Hits` output schema);
-the four runtime commands work the same in both cases.
+the four runtime skills work the same in both cases.
 
 ## Layout
 
 | Directory | Role |
 |-----------|------|
 | `src/`        | C++ source for your Geant4 application. Plus `CMakeLists.txt`. |
-| `build/`      | CMake build output. **Gitignored.** Re-create with `/geant4-claude:geant4-build`. |
+| `build/`      | CMake build output. **Gitignored.** Re-create by running the **geant4-build** skill (e.g. ask to build). |
 | `geometries/` | GDML files (if you use GDML). Versioned. Optional. |
 | `macros/`     | Geant4 macro files (`*.mac`). Versioned. |
-| `runs/`       | One sub-directory per `/geant4-claude:geant4-run`. **Gitignored** (only the placeholder is kept). |
+| `runs/`       | One sub-directory per **geant4-run** invocation. **Gitignored** (only the placeholder is kept). |
 | `analysis/`   | Python scripts that read `runs/<id>/*.root`. |
 | `log.md`      | Chronological work log — append at the top after each session. |
 | `result.md`   | Per-run findings, with paths to `runs/<id>/` and `analysis/`. |
@@ -43,19 +46,20 @@ the four runtime commands work the same in both cases.
    that needs ROOT runs inside the container via `g4run root <args>`.
 5. **Geometry vs. rebuild.** If you use GDML loaded at runtime, geometry
    edits don't require a rebuild — change the file, run again. If you
-   hard-code geometry in C++, every change needs `/geant4-claude:geant4-build`.
+   hard-code geometry in C++, every change needs a rebuild via the
+   **geant4-build** skill.
 6. **Maintain `log.md`, `result.md`, and `report.html`.** Every
-   simulation effort — orchestrator-driven *or* manual command
+   simulation effort — orchestrator-driven *or* a single skill
    invocation — leaves a record. Prepend a new dated section to
    `log.md` capturing four things: the user's **original request**
-   (verbatim, in their own words), the **plan** Claude drew up (spec
+   (verbatim, in their own words), the **plan** the assistant drew up (spec
    + step list), the user's **decision** (approved, edited the spec,
    or stop-and-just-write-the-plan), and the **outcome** (run id,
    exit status, one-line summary of what happened). After every
-   `/geant4-claude:geant4-run`, refresh `report.html`'s Runs table,
+   **geant4-run**, refresh `report.html`'s Runs table,
    Beam &amp; physics, and header date so the browser report reflects
-   the run even before it's analyzed. After a
-   `/geant4-claude:geant4-analyze` that produced a noteworthy
+   the run even before it's analyzed. After a **geant4-analyze**
+   that produced a noteworthy
    result, add or update a section in `result.md` with key numbers
    + plot paths, and update `report.html` to match (replace the
    placeholders in Summary / Setup / Runs table / Key numbers /
@@ -63,28 +67,31 @@ the four runtime commands work the same in both cases.
    files are authoritative — `report.html` is a presentation layer
    derived from them, so if they disagree the markdown wins. All
    three are load-bearing handoff documents — the user reads them
-   to pick up where they left off, future Claude sessions read them
+   to pick up where they left off, future assistant sessions read them
    to understand context, and `report.html` is what a collaborator
    or reviewer opens in a browser. Treat them as part of the
    deliverable, not as decoration.
 
 ## Typical loop (default — NL detector + example main)
 
-1. `/geant4-claude:geant4-detector` — describe the detector; writes
+1. Describe the detector (the **geant4-detector** skill runs); writes
    `geometries/<name>.gdml` (validated).
-2. `/geant4-claude:geant4-example` (once per workspace) — drops in the
-   GDML-loading `src/geant4_claude_main.cc` + `CMakeLists.txt` + a
-   sample `macros/run.mac` you can edit.
-3. `/geant4-claude:geant4-build` — compiles `src/` into `./build/geant4_claude_main`.
+2. Ask for the example (the **geant4-example** skill, once per
+   workspace) — drops in the GDML-loading `src/geant4_claude_main.cc`
+   + `CMakeLists.txt` + a sample `macros/run.mac` you can edit.
+3. Ask to build (the **geant4-build** skill) — compiles `src/` into
+   `./build/geant4_claude_main`.
 4. Edit `macros/<name>.mac` for primary particle, energy, event count.
-5. `/geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/<name>.gdml macros/<name>.mac {run_dir}/hits.root`.
-6. `/geant4-claude:geant4-analyze runs/<id>` — auto-detects the output schema and
-   plots; or write your own script in `analysis/`.
+5. Ask to run (the **geant4-run** skill) the executable
+   `build/geant4_claude_main` with `geometries/<name>.gdml`,
+   `macros/<name>.mac`, and a `hits.root` output.
+6. Ask to analyze the run (the **geant4-analyze** skill) — auto-detects
+   the output schema and plots; or write your own script in `analysis/`.
 
-Optional: between steps 1 and 2 you can run
-`/geant4-claude:geant4-preview geometries/<name>.gdml` to eyeball the
-geometry. The command is currently alpha (rendering hangs in the v11.4
-container — see the slash-command doc); when it does render, it
+Optional: between steps 1 and 2 you can ask to preview the geometry
+(the **geant4-preview** skill on `geometries/<name>.gdml`) to eyeball
+it. The skill is currently alpha (rendering hangs in the v11.4
+container — see its skill doc); when it does render, it
 produces three JPEG views useful for catching forward-flux sensor
 traps and other geometry mistakes before the simulation runs.
 
@@ -95,10 +102,12 @@ example main loads GDML at runtime.
 
 1. Edit `src/main.cc` (and `src/CMakeLists.txt`) for whatever physics
    list, geometry strategy, and output schema you want.
-2. `/geant4-claude:geant4-build` — compiles `src/` into `./build/<target>`.
+2. Ask to build (the **geant4-build** skill) — compiles `src/` into
+   `./build/<target>`.
 3. Edit `macros/<name>.mac`.
-4. `/geant4-claude:geant4-run --exe build/<target> -- [your args] {run_dir}/<output>.root`.
-5. `/geant4-claude:geant4-analyze runs/<id>`.
+4. Ask to run (the **geant4-run** skill) `build/<target>` with your
+   args and a `<output>.root` output.
+5. Ask to analyze the run (the **geant4-analyze** skill).
 
 ## When something fails
 

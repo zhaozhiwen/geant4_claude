@@ -13,12 +13,13 @@
   the runs/ / geometries/ / analysis/ directories.
 
   How it gets updated:
-    - /geant4-claude:geant4-run refreshes the Runs table + Beam/physics
-      + header date after every finished simulation; /geant4-claude:
-      geant4-analyze adds the plots, key numbers, and interpretation.
+    - The geant4-run skill refreshes the Runs table + Beam/physics
+      + header date after every finished simulation; the geant4-analyze
+      skill adds the plots, key numbers, and interpretation.
     - You can also hand-edit any "EDIT:" placeholder directly (search
       for that token to find every spot meant for human input), or ask
-      Claude in this workspace to "update the report".
+      the assistant in this workspace (Claude Code or Codex) to
+      "update the report".
     - Keep the section structure intact; add or remove rows inside
       sections (Runs table, Key numbers, Plots grid) rather than
       restructuring.
@@ -164,7 +165,7 @@
     <span class="placeholder">Describe the active volume(s), world, materials, and which volumes are tagged sensitive. Cite the GDML file under <code>geometries/</code>.</span>
   </p>
   <!--
-    Optional preview image — uncomment once /geant4-claude:geant4-preview
+    Optional preview image — uncomment once the geant4-preview skill
     has produced PNGs in geometries/<name>.preview/ . Default sketch
     backend writes preview_xy / preview_yz / preview_xz; pick whichever
     view shows the layout best.

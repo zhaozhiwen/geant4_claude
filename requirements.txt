@@ -1,9 +1,9 @@
 pdg>=0.2.2
 # matplotlib + numpy power scripts/preview_gdml.py (sketch backend for
-# /geant4-claude:geant4-preview) and the canned analyze plots.
+# the geant4-preview skill) and the canned analyze plots.
 matplotlib>=3.6
 numpy>=1.23
-# uproot is the host-side ROOT reader for /geant4-claude:geant4-analyze and
+# uproot is the host-side ROOT reader for the geant4-analyze skill and
 # scripts/validators/. Seeding it here means scripts/ensure_venv.sh installs
 # (called by the skills that need Python) it into the managed venv, so the
 # analyze/validate paths work on a fresh clone without a separate pip step

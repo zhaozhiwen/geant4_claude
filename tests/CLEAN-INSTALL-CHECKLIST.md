@@ -1,9 +1,11 @@
 # Clean-install checklist
 
 A pre-release smoke test that exercises the parts of the plugin that
-`tests/clean-smoke.sh` *can't* reach: Claude Code's slash-command
-dispatch, the deepwiki MCP approval prompt, the `AskUserQuestion` flow
-in `/geant4-init`, and namespace lookup.
+`tests/clean-smoke.sh` *can't* reach: Claude Code's natural-language
+skill triggering, the deepwiki MCP approval prompt, the `AskUserQuestion`
+flow in the `geant4-init` skill, and plugin install. Steps are triggered
+by plain-language requests that should auto-fire the matching
+`geant4-<verb>` skill — there are no slash commands anymore.
 
 **Run this before tagging any release.** ~10 minutes.
 
@@ -11,7 +13,8 @@ in `/geant4-init`, and namespace lookup.
 > via tmux + sandboxed Claude Code. Use the script to re-run a known
 > flow quickly; use this manual checklist when a release may have
 > introduced a new prompt that an auto-clicked script shouldn't blindly
-> approve.
+> approve, or when you want to confirm by hand that each plain-language
+> request fires the right skill.
 
 ## Prerequisites
 
@@ -72,27 +75,28 @@ Pass:
   (verifiable by listing tools or asking Claude to call it).
 
 > The pdg venv is **not** created at session start — there is no
-> SessionStart hook on either CLI. It is seeded later, when
-> `/geant4-init` runs `scripts/ensure_venv.sh` (checked in phase 3).
+> SessionStart hook on either CLI. It is seeded later, when the
+> `geant4-init` skill runs `scripts/ensure_venv.sh` (checked in phase 3).
 
-## Phase 3 — `/geant4-claude:geant4-init`
+## Phase 3 — Set up workspace (geant4-init skill)
 
 ```bash
 mkdir /tmp/g4c_clean_smoke && cd /tmp/g4c_clean_smoke
 ```
 
-In Claude Code:
+In Claude Code, ask in plain language (this should auto-trigger the
+`geant4-init` skill):
 
 ```text
-> /geant4-claude:geant4-init
+> Set up a Geant4 workspace in the current directory.
 ```
 
 Pass:
 - Workspace skeleton appears: `CLAUDE.md`, `.gitignore`, plus empty
   `src/`, `geometries/`, `macros/`, `runs/`, `analysis/`.
 - `~/.claude/plugins/data/geant4-claude-geant4-claude/venv/bin/python -c "import pdg"`
-  succeeds (`/geant4-init` ran `scripts/ensure_venv.sh`, which installed
-  `pdg` into the managed venv).
+  succeeds (the `geant4-init` skill ran `scripts/ensure_venv.sh`, which
+  installed `pdg` into the managed venv).
 - `.sif` lands at
   `~/.claude/plugins/data/geant4-claude-geant4-claude/cache/sif/g4install_11.4.0-almalinux-9.4.sif`.
 - `AskUserQuestion` for the optional Geant4 source clone fires. Pick
@@ -105,13 +109,14 @@ Pass:
 
 ## Phase 4 — Example flow
 
-In Claude Code, in `/tmp/g4c_clean_smoke`:
+In Claude Code, in `/tmp/g4c_clean_smoke`, ask in plain language (each
+request should auto-trigger the matching skill):
 
 ```text
-> /geant4-claude:geant4-example
-> /geant4-claude:geant4-build
-> /geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root
-> /geant4-claude:geant4-analyze runs/<id>
+> Drop in the shipped example (GDML + main.cc + macro + analysis).
+> Build the simulation from src/ into build/.
+> Run the simulation: ./build/geant4_claude_main on geometries/example.gdml with macros/run.mac, writing the output to {run_dir}/hits.root.
+> Analyze run runs/<id>.
 ```
 
 Pass at each step:
@@ -131,20 +136,20 @@ In a second scratch dir:
 mkdir /tmp/g4c_clean_custom && cd /tmp/g4c_clean_custom
 ```
 
-In Claude Code:
+In Claude Code, ask in plain language:
 
 ```text
-> /geant4-claude:geant4-init
+> Set up a Geant4 workspace in the current directory.
 ```
 
 Then **outside** Claude Code (or with Claude's help), hand-write a
 minimal `src/main.cc` + `src/CMakeLists.txt` whose binary writes a
-non-`Hits` schema (e.g. a `Tracks` TTree). Then:
+non-`Hits` schema (e.g. a `Tracks` TTree). Then ask in plain language:
 
 ```text
-> /geant4-claude:geant4-build
-> /geant4-claude:geant4-run --exe build/<your-binary> -- <your args> {run_dir}/<output>.root
-> /geant4-claude:geant4-analyze runs/<id>
+> Build the simulation from src/ into build/.
+> Run the simulation: ./build/<your-binary> on <your args>, writing the output to {run_dir}/<output>.root.
+> Analyze run runs/<id>.
 ```
 
 Pass:
@@ -154,11 +159,11 @@ Pass:
 
 ## Phase 6 — Idempotency
 
-Back in `/tmp/g4c_clean_smoke`:
+Back in `/tmp/g4c_clean_smoke`, ask in plain language again:
 
 ```text
-> /geant4-claude:geant4-init
-> /geant4-claude:geant4-build
+> Set up a Geant4 workspace in the current directory.
+> Build the simulation from src/ into build/.
 ```
 
 Pass:
@@ -222,9 +227,9 @@ Approve the plan and let the orchestrator run. Pass criteria:
 | **RINDEX gate — missing index** | Before approving, ask Claude to re-run with "a CO₂ radiator but don't add a refractive index". `geant4-detector` must stop and name the material that is missing RINDEX — do not write a success GDML. |
 | **RINDEX gate — happy path** | When given a valid spec (n ≈ 1.00045), `geant4-detector` writes `geometries/<name>.gdml` containing a `<matrix>` and `<property name="RINDEX">` for the radiator material. |
 | **Recipe-guided edit announced** | Claude tells the user explicitly that it is applying the optical-main recipe in place to `src/geant4_claude_main.cc` (the improvisation rule: it names `geant4-example` as the command bypassed, says it is applying the recipe instead, and says why). It does **not** silently drop in a different main. |
-| **Edited main compiles** | `/geant4-claude:geant4-build` succeeds. `build/<binary>` is present and executable. |
-| **Run produces photons** | `/geant4-claude:geant4-run` completes with exit status 0. `runs/<id>/hits.root` is non-empty. `log.txt` contains `[g4c] attached optical SD` and no `WARNING: no material has a RINDEX property`. |
-| **Validate PASS** | `/geant4-claude:geant4-validate cherenkov runs/<id> --rindex-from-gdml geometries/<name>.gdml --rindex-material <radmat> --radiator-length 1m` prints `RESULT: PASS` and writes `runs/<id>/validate_cherenkov.json`. |
+| **Edited main compiles** | Asking "Build the simulation from src/ into build/." succeeds. `build/<binary>` is present and executable. |
+| **Run produces photons** | Asking to run the simulation completes with exit status 0. `runs/<id>/hits.root` is non-empty. `log.txt` contains `[g4c] attached optical SD` and no `WARNING: no material has a RINDEX property`. |
+| **Validate PASS** | Asking "Physics-validate cherenkov for runs/<id> with --rindex-from-gdml geometries/<name>.gdml --rindex-material <radmat> --radiator-length 1m." prints `RESULT: PASS` and writes `runs/<id>/validate_cherenkov.json`. |
 | **FAIL surfaced** | If the validate step returns FAIL, Claude stops and shows the PASS/FAIL block verbatim — it does **not** proceed to the final report as if the physics were sound. |
 
 ## Pass criteria for the release

@@ -3,10 +3,18 @@
 #
 # Drives the same flow as tests/CLEAN-INSTALL-CHECKLIST.md, but
 # automated: spawns a sandboxed Claude Code in a tmux session, types
-# the slash commands, and verifies post-conditions with Bash assertions.
-# Symlinks the .sif and (if present) the Geant4 source tree from the
-# operator's real plugin data dir into the sandbox so we don't
+# natural-language requests, and verifies post-conditions with Bash
+# assertions. Symlinks the .sif and (if present) the Geant4 source tree
+# from the operator's real plugin data dir into the sandbox so we don't
 # re-download ~600 MB.
+#
+# NOTE ON TRIGGERING: steps are no longer slash commands. Each step is
+# triggered by a natural-language request that should auto-fire the
+# matching geant4-<verb> skill. NL triggering is less deterministic than
+# slash dispatch, but this test asserts on-disk post-conditions, so the
+# nondeterminism is tolerated as long as the right skill fires. If a
+# step's skill doesn't fire, its post-condition wait_for/wait_for_file
+# times out — that is the intended failure signal.
 #
 # When to use which:
 #   - tests/clean-smoke.sh          → run on every commit. Plumbing only;
@@ -26,13 +34,13 @@
 #   - Plugin install via /plugin marketplace add + /plugin install
 #     (handles the user-scope confirmation prompt).
 #   - Exit + relaunch claude after install so the freshly-installed plugin
-#     loads (its commands/skills become available). The pdg venv is created
-#     later, when /geant4-init runs scripts/ensure_venv.sh — there is no
-#     SessionStart hook.
-#   - /geant4-claude:geant4-init, including the AskUserQuestion source-
+#     loads (its skills become available). The pdg venv is created
+#     later, when the geant4-init skill runs scripts/ensure_venv.sh —
+#     there is no SessionStart hook.
+#   - geant4-init (via NL request), including the AskUserQuestion source-
 #     clone prompt (picks "Yes" — but with the symlink in place, it
 #     detects the existing tree and no-ops).
-#   - /geant4-claude:geant4-example, geant4-build, geant4-run, geant4-analyze.
+#   - geant4-example, geant4-build, geant4-run, geant4-analyze (all via NL).
 #   - On-disk post-condition checks at each gate (workspace skeleton,
 #     binary, run outputs, generic config.json schema, edep plot).
 #
@@ -50,7 +58,7 @@
 #
 # Honest caveat:
 #   This script auto-clicks through the deepwiki MCP approval and the
-#   /geant4-init AskUserQuestion. That's safe for re-running known flows,
+#   geant4-init AskUserQuestion. That's safe for re-running known flows,
 #   but on the *first* run after a release introduces a new prompt, drive
 #   manually via CLEAN-INSTALL-CHECKLIST.md so a human reviews what's
 #   being approved.
@@ -170,7 +178,7 @@ for cand in \
   ; do
   [ -f "$cand" ] && { SIF_SRC="$cand"; break; }
 done
-[ -n "$SIF_SRC" ] || fail "no ${SIF_NAME} found on host. Run /geant4-claude:geant4-init once in real ~/.claude to seed it, then re-run this script."
+[ -n "$SIF_SRC" ] || fail "no ${SIF_NAME} found on host. Set up a Geant4 workspace once in real ~/.claude (which seeds it), then re-run this script."
 
 # Optional: locate a real geant4-src to symlink (avoid 36 MB tarball)
 G4SRC_SRC=""
@@ -298,11 +306,11 @@ grep -q "geant4-claude" "${SANDBOX_CLAUDE}/plugins/installed_plugins.json" \
 note "✓ plugin recorded in installed_plugins.json"
 
 # --- phase 2: load the freshly-installed plugin (requires exit + restart) --
-# /reload-plugins picks up the new commands but the cleanest way to get the
-# plugin's commands/skills fully loaded is a fresh `claude` invocation. So:
+# /reload-plugins picks up the new plugin but the cleanest way to get the
+# plugin's skills fully loaded is a fresh `claude` invocation. So:
 # exit and relaunch. There is no SessionStart hook anymore — the pdg venv is
-# created later, when /geant4-init runs scripts/ensure_venv.sh (asserted in
-# phase 3).
+# created later, when the geant4-init skill runs scripts/ensure_venv.sh
+# (asserted in phase 3).
 #
 # MCP approval: on first install of a new MCP, Claude Code shows an
 # approve-once prompt. In our flow it doesn't fire because the operator's
@@ -314,9 +322,9 @@ send "/exit"
 sleep 4
 launch_claude
 
-# --- phase 3: /geant4-claude:geant4-init -----------------------------------
-log "phase 3: /geant4-claude:geant4-init (workspace skeleton + image pull)"
-send "/geant4-claude:geant4-init"
+# --- phase 3: geant4-init (NL) ---------------------------------------------
+log "phase 3: geant4-init via NL (workspace skeleton + image pull)"
+send "Set up a Geant4 workspace in the current directory."
 
 # AskUserQuestion for source clone may fire. With our symlink, it detects
 # the existing tree and skips. If it doesn't (no host copy), pick "Yes".
@@ -349,9 +357,9 @@ else
   fail "geant4-init did not create venv at ${PLUGIN_DATA_SANDBOX}/venv"
 fi
 
-# --- phase 4a: /geant4-claude:geant4-example -------------------------------
-log "phase 4a: /geant4-claude:geant4-example (drop demo)"
-send "/geant4-claude:geant4-example"
+# --- phase 4a: geant4-example (NL) -----------------------------------------
+log "phase 4a: geant4-example via NL (drop demo)"
+send "Drop in the shipped example (GDML + main.cc + macro + analysis)."
 # example writes 5 files into the workspace, the last to land is
 # typically analysis/example.py — wait for it instead of pattern-matching
 # the validate-gdml banner (whose text has churned: "well-formed" → "parses cleanly").
@@ -364,9 +372,9 @@ wait_for_file "${WS}/analysis/example.py" 90
 [ -f "${WS}/analysis/example.py" ]       || fail "example analysis missing"
 note "✓ example files in place"
 
-# --- phase 4b: /geant4-claude:geant4-build ---------------------------------
-log "phase 4b: /geant4-claude:geant4-build"
-send "/geant4-claude:geant4-build"
+# --- phase 4b: geant4-build (NL) -------------------------------------------
+log "phase 4b: geant4-build via NL"
+send "Build the simulation from src/ into build/."
 # CMake's "[100%] Built target …" line is the obvious text marker, but
 # Claude collapses long bash outputs into a "~N lines" summary, so the
 # pane won't show it. Poll the produced binary directly instead — that's
@@ -374,9 +382,9 @@ send "/geant4-claude:geant4-build"
 wait_for_file "${WS}/build/geant4_claude_main" 300
 note "✓ binary built"
 
-# --- phase 4c: /geant4-claude:geant4-run -----------------------------------
-log "phase 4c: /geant4-claude:geant4-run"
-send "/geant4-claude:geant4-run --exe build/geant4_claude_main -- geometries/example.gdml macros/run.mac {run_dir}/hits.root"
+# --- phase 4c: geant4-run (NL) ---------------------------------------------
+log "phase 4c: geant4-run via NL"
+send "Run the simulation: ./build/geant4_claude_main on geometries/example.gdml with macros/run.mac, writing the output to {run_dir}/hits.root."
 wait_for "finished" 600 || wait_for "run ended" 600
 
 # Find the run dir
@@ -399,14 +407,14 @@ assert not forbidden, f'config.json has stale fields: {forbidden}'
 print('config.json schema ok')
 " || fail "config.json schema check"
 
-# --- phase 4d: /geant4-claude:geant4-analyze -------------------------------
-log "phase 4d: /geant4-claude:geant4-analyze (fast-path on Hits TTree)"
+# --- phase 4d: geant4-analyze (NL) -----------------------------------------
+log "phase 4d: geant4-analyze via NL (fast-path on Hits TTree)"
 # Note: if the host python lacks uproot+numpy+matplotlib, the analyze
 # command may auto-install them into the plugin's venv (~120 MB, ~60–90 s).
 # That's the documented behavior since v0.0.2 — bumping the timeout here
 # to accommodate.
 RUN_ID="${RUN_DIR##*/}"
-send "/geant4-claude:geant4-analyze runs/${RUN_ID}"
+send "Analyze run runs/${RUN_ID}."
 # Same collapse problem as the build phase — wait for the output PNG
 # instead of a text marker.
 wait_for_file "${RUN_DIR}/edep_hist.png" 240
