@@ -27,8 +27,16 @@ release. A breaking change to the `Hits` TTree schema or to the
   var). `.g4c/g4run` is a shim and `.g4c/env` resolves the plugin root **live**
   on each use — `$CLAUDE_PLUGIN_ROOT` → newest Codex install (by mtime) → the
   path recorded at init — so a plugin version bump (each CLI installs versions
-  under their own dir) never strands an initialized workspace. Cache/data dirs
-  stay under `~/.cache` (or the plugin data dir) and are frozen.
+  under their own dir) never strands an initialized workspace.
+- **Workspace-rooted cache + venv.** `bin/g4run` resolves the `.sif` cache by
+  walking up to the `.g4c/` marker → `<workspace>/cache` (override
+  `GEANT4_CLAUDE_CACHE` to share one `.sif` across workspaces); the venv is
+  anchored the same way at `<workspace>/venv` (`GEANT4_CLAUDE_VENV`), with its
+  requirements snapshot stored inside it. A workspace is now self-contained and
+  survives plugin updates; `ensure_sif` migrates a `.sif` from a legacy
+  plugin-data/XDG location before re-pulling. `GEANT4_CLAUDE_DATA` remains the
+  one *shared* dir, holding only the plugin-wide Geant4 source tree. Mirrors the
+  sibling `solid_gemc_claude` plugin's design.
 - **Strict-YAML + symlink lints** (`tests/lint-skill-frontmatter.py`,
   `tests/lint-agents-mirror.sh`), run in `clean-smoke.sh` (phase 0f/0g) and a new
   `.github/workflows/lint.yml`. The frontmatter lint reproduces Codex's strict
@@ -59,7 +67,9 @@ release. A breaking change to the `Hits` TTree schema or to the
   exercise `ensure_venv.sh` with no `CLAUDE_*` env (the Codex path) and its
   stale-snapshot self-heal; phase 0f/0g run the two lints; phase 0h runs
   `geant4-init`'s actual `.g4c/` recipe and asserts live resolution + the
-  recorded fallback.
+  recorded fallback (incl. the workspace-rooted `GEANT4_CLAUDE_VENV`). Phase 6
+  asserts the workspace-rooted cache (marker walk + bare-dir `$PWD/cache`
+  fallback).
 - `ensure_venv.sh` fast-exit now gates on the venv interpreter existing, not just
   the requirements snapshot, so a half-deleted venv self-heals instead of leaving
   a dead python on the analyze/preview/validate path.

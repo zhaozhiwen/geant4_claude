@@ -48,7 +48,7 @@ $ claude          # or: codex
 > set up a Geant4 workspace                       # → geant4-init skill
 ✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
 ✓ wrote .g4c/ engine pointer (g4run shim + env)
-✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${GEANT4_CLAUDE_CACHE}/sif)
+✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at <workspace>/cache/sif)
 
 > design a 1×1×10 cm lead block in an air world,  # → geant4-detector skill
   tag the lead as sensitive
@@ -147,22 +147,19 @@ host-side `scripts/preview_gdml.py`.
 the user's CMake target name, output schema, or argument shape. The skills
 carry the workspace conventions; the wrapper just runs the container.
 
-`bin/g4run` itself is **unchanged by the dual-CLI port** — it still resolves
-its cache from env, with no silent `$HOME` fallback. What changed is *who
-sets the env*: instead of each slash command prepending
-`GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"`, every skill now sources
-the workspace's `.g4c/env` (written once by `geant4-init`), which exports
-`GEANT4_CLAUDE_CACHE` CLI-neutrally. See **Dual-CLI engine contract**.
+`bin/g4run` resolves a **workspace-rooted** cache: it walks up from `$PWD` to
+the `.g4c/` marker `geant4-init` wrote and anchors the `.sif` at
+`<workspace-root>/cache` (override with `$GEANT4_CLAUDE_CACHE` to share one
+`.sif` across workspaces). Anchoring to the workspace — not the version-pinned
+plugin install — makes a workspace self-contained and survives plugin updates.
+See **Dual-CLI engine contract**.
 
 Internally each subcommand:
 
-1. ensures the `.sif` for the pinned tag exists at `<cache>/sif/…`, pulling
-   on first use. The cache resolves to `$GEANT4_CLAUDE_CACHE` (explicit
-   override, set by `.g4c/env`) or `$CLAUDE_PLUGIN_DATA/cache` (auto-set by
-   Claude Code when the plugin is installed) — both unset is a fatal error
-   rather than a silent fallback to `$HOME`. On Codex, where no
-   `CLAUDE_PLUGIN_DATA` exists, `.g4c/env` is the *only* source of the cache
-   path, which is exactly why `geant4-init` must run first;
+1. ensures the `.sif` for the pinned tag exists at `<cache>/sif/…`, pulling on
+   first use (and migrating a `.sif` from a legacy plugin-data/XDG location
+   before re-pulling). With no `.g4c/` marker up-tree (a bare clone), the cache
+   falls back to `$PWD/cache`;
 2. invokes `apptainer exec --bind <project>,<cache> <sif> bash -lc
    'source /usr/local/bin/docker-entrypoint.sh && <cmd>'`.
 
@@ -284,7 +281,7 @@ plugin root *live*, and writes both into the workspace:
 | `.g4c/` entry | What it is |
 |---------------|------------|
 | `.g4c/g4run` | A `/bin/sh` shim that sources `.g4c/env` and execs `${GEANT4_CLAUDE_ROOT}/bin/g4run` — so the wrapper path is resolved live, never frozen. |
-| `.g4c/env` | Exports `GEANT4_CLAUDE_DATA`/`GEANT4_CLAUDE_CACHE` (frozen — under `CLAUDE_PLUGIN_DATA` on Claude or `${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude` on Codex, both stable across updates) and resolves `GEANT4_CLAUDE_ROOT` **live** every time it is sourced. |
+| `.g4c/env` | Exports `GEANT4_CLAUDE_DATA` (frozen shared dir, holds only the plugin-wide geant4-src), resolves `GEANT4_CLAUDE_ROOT` **live** every time it is sourced, and resolves a workspace-rooted `GEANT4_CLAUDE_VENV` by walking up to `.g4c/`. The `.sif` cache is *not* recorded here — `bin/g4run` resolves it from the workspace the same way. |
 
 **Why the root is resolved live, not frozen.** Each CLI installs every plugin
 version under its own dir, so a path recorded at init would dangle after an
@@ -308,16 +305,22 @@ then calls `"${G4RUN}" …`. This sources the cache/root env and resolves the
 wrapper through the workspace pointer — so the skill bodies are identical on
 both CLIs and never name a CLI-specific env var or path.
 
-**Cache flow keeps `bin/g4run` unchanged.** The wrapper still reads its cache
-from `GEANT4_CLAUDE_CACHE` and still treats an unresolvable cache as a fatal
-error (no silent `$HOME` fallback). `.g4c/env` is simply the new, CLI-neutral
-*source* of that variable, replacing the per-command
-`GEANT4_CLAUDE_CACHE="${CLAUDE_PLUGIN_DATA}/cache"` prefix the old slash
-commands carried. `bin/g4run` itself was not modified for the port.
+**Workspace-rooted cache.** `bin/g4run` resolves the cache by walking up from
+`$PWD` to the `.g4c/` marker → `<workspace-root>/cache`, with
+`$GEANT4_CLAUDE_CACHE` as an explicit override and `$PWD/cache` as the
+no-marker fallback. The `.sif` therefore lives in the workspace, not the
+version-pinned plugin install, so a plugin update never orphans it
+(`ensure_sif` migrates a `.sif` from a legacy plugin-data/XDG location before
+re-pulling). The venv is anchored the same way (`<workspace-root>/venv`,
+exported as `GEANT4_CLAUDE_VENV` by `.g4c/env`). `GEANT4_CLAUDE_DATA` remains a
+*shared* dir, holding only the plugin-wide Geant4 source tree.
 
 **venv bootstrap, CLI-neutral.** The dep-install logic lives in
-`scripts/ensure_venv.sh` (reads `GEANT4_CLAUDE_ROOT`/`_DATA` with the same
-fallbacks). There is no session-start hook on either CLI; instead the skills
+`scripts/ensure_venv.sh` — it builds the venv at `GEANT4_CLAUDE_VENV` (the
+workspace venv `.g4c/env` exports, falling back to `GEANT4_CLAUDE_DATA/venv`
+for standalone use) and stores its requirements snapshot *inside* that venv, so
+per-workspace venvs don't share a gating snapshot. There is no session-start
+hook on either CLI; instead the skills
 that need Python (`geant4-init`, `geant4-analyze`, `geant4-preview`,
 `geant4-validate`) call `ensure_venv.sh` directly on first use. It is
 idempotent, so repeat calls are a fast no-op. This is identical on Claude and
@@ -421,7 +424,7 @@ the `geant4-run` skill.
 **Fix:** ship a tiny C++ harness (e.g. `templates/validate/main.cc`)
 that does `G4GDMLParser::Read()` against the file, prints any parser
 error, and exits non-zero on failure. Build it on first use inside the
-container, cache the binary at `${GEANT4_CLAUDE_CACHE}/bin/`, and
+container, cache the binary under the resolved cache (`<workspace>/cache/bin/`), and
 call it from `cmd_validate_gdml` after the xmllint pass.
 
 **Impact:** Geometry errors surface before the `geant4-build`/`geant4-run`

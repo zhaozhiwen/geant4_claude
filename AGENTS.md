@@ -66,7 +66,7 @@ will clone it on a fresh machine.
 | `.agents/plugins/marketplace.json` | Codex marketplace entry (`codex plugin marketplace add`). Its local source path is `./plugins/geant4-claude` — a symlink → repo root, because Codex resolves declared plugins under `plugins/<name>/`. `.claude-plugin/marketplace.json` is the Claude counterpart. |
 | `.mcp.json` | Plugin-shipped MCP servers (currently: deepwiki), bundled by both manifests. Add servers here only if they are free, no-auth, and clearly useful for Geant4 work. |
 | `requirements.txt` | Python deps installed by `scripts/ensure_venv.sh`. Currently: `pdg`, `matplotlib`, `numpy` (used by `scripts/preview_gdml.py` and the canned analyze plots). Touch this file to trigger reinstall. Add packages only when something in `skills/`/`scripts/` actually imports them. |
-| `scripts/ensure_venv.sh` | CLI-neutral, idempotent venv bootstrap (uv first, `python3 -m venv` fallback). The fast-exit gates on the venv interpreter existing **and** the requirements snapshot matching, so a half-deleted venv (snapshot survives, python gone) self-heals instead of leaving analyze/preview/validate pointed at a dead python. Called directly by the skills that need Python (`geant4-init` + `geant4-analyze`/`preview`/`validate`) — identically on both CLIs. There is **no** `SessionStart` hook (Codex can't bundle one; dropped on Claude too for one bootstrap path). |
+| `scripts/ensure_venv.sh` | CLI-neutral, idempotent venv bootstrap (uv first, `python3 -m venv` fallback). The venv is **workspace-rooted** (`<workspace>/venv`, via `GEANT4_CLAUDE_VENV` from `.g4c/env`; falls back to `GEANT4_CLAUDE_DATA/venv` standalone), with its requirements snapshot stored *inside* the venv. The fast-exit gates on the venv interpreter existing **and** the snapshot matching, so a half-deleted venv self-heals instead of leaving analyze/preview/validate pointed at a dead python. Called directly by the skills that need Python (`geant4-init` + `geant4-analyze`/`preview`/`validate`) — identically on both CLIs. There is **no** `SessionStart` hook (Codex can't bundle one; dropped on Claude too for one bootstrap path). |
 | `skills/<name>/SKILL.md` | The plugin's entire surface — 8 task skills (`geant4-init/detector/example/preview/build/run/analyze/validate`), the `geant4` orchestrator (front door), and 3 reference skills (`geant4-geometry/physics-list/analysis`). No slash commands. |
 | `AGENTS.md` | **Canonical** agent-instructions file (vendor-neutral; what Codex reads). `CLAUDE.md` is a symlink → `AGENTS.md` so Claude Code reads the same rules. One pair per location (root, `templates/workspace/`, `wiki/`). New instruction files are `AGENTS.md` with a `CLAUDE.md` symlink alongside. |
 | `bin/g4run` | The only allowed bridge to apptainer (and the host-side dispatcher for the sketch preview backend). Subcommands: `pull`, `info`, `shell`, `build <src> <build>`, `exec <executable> [args…]`, `root`, `validate-gdml`, `preview <gdml> [out_dir] [--backend=sketch|raytracer]`, `image-tag`, `sif-name` (echo the pinned tag / `.sif` name — the single-source accessors docs and tests derive from). |
@@ -111,7 +111,8 @@ Claude Code and Codex).
    `/geant4-claude:` names (phase 0d gate).
 4. Skills that run Python must first call
    `. .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"` and run via
-   `"${GEANT4_CLAUDE_DATA}/venv/bin/python"` (Codex has no venv hook).
+   `"${GEANT4_CLAUDE_VENV}/bin/python"` (the workspace-rooted venv `.g4c/env`
+   exports; Codex has no venv hook).
 5. Must work from an empty workspace (the `geant4-init` skill runs first) and
    from a populated one (nothing destructive without `--force`).
 6. Update `docs/DESIGN.md`'s **Skill surface** with the new one-liner.
@@ -154,7 +155,7 @@ extracted from the SKILL — no drift). Doesn't go through Claude Code or Codex,
 so it doesn't catch skill-dispatch / MCP / AskUserQuestion regressions —
 those need layer 2 or 3 (the bootstrap itself is covered by phase 0e). Catches
 everything else (wrapper plumbing, build, run, schema-detection,
-idempotency, the no-fallback cache resolution, the tracked-files
+idempotency, the workspace-rooted cache resolution (`.g4c/` marker walk), the tracked-files
 `/home/$USER` leakage scan, the optical fixture's Frank-Tamm closure,
 plus pure-bash gates: exit-capture, recipe↔fixture drift, the
 `g4run-unit` helper tests, and the README/`_config.yml`↔`g4run`

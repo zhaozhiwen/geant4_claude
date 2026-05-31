@@ -26,6 +26,8 @@ the four runtime skills work the same in both cases.
 | `macros/`     | Geant4 macro files (`*.mac`). Versioned. |
 | `runs/`       | One sub-directory per **geant4-run** invocation. **Gitignored** (only the placeholder is kept). |
 | `analysis/`   | Python scripts that read `runs/<id>/*.root`. |
+| `cache/`      | Workspace-rooted container image (`.sif`). **Gitignored.** Written by geant4-init/`g4run`; set `GEANT4_CLAUDE_CACHE` to share one across workspaces instead. |
+| `venv/`       | Workspace-rooted Python venv (uproot/numpy/matplotlib). **Gitignored.** Seeded by geant4-init. |
 | `log.md`      | Chronological work log — append at the top after each session. |
 | `result.md`   | Per-run findings, with paths to `runs/<id>/` and `analysis/`. |
 | `report.html` | Single-page browser-friendly summary of the study (overview, runs table, key numbers, plots, interpretation). Self-contained — open in any browser via `file://`. Derived from `log.md` + `result.md` + `runs/`; markdown is authoritative if they disagree. |

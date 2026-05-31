@@ -107,7 +107,7 @@ stores Cherenkov yield in `Events.n_photons` would run with
 
    ```bash
    . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
-   PY="${GEANT4_CLAUDE_DATA}/venv/bin/python"
+   PY="${GEANT4_CLAUDE_VENV}/bin/python"
    if ! "${PY}" -c "import uproot, numpy" 2>/dev/null; then
      echo "validate: could not provision uproot/numpy in the plugin" \
           "venv (${PY}). Check scripts/ensure_venv.sh output and" \

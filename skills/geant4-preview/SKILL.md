@@ -61,7 +61,7 @@ Two backends ship; pick with `--backend`:
    The script takes the GDML and an explicit output dir (when the user
    omits one, use the default `<file.gdml>.preview/` next to the GDML):
    ```bash
-   "${GEANT4_CLAUDE_DATA}/venv/bin/python" \
+   "${GEANT4_CLAUDE_VENV}/bin/python" \
      "${GEANT4_CLAUDE_ROOT}/scripts/preview_gdml.py" <file.gdml> <out_dir>
    ```
    It reads `<solids>` + `<structure>` with the stdlib XML parser,

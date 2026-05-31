@@ -97,7 +97,7 @@ Two things get set up automatically — neither needs your action beyond approvi
 
 1. **deepwiki MCP server** is registered from `.mcp.json`. Claude Code prompts once to approve the external server (`https://mcp.deepwiki.com/mcp`, no auth, no key); approve it and Claude gains three tools (`mcp__deepwiki__ask_question`, `read_wiki_structure`, `read_wiki_contents`) for asking Geant4 questions in-loop. Used by the plugin as orientation only — answers are LLM-grounded and must be verified against actual Geant4 source before they land in any synthesis. See [docs/DESIGN.md](docs/DESIGN.md) §"deepwiki MCP".
 
-2. **`pdg` Python package** is seeded into a managed venv at `~/.claude/plugins/data/<plugin-id>/venv/` by `scripts/ensure_venv.sh`, which the skills that need Python call directly — the first `geant4-init`/analyze/preview/validate triggers it. This works identically on both CLIs: there is no `SessionStart` hook and no session-start pip-approval prompt. The first such call takes ~10–30 s while pip pulls `pdg` + `sqlalchemy` (~50 MB on disk); later calls are a 3 ms diff/no-op. The venv lives outside this repo, survives plugin updates, and is deleted automatically when you uninstall the plugin. Used by the plugin to look up PDG particle data on demand. See [docs/DESIGN.md](docs/DESIGN.md) §"Python deps via `scripts/ensure_venv.sh`".
+2. **`pdg` Python package** is seeded into a workspace-rooted managed venv (`<workspace>/venv/`) by `scripts/ensure_venv.sh`, which the skills that need Python call directly — the first `geant4-init`/analyze/preview/validate triggers it. This works identically on both CLIs: there is no `SessionStart` hook and no session-start pip-approval prompt. The first such call takes ~10–30 s while pip pulls `pdg` + `sqlalchemy` (~50 MB on disk); later calls are a 3 ms diff/no-op. The venv lives in the workspace (gitignored), is self-contained per workspace, and survives plugin updates. Used by the plugin to look up PDG particle data on demand. See [docs/DESIGN.md](docs/DESIGN.md) §"Python deps via `scripts/ensure_venv.sh`".
 
 If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your local clone before enabling the plugin. Neither is required for the skills to work.
 
@@ -152,7 +152,7 @@ simulation. Just describe each step — the named skill triggers:
   → the geant4-init skill runs
 ✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md, report.html)
 ✓ recorded engine pointer .g4c/  (g4run shim + env)
-✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
+✓ pulled image  → <workspace>/cache/sif/g4install_11.4.0-almalinux-9.4.sif
 
 > Drop in the shipped example.
   → the geant4-example skill runs
@@ -240,7 +240,7 @@ The **geant4-init** skill scaffolds an empty skeleton:
 ```
 my-project/
 ├── CLAUDE.md          rules for Claude inside this workspace
-├── .gitignore         excludes runs/, *.root, build/, __pycache__/
+├── .gitignore         excludes runs/, *.root, build/, cache/, venv/, __pycache__/
 ├── log.md             chronological work log (Claude appends after each run)
 ├── result.md          per-run findings (Claude updates after a noteworthy analyze)
 ├── report.html        single-page browser-friendly summary (overview + runs table + plots + interpretation)
@@ -295,9 +295,12 @@ project with a collaborator who isn't in the CLI.
   CMake target name, output schema, or argument shape. It just CMake-builds
   whatever source you point at, and execs whatever binary you point at,
   inside the pinned container.
-- **Per-user data dir.** The runtime cache (`.sif`) and any optional
-  Geant4 source clone live under `${CLAUDE_PLUGIN_DATA}/`, so they
-  survive plugin version bumps.
+- **Workspace-rooted cache + venv.** The runtime cache (`.sif`) and the
+  Python venv live in the workspace (`<workspace>/cache`, `<workspace>/venv`),
+  resolved by `g4run` from the `.g4c/` marker — so a workspace is
+  self-contained and survives plugin version bumps. Set `GEANT4_CLAUDE_CACHE`
+  to share one `.sif` across workspaces. The optional plugin-wide Geant4 source
+  clone is the one shared artifact (under `${GEANT4_CLAUDE_DATA}/`).
 - **Schema-aware analysis.** The **geant4-analyze** skill inspects the ROOT
   file and either uses the canned `Hits`-TTree plot (example schema) or
   generates a custom analysis script tailored to the actual branches.
@@ -314,7 +317,7 @@ For the full architecture, see [docs/DESIGN.md](docs/DESIGN.md).
 | `apptainer: command not found` | Install apptainer first. |
 | `pull` hangs or 401 | Check network; `ghcr.io/gemc/g4install` is public. |
 | `G4GDML: ERROR: ...` | `g4run validate-gdml <file>`; consult the `geant4-geometry` skill. |
-| `ModuleNotFoundError: uproot` (analyze step) | Re-run the geant4-analyze skill — it seeds the plugin-managed venv (`${CLAUDE_PLUGIN_DATA}/venv`) automatically. On Codex, re-run geant4-init to bootstrap the venv. Do not `pip install --user` (pollutes host site-packages). |
+| `ModuleNotFoundError: uproot` (analyze step) | Re-run the geant4-analyze skill — it seeds the workspace-rooted managed venv (`<workspace>/venv`) automatically. On Codex, re-run geant4-init to bootstrap the venv. Do not `pip install --user` (pollutes host site-packages). |
 | Empty `Hits` tree | No volume has the sensitive aux tag, or gun energy is zero. |
 | Build fails | `g4run shell` and try `cmake -S /…/src -B /tmp/build` manually to see the real cmake error. |
 | `TGeoManager::Import` returns null in container ROOT | The pinned image's ROOT 6.38 is built without `root-geom`. To preview geometry, load the GDML inside Geant4's own viewer via `g4run shell` and a `vis.mac` macro, not via ROOT. |

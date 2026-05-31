@@ -51,22 +51,27 @@ Optional: `--force` (overwrite existing workspace files).
    load-bearing, not decorative.
 
 5. **Record the engine pointer `.g4c/` (the keystone).** Resolve the data dir
-   CLI-neutrally and write the pointer the other skills read. Both files resolve
-   the plugin root **live** so a plugin version bump never strands the workspace:
-   each CLI installs every version under its own dir (`$CLAUDE_PLUGIN_ROOT` on
-   Claude; a per-version dir under `$CODEX_HOME/plugins/cache/` on Codex), so a
-   frozen path would dangle after an update. `DATA`/`CACHE` live under `~/.cache`
-   (or the plugin data dir) and are stable, so they stay frozen.
+   CLI-neutrally and write the pointer the other skills read. `.g4c/env`
+   resolves the plugin root **live** so a plugin version bump never strands the
+   workspace (each CLI installs every version under its own dir), and exports a
+   **workspace-rooted** venv. The `.sif` cache is *not* recorded here — the
+   wrapper resolves it from the workspace (the `.g4c/` marker) so it is
+   workspace-rooted too. `GEANT4_CLAUDE_DATA` is the one shared dir (under
+   `~/.cache` or the plugin data dir): it holds the plugin-wide Geant4 source
+   tree (step 8), identical across workspaces, so it stays there.
    ```bash
    DATA="${GEANT4_CLAUDE_DATA:-${CLAUDE_PLUGIN_DATA:-${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude}}"
    mkdir -p .g4c "$DATA"
-   # .g4c/env — sourced by every skill (and by the shim below). ROOT is resolved
-   # live each time: Claude's live env -> newest Codex install (by mtime; the
-   # cache leaf is a hash, not a sortable version) -> the path recorded here at
-   # init (bare-clone / standalone fallback).
+   # .g4c/env — sourced by every skill (and by the shim below).
+   #  - GEANT4_CLAUDE_DATA: shared dir for the plugin-wide geant4-src (frozen).
+   #  - GEANT4_CLAUDE_ROOT: plugin root, resolved live — Claude's live env ->
+   #    newest Codex install (by mtime; the cache leaf is a hash, not a sortable
+   #    version) -> the path recorded here at init (standalone fallback).
+   #  - GEANT4_CLAUDE_VENV: <workspace-root>/venv, found by walking up to .g4c/
+   #    so a moved workspace or a subdir invocation still resolves. (The .sif
+   #    cache is resolved the same way by the wrapper itself: <root>/cache.)
    cat > .g4c/env <<EOF
    export GEANT4_CLAUDE_DATA="${DATA}"
-   export GEANT4_CLAUDE_CACHE="${DATA}/cache"
    _g4c_root="\${CLAUDE_PLUGIN_ROOT:-}"
    if [ ! -x "\${_g4c_root}/bin/g4run" ]; then
      _g4c_root="\$(ls -td "\${CODEX_HOME:-\$HOME/.codex}"/plugins/cache/*/geant4-claude/*/ 2>/dev/null | head -1)"
@@ -74,7 +79,11 @@ Optional: `--force` (overwrite existing workspace files).
    fi
    [ -x "\${_g4c_root}/bin/g4run" ] || _g4c_root="${PLUGIN_ROOT}"
    export GEANT4_CLAUDE_ROOT="\${_g4c_root}"
-   unset _g4c_root
+   _g4c_ws="\$PWD"
+   while [ "\${_g4c_ws}" != "/" ] && [ ! -d "\${_g4c_ws}/.g4c" ]; do _g4c_ws="\$(dirname "\${_g4c_ws}")"; done
+   [ -d "\${_g4c_ws}/.g4c" ] || _g4c_ws="\$PWD"
+   export GEANT4_CLAUDE_VENV="\${_g4c_ws}/venv"
+   unset _g4c_root _g4c_ws
    EOF
    # .g4c/g4run — a shim (not a symlink): defers to .g4c/env's live ROOT, so the
    # wrapper path is never frozen. Skills still just call .g4c/g4run unchanged.
@@ -95,8 +104,9 @@ Optional: `--force` (overwrite existing workspace files).
    ```bash
    . .g4c/env
    echo "[g4c] plugin root : ${GEANT4_CLAUDE_ROOT}"
-   echo "[g4c] data dir    : ${GEANT4_CLAUDE_DATA}"
-   echo "[g4c] image cache : ${GEANT4_CLAUDE_CACHE}/sif"
+   echo "[g4c] shared data : ${GEANT4_CLAUDE_DATA}   (geant4-src)"
+   echo "[g4c] venv        : ${GEANT4_CLAUDE_VENV}"
+   echo "[g4c] image cache : ${PWD}/cache/sif   (workspace-rooted)"
    ```
 
 6. **Bootstrap the Python venv** (idempotent, and always run here — there is no
@@ -110,7 +120,8 @@ Optional: `--force` (overwrite existing workspace files).
    ```bash
    . .g4c/env; .g4c/g4run pull
    ```
-   First-run downloads ~1–2 GB into `${GEANT4_CLAUDE_CACHE}/sif/`. Reruns no-op.
+   First-run downloads ~1–2 GB into the workspace cache (`<workspace>/cache/sif/`,
+   resolved by the wrapper from the `.g4c/` marker). Reruns no-op.
 
 8. **Offer the Geant4 source checkout (one-time, plugin-wide).** The wiki's
    `sources/geant4-code/synthesis/` pages cite specific `.cc:line` ranges, only
@@ -187,7 +198,9 @@ Optional: `--force` (overwrite existing workspace files).
 - `.g4c/g4run` (shim) + `.g4c/env` — the engine pointer the other skills read;
   both resolve the current `bin/g4run` live, so a plugin update doesn't strand
   the workspace.
-- A cached `.sif` at `${GEANT4_CLAUDE_CACHE}/sif/`.
+- A cached `.sif` at `<workspace>/cache/sif/` (workspace-rooted; override with
+  `GEANT4_CLAUDE_CACHE` to share one across workspaces).
+- A workspace venv at `<workspace>/venv/` (`GEANT4_CLAUDE_VENV`).
 - (Optional, on consent) Geant4 source tree at `${GEANT4_CLAUDE_DATA}/geant4-src/`
   with the `wiki/raw/geant4-src` symlink.
 

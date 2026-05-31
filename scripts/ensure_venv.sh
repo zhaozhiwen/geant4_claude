@@ -14,16 +14,21 @@
 #
 # Env (all optional; resolved CLI-neutrally):
 #   GEANT4_CLAUDE_ROOT  plugin root (else CLAUDE_PLUGIN_ROOT, else this script's ../)
-#   GEANT4_CLAUDE_DATA  data dir for venv (else CLAUDE_PLUGIN_DATA,
-#                       else ${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude)
+#   GEANT4_CLAUDE_VENV  workspace venv dir (set by .g4c/env). If unset, falls back
+#                       to GEANT4_CLAUDE_DATA/venv (else CLAUDE_PLUGIN_DATA, else
+#                       ${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude/venv) — for
+#                       standalone/CI use with no workspace.
 
 set -eu
 
 ROOT="${GEANT4_CLAUDE_ROOT:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}}"
 DATA="${GEANT4_CLAUDE_DATA:-${CLAUDE_PLUGIN_DATA:-${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude}}"
+# Venv is workspace-rooted: .g4c/env exports GEANT4_CLAUDE_VENV=<workspace>/venv.
+VENV="${GEANT4_CLAUDE_VENV:-$DATA/venv}"
 REQ="$ROOT/requirements.txt"
-STORED="$DATA/requirements.txt"
-VENV="$DATA/venv"
+# Snapshot lives inside the venv (not a shared dir) — with per-workspace venvs a
+# shared snapshot would wrongly gate a second workspace's first build.
+STORED="$VENV/requirements.snapshot"
 
 # Idempotency check — exit fast only when the venv actually works AND
 # requirements are unchanged. Gating on the interpreter (not just the snapshot)
@@ -33,7 +38,7 @@ if [ -x "$VENV/bin/python" ] && diff -q "$REQ" "$STORED" >/dev/null 2>&1; then
     exit 0
 fi
 
-mkdir -p "$DATA"
+mkdir -p "$(dirname "$VENV")"
 
 echo "[geant4_claude] installing Python deps into $VENV (one-time, ~30s)..."
 

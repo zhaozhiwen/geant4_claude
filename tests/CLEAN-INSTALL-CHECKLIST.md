@@ -94,11 +94,11 @@ In Claude Code, ask in plain language (this should auto-trigger the
 Pass:
 - Workspace skeleton appears: `CLAUDE.md`, `.gitignore`, plus empty
   `src/`, `geometries/`, `macros/`, `runs/`, `analysis/`.
-- `~/.claude/plugins/data/geant4-claude-geant4-claude/venv/bin/python -c "import pdg"`
-  succeeds (the `geant4-init` skill ran `scripts/ensure_venv.sh`, which
-  installed `pdg` into the managed venv).
-- `.sif` lands at
-  `~/.claude/plugins/data/geant4-claude-geant4-claude/cache/sif/g4install_11.4.0-almalinux-9.4.sif`.
+- `<workspace>/venv/bin/python -c "import pdg"` succeeds (the `geant4-init`
+  skill ran `scripts/ensure_venv.sh`, which installed `pdg` into the
+  workspace-rooted managed venv).
+- `.sif` lands at `<workspace>/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
+  (workspace-rooted; **not** under the plugin install or `~/.geant4_claude`).
 - `AskUserQuestion` for the optional Geant4 source clone fires. Pick
   **Yes**.
 - The tarball downloads (~36 MB compressed) and extracts to
@@ -173,15 +173,16 @@ Pass:
   unchanged sources).
 - The `.sif` is **not** re-pulled. Spot-check the mtime.
 
-## Phase 7 — Cache propagation regression
+## Phase 7 — Workspace-rooted cache regression
 
-This guards against the bug fixed in `37361d9` (CLAUDE_PLUGIN_DATA not
-making it into Bash subshells, causing silent re-pull from
-`$HOME/.geant4_claude`).
+The cache + venv are anchored to the workspace (the wrapper walks up to the
+`.g4c/` marker), not the plugin install, so a workspace is self-contained and
+survives plugin updates. `g4run info` tags the cache `[workspace (<root>/cache)]`.
 
 Pass:
-- Throughout phases 3–6, no `.sif` ever appears in `~/.geant4_claude/`
-  (the legacy path; should not exist or be touched).
+- The `.sif` lives in `<workspace>/cache/sif/`, and the venv in
+  `<workspace>/venv/` — **not** under `~/.claude/plugins/data/.../cache` or the
+  legacy `~/.geant4_claude/`.
 - `runs/<id>/log.txt` files contain no mention of pulling the image
   except on the very first `geant4-init` run.
 

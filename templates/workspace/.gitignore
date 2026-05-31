@@ -10,3 +10,7 @@ __pycache__/
 *_portable.html
 # engine pointer written by the geant4-init skill (per-workspace, local)
 .g4c/
+# workspace-rooted runtime artifacts written by geant4-init/g4run (large, local):
+# the pinned container image and the managed Python venv
+cache/
+venv/

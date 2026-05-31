@@ -74,9 +74,17 @@ This is the reason `.g4c/g4run` is a live-resolving shim, not a frozen symlink.
 
 ## 6. Path hygiene
 
-- [ ] The `.sif` landed at `${GEANT4_CLAUDE_CACHE}/sif/` — i.e. under
-      `~/.cache/geant4_claude/cache` (or `$GEANT4_CLAUDE_CACHE` if overridden),
-      **not** under the version-pinned plugin install dir. This is what lets the
-      cache survive a plugin update. Confirm with `. .g4c/env; .g4c/g4run info`.
+- [ ] The `.sif` landed at `<workspace>/cache/sif/` and the venv at
+      `<workspace>/venv/` — workspace-rooted (the wrapper resolves them from the
+      `.g4c/` marker), **not** under the version-pinned plugin install dir. This
+      is what makes a workspace self-contained and survive a plugin update.
+      Confirm with `. .g4c/env; .g4c/g4run info` — cache line tagged
+      `[workspace (<root>/cache)]`.
+- [ ] `GEANT4_CLAUDE_CACHE` overrides the cache location (point it at a
+      shared/pre-staged `.sif` to skip a per-workspace ~600 MB copy); `info`
+      then tags the cache line `[GEANT4_CLAUDE_CACHE override]`.
+- [ ] The one shared artifact is the plugin-wide Geant4 source tree under
+      `${GEANT4_CLAUDE_DATA}` (`~/.cache/geant4_claude` on Codex) — identical
+      across workspaces, intentionally not per-workspace.
 - [ ] Re-running `geant4-init` is idempotent (existing files skipped without
       `--force`; `.g4c/` and the `wiki/raw/geant4-src` symlink are refreshed).

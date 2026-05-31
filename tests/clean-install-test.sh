@@ -199,7 +199,7 @@ done
 # --- sandbox setup ----------------------------------------------------------
 log "sandbox: ${SANDBOX}"
 rm -rf "${SANDBOX}"
-mkdir -p "${SANDBOX_CLAUDE}" "${WS}" "${PLUGIN_DATA_SANDBOX}/cache/sif"
+mkdir -p "${SANDBOX_CLAUDE}" "${WS}/cache/sif" "${PLUGIN_DATA_SANDBOX}"
 
 # Why HOME= override (not just CLAUDE_CONFIG_DIR=):
 # Claude Code keeps post-first-run state in ~/.claude.json (in $HOME, NOT
@@ -217,9 +217,11 @@ ln -s ~/.claude/.credentials.json "${SANDBOX_CLAUDE}/.credentials.json"
 [ -f ~/.claude/settings.json ] && cp ~/.claude/settings.json "${SANDBOX_CLAUDE}/settings.json"
 cp ~/.claude.json "${SANDBOX}/.claude.json"
 
-# Symlink .sif into sandboxed plugin data dir (saves the pull).
-ln -s "${SIF_SRC}" "${PLUGIN_DATA_SANDBOX}/cache/sif/${SIF_NAME}"
-note "linked .sif: ${SIF_SRC}"
+# Symlink .sif into the WORKSPACE cache (cache is workspace-rooted now; saves
+# the pull). geant4-init writes .g4c/ in ${WS} before its pull, so the wrapper
+# resolves the cache to ${WS}/cache and finds this staged .sif.
+ln -s "${SIF_SRC}" "${WS}/cache/sif/${SIF_NAME}"
+note "linked .sif -> ${WS}/cache/sif: ${SIF_SRC}"
 
 if [ -n "${G4SRC_SRC}" ]; then
   ln -s "${G4SRC_SRC}" "${PLUGIN_DATA_SANDBOX}/geant4-src"
@@ -229,8 +231,8 @@ else
 fi
 
 if [ -n "${VENV_SRC}" ]; then
-  ln -s "${VENV_SRC}" "${PLUGIN_DATA_SANDBOX}/venv"
-  note "linked venv: ${VENV_SRC}"
+  ln -s "${VENV_SRC}" "${WS}/venv"
+  note "linked venv -> ${WS}/venv: ${VENV_SRC}"
 else
   note "venv: no host copy; geant4-init will pip install pdg (~10-30 s)"
 fi
@@ -342,19 +344,19 @@ wait_for "ready" 120 || wait_for "info" 120 || wait_for "✓" 120 || true
 for d in src geometries macros runs analysis; do
   [ -d "${WS}/${d}" ] || fail "workspace ${d}/ missing"
 done
-[ -f "${PLUGIN_DATA_SANDBOX}/cache/sif/${SIF_NAME}" ] || \
-  fail ".sif missing (symlink broken?)"
-note "✓ workspace skeleton + cached .sif present"
+[ -f "${WS}/cache/sif/${SIF_NAME}" ] || \
+  fail ".sif missing from workspace cache (symlink broken?)"
+note "✓ workspace skeleton + workspace-rooted .sif present"
 
 # geant4-init runs scripts/ensure_venv.sh, which is what now seeds the pdg
 # venv (no SessionStart hook). Give pip a moment if it had to install.
 sleep 5
-if [ -d "${PLUGIN_DATA_SANDBOX}/venv/bin" ]; then
-  "${PLUGIN_DATA_SANDBOX}/venv/bin/python" -c "import pdg" 2>/dev/null \
-    && note "✓ pdg installed in sandbox venv" \
+if [ -d "${WS}/venv/bin" ]; then
+  "${WS}/venv/bin/python" -c "import pdg" 2>/dev/null \
+    && note "✓ pdg installed in workspace venv" \
     || fail "venv exists but pdg not importable"
 else
-  fail "geant4-init did not create venv at ${PLUGIN_DATA_SANDBOX}/venv"
+  fail "geant4-init did not create venv at ${WS}/venv"
 fi
 
 # --- phase 4a: geant4-example (NL) -----------------------------------------

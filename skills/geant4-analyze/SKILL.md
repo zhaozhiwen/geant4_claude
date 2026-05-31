@@ -70,16 +70,16 @@ optional reusable scripts dropped in `analysis/`.
      PY="$(command -v python3)"
 
    # (b) plugin's managed venv (seeded by ensure_venv.sh in step 2)
-   elif "${GEANT4_CLAUDE_DATA}/venv/bin/python" \
+   elif "${GEANT4_CLAUDE_VENV}/bin/python" \
         -c "import uproot, numpy, matplotlib" 2>/dev/null; then
-     PY="${GEANT4_CLAUDE_DATA}/venv/bin/python"
+     PY="${GEANT4_CLAUDE_VENV}/bin/python"
 
    # (c) re-provision the venv (idempotent; single source of venv-creation
    #     logic), then re-resolve. Reaches here only if step 2 was skipped
    #     or the venv was removed/broken since.
    else
      . .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh" || true
-     PY="${GEANT4_CLAUDE_DATA}/venv/bin/python"
+     PY="${GEANT4_CLAUDE_VENV}/bin/python"
      if ! "${PY}" -c "import uproot, numpy, matplotlib" 2>/dev/null; then
        echo "analyze: could not provision uproot/numpy/matplotlib in the" \
             "plugin venv (${PY}). Check ensure_venv.sh output and" \
@@ -189,7 +189,7 @@ PY
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `.g4c/` missing | Workspace not initialized. | Run the geant4-init skill first. |
-| `ModuleNotFoundError: uproot` (after step 4's provisioning path) | Network blocked, or the plugin venv is missing/broken. | Inspect `${GEANT4_CLAUDE_DATA}/venv/`; repair with `. .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"`, or reinstall the plugin. Never `pip install --user` (pollutes host site-packages). |
+| `ModuleNotFoundError: uproot` (after step 4's provisioning path) | Network blocked, or the plugin venv is missing/broken. | Inspect `${GEANT4_CLAUDE_VENV}/`; repair with `. .g4c/env; "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"`, or reinstall the plugin. Never `pip install --user` (pollutes host site-packages). |
 | `no .root file in runs/<id>` | Binary didn't produce a ROOT file (or wrote elsewhere). | Inspect `runs/<id>/log.txt`; check the binary's args / `RUN_DIR` handling. |
 | `KeyError: 'Hits'` (custom schema) | The fast-path script was forced on a non-`Hits` file. | Don't pass `--script`; let the skill auto-detect, or pass a script that matches your schema. |
 | Empty histogram | All entries zero, or selected branch is wrong. | Check the schema dump; explicitly pick the branch via a custom script. |

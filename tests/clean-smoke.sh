@@ -106,14 +106,23 @@ if git -C "${PLUGIN_ROOT}" grep -nE "/geant4-claude:" -- skills/ >/dev/null 2>&1
   fail "skills/ contains /geant4-claude: slash-command refs"
 fi
 
-# --- phase 0e: ensure_venv.sh works with no CLAUDE_* env (Codex path) -------
-log "ensure-venv: bootstraps under GEANT4_CLAUDE_DATA without CLAUDE_* env"
+# --- phase 0e: ensure_venv.sh honors GEANT4_CLAUDE_VENV, no CLAUDE_* env -----
+# The venv is workspace-rooted: ensure_venv must build at GEANT4_CLAUDE_VENV
+# (set by .g4c/env), write its snapshot INSIDE the venv, and not touch the
+# shared GEANT4_CLAUDE_DATA dir (which holds only geant4-src).
+log "ensure-venv: builds at GEANT4_CLAUDE_VENV (workspace), no CLAUDE_* env"
 EV_DATA="${SCRATCH}/ev-data"
+EV_VENV="${SCRATCH}/ev-ws/venv"
 if env -u CLAUDE_PLUGIN_ROOT -u CLAUDE_PLUGIN_DATA \
      GEANT4_CLAUDE_ROOT="${PLUGIN_ROOT}" GEANT4_CLAUDE_DATA="${EV_DATA}" \
+     GEANT4_CLAUDE_VENV="${EV_VENV}" \
      bash "${PLUGIN_ROOT}/scripts/ensure_venv.sh" >/dev/null 2>&1; then
-  [ -x "${EV_DATA}/venv/bin/python" ] \
-    || fail "ensure_venv.sh did not create a venv under GEANT4_CLAUDE_DATA"
+  [ -x "${EV_VENV}/bin/python" ] \
+    || fail "ensure_venv.sh did not create the venv at GEANT4_CLAUDE_VENV"
+  [ -f "${EV_VENV}/requirements.snapshot" ] \
+    || fail "ensure_venv.sh did not write the snapshot inside the venv"
+  [ ! -e "${EV_DATA}/venv" ] \
+    || fail "ensure_venv.sh built under GEANT4_CLAUDE_DATA; must honor GEANT4_CLAUDE_VENV"
 else
   log "ensure-venv: SKIPPED venv creation (no uv/python3 venv support here)"
 fi
@@ -122,13 +131,14 @@ fi
 # The idempotency check must gate on the venv python existing, not just the
 # requirements snapshot. If the snapshot survives but the venv is gone, a
 # rebuild must still happen — otherwise analyze/preview/validate hit a dead python.
-if [ -x "${EV_DATA}/venv/bin/python" ]; then
+if [ -x "${EV_VENV}/bin/python" ]; then
   log "ensure-venv: rebuilds when snapshot matches but venv python is gone"
-  rm -rf "${EV_DATA}/venv/bin"   # snapshot (requirements.txt) stays behind
+  rm -rf "${EV_VENV}/bin"   # snapshot (inside the venv) stays behind
   env -u CLAUDE_PLUGIN_ROOT -u CLAUDE_PLUGIN_DATA \
     GEANT4_CLAUDE_ROOT="${PLUGIN_ROOT}" GEANT4_CLAUDE_DATA="${EV_DATA}" \
+    GEANT4_CLAUDE_VENV="${EV_VENV}" \
     bash "${PLUGIN_ROOT}/scripts/ensure_venv.sh" >/dev/null 2>&1 || true
-  [ -x "${EV_DATA}/venv/bin/python" ] \
+  [ -x "${EV_VENV}/bin/python" ] \
     || fail "ensure_venv.sh did not rebuild a venv whose python was removed (stale-snapshot bug)"
 fi
 
@@ -169,6 +179,9 @@ got=$(cd "${G4C_WS}" && env CLAUDE_PLUGIN_ROOT="${PLUGIN_ROOT}" sh -c '. .g4c/en
 [ "${got}" = "${exp_tag}" ] || fail "phase 0h: shim did not resolve via live CLAUDE_PLUGIN_ROOT (got '${got}')"
 got=$(cd "${G4C_WS}" && env -u CLAUDE_PLUGIN_ROOT CODEX_HOME="${SCRATCH}/no-codex" sh -c '. .g4c/env; .g4c/g4run image-tag')
 [ "${got}" = "${exp_tag}" ] || fail "phase 0h: shim recorded-fallback did not resolve (got '${got}')"
+# .g4c/env exports a workspace-rooted venv (walked up to the .g4c/ marker).
+got=$(cd "${G4C_WS}" && env CLAUDE_PLUGIN_ROOT="${PLUGIN_ROOT}" sh -c '. .g4c/env; echo "$GEANT4_CLAUDE_VENV"')
+[ "${got}" = "${G4C_WS}/venv" ] || fail "phase 0h: .g4c/env GEANT4_CLAUDE_VENV != <workspace>/venv (got '${got}')"
 
 # --- phase 1: init equivalent ----------------------------------------------
 log "init: copy workspace skeleton from templates/workspace/"
@@ -320,15 +333,25 @@ g4run pull
 sif_after=$(stat -c%Y -L "${sif}")
 [ "${sif_before}" = "${sif_after}" ] || fail "re-pull modified .sif mtime"
 
-# --- phase 6: cache-resolution loud-fail check ------------------------------
-log "cache: bare g4run (no env) must error, not fall back to \$HOME/.geant4_claude"
-if env -i HOME="${HOME}" PATH="${PATH}" "${PLUGIN_ROOT}/bin/g4run" info >/tmp/g4c_smoke_info.out 2>&1; then
-  fail "g4run info succeeded with no env vars set; should have errored"
-fi
-grep -q "no cache path" /tmp/g4c_smoke_info.out \
-  || fail "wrong error message; expected 'no cache path'. Got:
-$(cat /tmp/g4c_smoke_info.out)"
-rm -f /tmp/g4c_smoke_info.out
+# --- phase 6: workspace-rooted cache resolution (marker walk) ---------------
+# With no GEANT4_CLAUDE_CACHE override, g4run walks up from $PWD to the .g4c/
+# marker and anchors the cache at <root>/cache; with no marker it falls back to
+# $PWD/cache. (No env no longer means "die" — the cache is workspace-rooted.)
+log "cache: bare g4run resolves <workspace-root>/cache via the .g4c/ marker"
+WSR="${SCRATCH}/wsroot"; mkdir -p "${WSR}/.g4c" "${WSR}/proj/deep"
+info_out=$(cd "${WSR}/proj/deep" && env -i HOME="${HOME}" PATH="${PATH}" \
+            "${PLUGIN_ROOT}/bin/g4run" info 2>&1)
+got=$(printf '%s\n' "${info_out}" | awk '/^cache:/{print $2}')
+[ "${got}" = "${WSR}/cache" ] \
+  || fail "cache did not resolve to the .g4c/ marker dir; got '${got}', want '${WSR}/cache'"
+printf '%s\n' "${info_out}" | grep -qF '[workspace (<root>/cache)]' \
+  || fail "cache info not tagged [workspace (<root>/cache)]"
+# No marker up-tree -> $PWD/cache fallback (bare clone), still no error.
+BARE="${SCRATCH}/bare"; mkdir -p "${BARE}"
+got=$(cd "${BARE}" && env -i HOME="${HOME}" PATH="${PATH}" \
+        "${PLUGIN_ROOT}/bin/g4run" info 2>&1 | awk '/^cache:/{print $2}')
+[ "${got}" = "${BARE}/cache" ] \
+  || fail "bare-dir cache fallback should be \$PWD/cache; got '${got}'"
 
 # --- phase 6b: image-tag single-source check -------------------------------
 # CLAUDE.md non-negotiable: the tag lives in bin/g4run only. Static docs that

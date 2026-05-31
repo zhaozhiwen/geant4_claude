@@ -44,7 +44,7 @@ yourself.
 
 The **geant4-analyze** skill resolves a Python with `uproot`/`numpy`/
 `matplotlib` automatically: host Python if it already has them, else the
-plugin-managed venv at `${GEANT4_CLAUDE_DATA}/venv` (seeded once, or
+plugin-managed venv at `${GEANT4_CLAUDE_VENV}` (seeded once, or
 repaired on demand). Never `pip install --user` — it pollutes the host
 site-packages the rest of the plugin deliberately avoids. To ensure /
 repair the venv on demand (env vars come from sourcing `.g4c/env`):
@@ -54,7 +54,7 @@ repair the venv on demand (env vars come from sourcing `.g4c/env`):
 "${GEANT4_CLAUDE_ROOT}/scripts/ensure_venv.sh"
 ```
 
-then run the analysis with `${GEANT4_CLAUDE_DATA}/venv/bin/python`.
+then run the analysis with `${GEANT4_CLAUDE_VENV}/bin/python`.
 
 A separate project venv is a fine alternative if you prefer it isolated
 from the plugin's managed venv:

@@ -17,19 +17,46 @@ PLUGIN_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 log()  { printf '[g4run] %s\n' "$*" >&2; }
 die()  { printf '[g4run] error: %s\n' "$*" >&2; exit 1; }
 
-# Cache resolution: explicit env wins, else CLAUDE_PLUGIN_DATA/cache, else
-# error. There is intentionally no $HOME/.geant4_claude fallback — silent
-# fallback to a non-plugin path leads to phantom re-pulls when the plugin's
-# own .sif already exists at $CLAUDE_PLUGIN_DATA/cache/sif/. If you're
-# invoking g4run outside a Claude Code plugin context, set
-# GEANT4_CLAUDE_CACHE explicitly. Resolution is lazy so `g4run help` works
-# without any env vars set.
+# Cache resolution (two tiers, in order):
+#   1. $GEANT4_CLAUDE_CACHE    explicit override (any platform)
+#   2. <workspace-root>/cache  the workspace the wrapper runs in
+# Tier 2 anchors the .sif to the *workspace* (the dir holding the .g4c/ marker
+# geant4-init wrote — see workspace_root), NOT to the plugin install dir. The
+# plugin install is ephemeral (each CLI version-pins its path), so co-locating
+# the cache there orphaned it on every bump; the workspace is stable across
+# updates, so co-locating the .sif there makes a workspace a self-contained,
+# update-proof unit. With no marker (bare/standalone) workspace_root falls back
+# to $PWD. Tier 1 is the escape hatch — point several workspaces at one
+# shared/pre-staged .sif to avoid a per-workspace ~600 MB copy. ensure_sif
+# migrates a .sif from a legacy (pre-workspace) location before re-pulling.
+# Resolution is lazy so `g4run help` / `image-tag` work with no env or workspace.
 SIF_NAME="g4install_11.4.0-almalinux-9.4.sif"
 
 # Read-only accessors so docs/tests/CI derive the pinned identifiers from
 # this single source of truth instead of hardcoding them.
 image_tag_value() { printf '%s\n' "${IMAGE_TAG}"; }
 sif_name_value()  { printf '%s\n' "${SIF_NAME}"; }
+
+# Workspace root resolution. geant4-init drops the .g4c/ pointer dir in the
+# workspace root; every subcommand walks up from $PWD to find it, so the same
+# cache/venv resolves whether g4run is invoked from the workspace root or a
+# deep subdir.
+WORKSPACE_MARKER=".g4c"
+# Echo the nearest ancestor dir (inclusive of $PWD) containing the .g4c/ marker,
+# or nothing and return 1 if none is found. No filesystem writes.
+find_workspace_root() {
+  local d; d="$(pwd -P)"
+  while [[ "${d}" != "/" ]]; do
+    [[ -d "${d}/${WORKSPACE_MARKER}" ]] && { printf '%s' "${d}"; return 0; }
+    d="$(dirname "${d}")"
+  done
+  [[ -d "/${WORKSPACE_MARKER}" ]] && { printf '/'; return 0; }
+  return 1
+}
+# The workspace root that anchors the cache + venv: the marker dir if found
+# up-tree, else $PWD (keeps a bare clone working before its first geant4-init).
+workspace_root() { find_workspace_root || pwd -P; }
+
 CACHE_DIR=""
 SIF_DIR=""
 SIF_PATH=""
@@ -37,13 +64,21 @@ resolve_cache_dir() {
   [[ -n "${CACHE_DIR}" ]] && return 0
   if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
     CACHE_DIR="${GEANT4_CLAUDE_CACHE}"
-  elif [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]]; then
-    CACHE_DIR="${CLAUDE_PLUGIN_DATA}/cache"
   else
-    die "no cache path: set GEANT4_CLAUDE_CACHE or invoke from a plugin context that exports CLAUDE_PLUGIN_DATA. Slash commands should prefix every g4run call with GEANT4_CLAUDE_CACHE=\"\${CLAUDE_PLUGIN_DATA}/cache\"."
+    CACHE_DIR="$(workspace_root)/cache"
   fi
   SIF_DIR="${CACHE_DIR}/sif"
   SIF_PATH="${SIF_DIR}/${SIF_NAME}"
+}
+
+# Human-readable label for which cache tier resolve_cache_dir picked. Shared by
+# `info` so it reports the rule consistently.
+cache_source_label() {
+  if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
+    echo "GEANT4_CLAUDE_CACHE override"
+  else
+    echo "workspace (<root>/cache)"
+  fi
 }
 
 require_apptainer() {
@@ -55,6 +90,26 @@ ensure_sif() {
   require_apptainer
   if [[ -f "${SIF_PATH}" ]]; then return 0; fi
   mkdir -p "${SIF_DIR}"
+  # Reuse a .sif already pulled to a legacy (pre-workspace-rooted) location
+  # before re-downloading ~1-2 GB. These are NOT resolution tiers (the cache is
+  # workspace-rooted now) — one-time migration sources for users who pulled
+  # under the old plugin-data / XDG layout. Hard-link when on the same
+  # filesystem (no extra space, survives deletion of the source), else copy.
+  local -a legacy=()
+  [[ -n "${GEANT4_CLAUDE_DATA:-}" ]] && legacy+=("${GEANT4_CLAUDE_DATA}/cache/sif/${SIF_NAME}")
+  [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] && legacy+=("${CLAUDE_PLUGIN_DATA}/cache/sif/${SIF_NAME}")
+  legacy+=("${XDG_CACHE_HOME:-${HOME}/.cache}/geant4_claude/cache/sif/${SIF_NAME}")
+  local src
+  for src in "${legacy[@]}"; do
+    [[ "${src}" == "${SIF_PATH}" || ! -f "${src}" ]] && continue
+    if ln "${src}" "${SIF_PATH}" 2>/dev/null; then
+      log "reused existing .sif (hard-linked from ${src})"
+    else
+      log "reusing existing .sif (copying from ${src}; ~1-2 GB, one-time)"
+      cp "${src}" "${SIF_PATH}.part" && mv "${SIF_PATH}.part" "${SIF_PATH}"
+    fi
+    [[ -f "${SIF_PATH}" ]] && return 0
+  done
   log "pulling ${IMAGE_URI} -> ${SIF_PATH}"
   apptainer pull "${SIF_PATH}" "${IMAGE_URI}"
 }
@@ -70,15 +125,9 @@ container_cache_dir() { readlink -f "${CACHE_DIR}"; }
 # --- subcommands -------------------------------------------------------------
 cmd_info() {
   resolve_cache_dir
-  local cache_src
-  if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
-    cache_src="GEANT4_CLAUDE_CACHE override"
-  else
-    cache_src="CLAUDE_PLUGIN_DATA (plugin default)"
-  fi
   echo "image:    ${IMAGE_TAG}"
   echo "sif:      ${SIF_PATH} $([[ -f ${SIF_PATH} ]] && echo '[present]' || echo '[not pulled]')"
-  echo "cache:    ${CACHE_DIR}  [${cache_src}]"
+  echo "cache:    ${CACHE_DIR}  [$(cache_source_label)]"
   echo "plugin:   ${PLUGIN_ROOT}"
   command -v apptainer >/dev/null 2>&1 \
     && echo "apptainer: $(apptainer --version)" \
@@ -380,10 +429,12 @@ EOF
       [[ -f "${py}" ]] || die "missing sketch backend: ${py}"
       local python_bin="python3"
       # Prefer the plugin's managed venv if it exists (scripts/ensure_venv.sh,
-      # called by the skills, installs matplotlib there). Falls back to PATH
-      # python3 otherwise.
-      if [[ -n "${CLAUDE_PLUGIN_DATA:-}" && -x "${CLAUDE_PLUGIN_DATA}/venv/bin/python" ]]; then
-        python_bin="${CLAUDE_PLUGIN_DATA}/venv/bin/python"
+      # called by the skills, installs matplotlib there). The venv is
+      # workspace-rooted: honor an explicit GEANT4_CLAUDE_VENV, else
+      # <workspace-root>/venv. Falls back to PATH python3 otherwise.
+      local venv_dir="${GEANT4_CLAUDE_VENV:-$(workspace_root)/venv}"
+      if [[ -x "${venv_dir}/bin/python" ]]; then
+        python_bin="${venv_dir}/bin/python"
       fi
       "${python_bin}" "${py}" "${gdml}" "${out_real}"
       ;;
@@ -427,8 +478,8 @@ Subcommands:
 
 Image: ${IMAGE_TAG}
 Cache resolution order:
-  1. \$GEANT4_CLAUDE_CACHE              (explicit override; required outside plugin context)
-  2. \$CLAUDE_PLUGIN_DATA/cache         (auto-set when invoked via Claude Code)
+  1. \$GEANT4_CLAUDE_CACHE   (explicit override; share one .sif across workspaces)
+  2. <workspace-root>/cache (the .g4c/ dir geant4-init wrote; default)
 Run \`g4run info\` to see the resolved cache path.
 EOF
 }
