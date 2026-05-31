@@ -63,10 +63,10 @@ will clone it on a fresh machine.
 |------|------|
 | `.claude-plugin/plugin.json` | Claude Code manifest. Version bumped on every release (in lockstep with `.codex-plugin/`). |
 | `.codex-plugin/plugin.json` | Codex manifest (requires an `interface{}` block, strict semver, no `hooks` field — Codex's validator rejects it). Validate with `~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .`. |
-| `.agents/plugins/marketplace.json` | Codex marketplace entry (`codex plugin marketplace add`). `.claude-plugin/marketplace.json` is the Claude counterpart. |
+| `.agents/plugins/marketplace.json` | Codex marketplace entry (`codex plugin marketplace add`). Its local source path is `./plugins/geant4-claude` — a symlink → repo root, because Codex resolves declared plugins under `plugins/<name>/`. `.claude-plugin/marketplace.json` is the Claude counterpart. |
 | `.mcp.json` | Plugin-shipped MCP servers (currently: deepwiki), bundled by both manifests. Add servers here only if they are free, no-auth, and clearly useful for Geant4 work. |
 | `requirements.txt` | Python deps installed by `scripts/ensure_venv.sh`. Currently: `pdg`, `matplotlib`, `numpy` (used by `scripts/preview_gdml.py` and the canned analyze plots). Touch this file to trigger reinstall. Add packages only when something in `skills/`/`scripts/` actually imports them. |
-| `scripts/ensure_venv.sh` | CLI-neutral, idempotent venv bootstrap (uv first, `python3 -m venv` fallback). Called directly by the skills that need Python (`geant4-init` + `geant4-analyze`/`preview`/`validate`) — identically on both CLIs. There is **no** `SessionStart` hook (Codex can't bundle one; dropped on Claude too for one bootstrap path). |
+| `scripts/ensure_venv.sh` | CLI-neutral, idempotent venv bootstrap (uv first, `python3 -m venv` fallback). The fast-exit gates on the venv interpreter existing **and** the requirements snapshot matching, so a half-deleted venv (snapshot survives, python gone) self-heals instead of leaving analyze/preview/validate pointed at a dead python. Called directly by the skills that need Python (`geant4-init` + `geant4-analyze`/`preview`/`validate`) — identically on both CLIs. There is **no** `SessionStart` hook (Codex can't bundle one; dropped on Claude too for one bootstrap path). |
 | `skills/<name>/SKILL.md` | The plugin's entire surface — 8 task skills (`geant4-init/detector/example/preview/build/run/analyze/validate`), the `geant4` orchestrator (front door), and 3 reference skills (`geant4-geometry/physics-list/analysis`). No slash commands. |
 | `AGENTS.md` | **Canonical** agent-instructions file (vendor-neutral; what Codex reads). `CLAUDE.md` is a symlink → `AGENTS.md` so Claude Code reads the same rules. One pair per location (root, `templates/workspace/`, `wiki/`). New instruction files are `AGENTS.md` with a `CLAUDE.md` symlink alongside. |
 | `bin/g4run` | The only allowed bridge to apptainer (and the host-side dispatcher for the sketch preview backend). Subcommands: `pull`, `info`, `shell`, `build <src> <build>`, `exec <executable> [args…]`, `root`, `validate-gdml`, `preview <gdml> [out_dir] [--backend=sketch|raytracer]`, `image-tag`, `sif-name` (echo the pinned tag / `.sif` name — the single-source accessors docs and tests derive from). |
@@ -76,6 +76,7 @@ will clone it on a fresh machine.
 | `templates/preview/` | Tiny Geant4 program ditto — built on first `preview --backend=raytracer` call, cached at `${CACHE_DIR}/bin/preview_gdml`. Headless GDML preview via RayTracer. **Alpha** — rendering hangs in the v11.4 container; see DESIGN.md hardening backlog. The default sketch backend (no container call) lives in `scripts/preview_gdml.py`. |
 | `scripts/preview_gdml.py` | Host-side sketch backend for the `geant4-preview` skill (default). Stdlib XML parse of `<solids>`/`<structure>` + matplotlib projections. Supports box/tube/cone/polycone + full 3D rotations; unknown solids render as bounding boxes with a "!" badge. |
 | `scripts/validators/` | Host-side Python validators driven by the `geant4-validate` skill (`<topic>`). Each is a self-contained `<topic>.py` reading a `runs/<id>/` directory and writing `validate_<topic>.json`. v1: `cherenkov.py` (Frank-Tamm closure). |
+| `tests/lint-skill-frontmatter.py`, `tests/lint-agents-mirror.sh` | Pure lints — run standalone, in `clean-smoke.sh` (phase 0f/0g), and in CI (`.github/workflows/lint.yml`). Guard the strict-YAML frontmatter invariant (a colon-space in an unquoted `description:` silently drops the whole skill on Codex) and the `CLAUDE.md`→`AGENTS.md` symlink invariant. |
 | `docs/DESIGN.md` | Architecture, contracts, MVP boundary. Update whenever a contract changes. |
 
 Naming:
@@ -145,16 +146,21 @@ example main, `scripts/ensure_venv.sh`, or any `skills/*/SKILL.md`.
 
 Exercises `bin/g4run` + the workspace/example templates end-to-end
 against a sandboxed `CLAUDE_PLUGIN_DATA`, plus the pure-bash gates
-(incl. phase 0d's CLI-neutral skills check and phase 0e's `ensure_venv.sh`).
-Doesn't go through Claude Code or Codex, so it doesn't catch
-skill-dispatch / MCP / AskUserQuestion regressions —
+(incl. phase 0d's CLI-neutral skills check; phase 0e/0e2's `ensure_venv.sh`
+bootstrap **and** stale-snapshot self-heal; phase 0f's strict-YAML
+frontmatter lint; phase 0g's `CLAUDE.md`↔`AGENTS.md` mirror; and phase 0h's
+`.g4c/` live-resolution check, which runs `geant4-init`'s actual step-5 recipe
+extracted from the SKILL — no drift). Doesn't go through Claude Code or Codex,
+so it doesn't catch skill-dispatch / MCP / AskUserQuestion regressions —
 those need layer 2 or 3 (the bootstrap itself is covered by phase 0e). Catches
 everything else (wrapper plumbing, build, run, schema-detection,
 idempotency, the no-fallback cache resolution, the tracked-files
 `/home/$USER` leakage scan, the optical fixture's Frank-Tamm closure,
 plus pure-bash gates: exit-capture, recipe↔fixture drift, the
 `g4run-unit` helper tests, and the README/`_config.yml`↔`g4run`
-image-tag sync check).
+image-tag sync check). The two lints (`lint-skill-frontmatter.py`,
+`lint-agents-mirror.sh`) also run standalone and in CI
+(`.github/workflows/lint.yml`).
 
 ```bash
 # Reuse an existing .sif (fast):

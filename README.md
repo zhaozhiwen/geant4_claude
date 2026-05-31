@@ -54,8 +54,9 @@ codex plugin add geant4-claude@geant4-claude
 
 How skills find the engine, CLI-neutrally: the **geant4-init** skill
 scaffolds your workspace and records an engine pointer at `.g4c/` (a
-symlink to `bin/g4run` plus an `env` file), so every other skill locates
-the runtime the same way on either CLI. On both CLIs, geant4-init also
+small shim that resolves the current `bin/g4run` live, plus an `env`
+file), so every other skill locates the runtime the same way on either
+CLI — and a plugin update never strands the workspace. On both CLIs, geant4-init also
 bootstraps the Python venv on first scaffold — the plugin ships no
 session-start hook, so the install is skill-driven and lazy.
 
@@ -150,7 +151,7 @@ simulation. Just describe each step — the named skill triggers:
 > Set up a Geant4 workspace.
   → the geant4-init skill runs
 ✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md, report.html)
-✓ recorded engine pointer .g4c/  (symlink to bin/g4run + env)
+✓ recorded engine pointer .g4c/  (g4run shim + env)
 ✓ pulled image  → ${CLAUDE_PLUGIN_DATA}/cache/sif/g4install_11.4.0-almalinux-9.4.sif
 
 > Drop in the shipped example.
@@ -247,7 +248,7 @@ my-project/
 ├── src/               your main.cc + CMakeLists.txt go here
 ├── geometries/        GDML files (optional; if you load geometry at runtime)
 ├── macros/            Geant4 .mac files
-├── .g4c/              engine pointer (symlink to bin/g4run + env; gitignored)
+├── .g4c/              engine pointer (g4run shim + env; gitignored)
 ├── runs/              one sub-dir per geant4-run (gitignored)
 └── analysis/          uproot scripts
 ```
@@ -317,7 +318,7 @@ For the full architecture, see [docs/DESIGN.md](docs/DESIGN.md).
 | Empty `Hits` tree | No volume has the sensitive aux tag, or gun energy is zero. |
 | Build fails | `g4run shell` and try `cmake -S /…/src -B /tmp/build` manually to see the real cmake error. |
 | `TGeoManager::Import` returns null in container ROOT | The pinned image's ROOT 6.38 is built without `root-geom`. To preview geometry, load the GDML inside Geant4's own viewer via `g4run shell` and a `vis.mac` macro, not via ROOT. |
-| `g4run: command not found` in a plain shell | The plugin doesn't touch your shell `$PATH`. Inside a workspace, the geant4-init skill records `.g4c/g4run` (a symlink to the installed `bin/g4run`); skills resolve it from there. For ad-hoc use, invoke `.g4c/g4run` by path or symlink it to `~/.local/bin/g4run`. |
+| `g4run: command not found` in a plain shell | The plugin doesn't touch your shell `$PATH`. Inside a workspace, the geant4-init skill records `.g4c/g4run` (a shim that resolves the currently-installed `bin/g4run` live); skills resolve it from there. For ad-hoc use, invoke `.g4c/g4run` by path or symlink it to `~/.local/bin/g4run`. |
 | `g4run validate-gdml` passes but the run crashes on the GDML | The validator does an xmllint pass plus a `G4GDMLParser::Read` pass, but the parser does not do schema validation (the schema is hosted on the web and not always reachable in sandboxes), so a typo'd unit name like `unit="milimeter"` can still slip through as a warning. Check `runs/<id>/log.txt` for the underlying Geant4 message. |
 
 ## License

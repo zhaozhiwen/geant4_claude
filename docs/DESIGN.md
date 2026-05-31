@@ -47,7 +47,7 @@ $ claude          # or: codex
 
 > set up a Geant4 workspace                       # → geant4-init skill
 ✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
-✓ wrote .g4c/ engine pointer (g4run symlink + env)
+✓ wrote .g4c/ engine pointer (g4run shim + env)
 ✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at ${GEANT4_CLAUDE_CACHE}/sif)
 
 > design a 1×1×10 cm lead block in an air world,  # → geant4-detector skill
@@ -94,7 +94,7 @@ fresh install but *not* part of the user's real-simulation journey.
   └────┬────┘  └──┬───┘  └────┬─────┘  └──┬───┘ └─┬───┘ │           └────┬───────────┘
        │          │           │            │     │     │                │
        │  every skill sources .g4c/env, then calls "${G4RUN}" …         │ python
-       │  (.g4c/g4run → abs bin/g4run; GEANT4_CLAUDE_CACHE from env)     │ (uproot,
+       │  (.g4c/g4run shim → live bin/g4run; CACHE from env)            │ (uproot,
        │                      │            │     │     │                │  numpy, mpl)
        │           ┌──────────▼────────────▼─────▼─────┴────────────────┴┐
        │           │  bin/g4run  (apptainer exec sif:                    │
@@ -278,17 +278,25 @@ Codex. And since the plugin ships no session-start hook on Claude either, the
 venv bootstrap is skill-driven on both CLIs (see **venv bootstrap** below).
 
 **The solution — a per-workspace pointer, `.g4c/` (gitignored):** the
-`geant4-init` skill resolves the plugin root and data dir *once*
-(CLI-neutrally) and writes them into the workspace:
+`geant4-init` skill resolves the data dir *once*, records how to re-resolve the
+plugin root *live*, and writes both into the workspace:
 
 | `.g4c/` entry | What it is |
 |---------------|------------|
-| `.g4c/g4run` | Symlink to the absolute `bin/g4run` in the plugin checkout. |
-| `.g4c/env` | Exports `GEANT4_CLAUDE_ROOT`, `GEANT4_CLAUDE_DATA`, `GEANT4_CLAUDE_CACHE`. Values come from `CLAUDE_PLUGIN_DATA` on Claude, or `${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude` on Codex. |
+| `.g4c/g4run` | A `/bin/sh` shim that sources `.g4c/env` and execs `${GEANT4_CLAUDE_ROOT}/bin/g4run` — so the wrapper path is resolved live, never frozen. |
+| `.g4c/env` | Exports `GEANT4_CLAUDE_DATA`/`GEANT4_CLAUDE_CACHE` (frozen — under `CLAUDE_PLUGIN_DATA` on Claude or `${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude` on Codex, both stable across updates) and resolves `GEANT4_CLAUDE_ROOT` **live** every time it is sourced. |
 
-How `geant4-init` learns the plugin root with no env var on Codex: Codex hands
-the skill its own directory in context, and the root is its parent's parent
-(`…/skills/geant4-init/` → `…/`). On Claude it's just `${CLAUDE_PLUGIN_ROOT}`.
+**Why the root is resolved live, not frozen.** Each CLI installs every plugin
+version under its own dir, so a path recorded at init would dangle after an
+update. `.g4c/env` therefore re-resolves the root on each source, in order:
+`CLAUDE_PLUGIN_ROOT` (Claude's live env) → the newest install under
+`$CODEX_HOME/plugins/cache/*/geant4-claude/*/` (by mtime — the cache leaf is a
+hash, not a sortable version) → the path recorded at init (bare-clone /
+standalone fallback). On Claude the live env is authoritative; on Codex the glob
+finds the current install with zero re-init. The recorded fallback is how
+`geant4-init` itself learned the root: `${CLAUDE_PLUGIN_ROOT}` on Claude, or —
+on Codex, which hands the skill its own directory in context — its parent's
+parent (`…/skills/geant4-init/` → `…/`).
 
 **The preamble.** Every other skill begins with:
 
@@ -333,7 +341,7 @@ The `geant4-init` skill writes a **generic skeleton**:
 my-project/
 ├── AGENTS.md            # canonical workspace rules (what Codex reads)
 ├── CLAUDE.md            # symlink → AGENTS.md (so Claude Code reads the same rules)
-├── .g4c/                # engine pointer (gitignored): g4run symlink + env (see Dual-CLI engine contract)
+├── .g4c/                # engine pointer (gitignored): g4run shim + env (see Dual-CLI engine contract)
 ├── .gitignore           # excludes .g4c/, runs/, *.root, build/, __pycache__/
 ├── log.md               # chronological work log; Claude appends after each run
 ├── result.md            # per-run findings; Claude updates after a noteworthy analyze
@@ -534,9 +542,10 @@ sessions. There's no reason to add a parallel ROOT-based renderer.
 ### 7. `g4run` discoverability outside an initialized workspace
 
 **Largely addressed by the port.** Inside any initialized workspace,
-`.g4c/g4run` is a stable symlink to `bin/g4run` and `.g4c/env` carries the
-cache path, so ad-hoc debugging is just `. .g4c/env; .g4c/g4run shell`. The
-old "the path only exists inside slash-command execution" problem is gone.
+`.g4c/g4run` is a shim that resolves the current `bin/g4run` live and `.g4c/env`
+carries the cache path, so ad-hoc debugging is just `. .g4c/env; .g4c/g4run
+shell`. The old "the path only exists inside slash-command execution" problem is
+gone, and a plugin update no longer strands the workspace.
 
 **Remaining (cheap):** for use *outside* a workspace, optionally offer at
 install time to symlink `g4run` into `~/.local/bin/` (target: the plugin's

@@ -9,7 +9,7 @@ A bump of the pinned container image tag is at minimum a **minor**
 release. A breaking change to the `Hits` TTree schema or to the
 `runs/<id>/config.json` provenance contract is a **major** release.
 
-## [0.0.7] - 2026-05-29
+## [0.0.7] - 2026-05-31
 
 ### Added
 
@@ -22,9 +22,21 @@ release. A breaking change to the `Hits` TTree schema or to the
 - **`AGENTS.md`** is now the canonical instructions file (vendor-neutral) at the
   repo root, `templates/workspace/`, and `wiki/`; `CLAUDE.md` is a symlink →
   `AGENTS.md` so both Claude Code and Codex read the same instructions.
-- **`.g4c/` workspace engine pointer**, written by the `geant4-init` skill:
-  records the absolute `bin/g4run` and the cache/data dirs so every skill reaches
-  the engine CLI-neutrally (Codex exposes no plugin-root env var).
+- **`.g4c/` workspace engine pointer**, written by the `geant4-init` skill, so
+  every skill reaches the engine CLI-neutrally (Codex exposes no plugin-root env
+  var). `.g4c/g4run` is a shim and `.g4c/env` resolves the plugin root **live**
+  on each use — `$CLAUDE_PLUGIN_ROOT` → newest Codex install (by mtime) → the
+  path recorded at init — so a plugin version bump (each CLI installs versions
+  under their own dir) never strands an initialized workspace. Cache/data dirs
+  stay under `~/.cache` (or the plugin data dir) and are frozen.
+- **Strict-YAML + symlink lints** (`tests/lint-skill-frontmatter.py`,
+  `tests/lint-agents-mirror.sh`), run in `clean-smoke.sh` (phase 0f/0g) and a new
+  `.github/workflows/lint.yml`. The frontmatter lint reproduces Codex's strict
+  parser, where a colon-space in an unquoted `description:` silently drops the
+  whole skill.
+- **`tests/CODEX-CHECKLIST.md`** — the manual Codex-CLI verification flow
+  (install → init → detector/example → build → run → analyze), including a
+  plugin-update-survival check for the live `.g4c/` resolution.
 
 ### Changed (breaking)
 
@@ -43,8 +55,16 @@ release. A breaking change to the `Hits` TTree schema or to the
 ### Internal
 
 - Invariant enforced by `tests/clean-smoke.sh` phase 0d: no `skills/*` file may
-  reference `CLAUDE_*`/`CODEX_*` env or `/geant4-claude:` names. Added phase 0e
-  exercising `ensure_venv.sh` with no `CLAUDE_*` env (the Codex path).
+  reference `CLAUDE_*`/`CODEX_*` env or `/geant4-claude:` names. Phase 0e/0e2
+  exercise `ensure_venv.sh` with no `CLAUDE_*` env (the Codex path) and its
+  stale-snapshot self-heal; phase 0f/0g run the two lints; phase 0h runs
+  `geant4-init`'s actual `.g4c/` recipe and asserts live resolution + the
+  recorded fallback.
+- `ensure_venv.sh` fast-exit now gates on the venv interpreter existing, not just
+  the requirements snapshot, so a half-deleted venv self-heals instead of leaving
+  a dead python on the analyze/preview/validate path.
+- Codex local-marketplace source points at `./plugins/geant4-claude` (a symlink →
+  repo root); Codex resolves declared plugins under `plugins/<name>/`.
 
 ## [0.0.6] - 2026-05-18
 

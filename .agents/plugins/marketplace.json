@@ -8,7 +8,7 @@
       "name": "geant4-claude",
       "source": {
         "source": "local",
-        "path": "."
+        "path": "./plugins/geant4-claude"
       },
       "policy": {
         "installation": "AVAILABLE",

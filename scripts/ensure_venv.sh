@@ -25,8 +25,11 @@ REQ="$ROOT/requirements.txt"
 STORED="$DATA/requirements.txt"
 VENV="$DATA/venv"
 
-# Idempotency check — exit fast if already in sync.
-if diff -q "$REQ" "$STORED" >/dev/null 2>&1; then
+# Idempotency check — exit fast only when the venv actually works AND
+# requirements are unchanged. Gating on the interpreter (not just the snapshot)
+# keeps this self-healing if the venv was partially deleted or its python moved:
+# a stale snapshot alone must never short-circuit the rebuild.
+if [ -x "$VENV/bin/python" ] && diff -q "$REQ" "$STORED" >/dev/null 2>&1; then
     exit 0
 fi
 

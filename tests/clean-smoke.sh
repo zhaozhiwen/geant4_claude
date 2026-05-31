@@ -118,6 +118,58 @@ else
   log "ensure-venv: SKIPPED venv creation (no uv/python3 venv support here)"
 fi
 
+# --- phase 0e2: ensure_venv self-heals a missing interpreter (stale snapshot) -
+# The idempotency check must gate on the venv python existing, not just the
+# requirements snapshot. If the snapshot survives but the venv is gone, a
+# rebuild must still happen — otherwise analyze/preview/validate hit a dead python.
+if [ -x "${EV_DATA}/venv/bin/python" ]; then
+  log "ensure-venv: rebuilds when snapshot matches but venv python is gone"
+  rm -rf "${EV_DATA}/venv/bin"   # snapshot (requirements.txt) stays behind
+  env -u CLAUDE_PLUGIN_ROOT -u CLAUDE_PLUGIN_DATA \
+    GEANT4_CLAUDE_ROOT="${PLUGIN_ROOT}" GEANT4_CLAUDE_DATA="${EV_DATA}" \
+    bash "${PLUGIN_ROOT}/scripts/ensure_venv.sh" >/dev/null 2>&1 || true
+  [ -x "${EV_DATA}/venv/bin/python" ] \
+    || fail "ensure_venv.sh did not rebuild a venv whose python was removed (stale-snapshot bug)"
+fi
+
+# --- phase 0f: strict-YAML frontmatter lint (Codex silent-load guard) --------
+# Codex parses SKILL.md frontmatter with a strict YAML parser; a colon-space in
+# an unquoted description silently drops the whole skill. Guard every skill.
+log "frontmatter: every SKILL.md parses under strict YAML"
+fm_rc=0; python3 "${PLUGIN_ROOT}/tests/lint-skill-frontmatter.py" >/dev/null 2>&1 || fm_rc=$?
+case "${fm_rc}" in
+  0) ;;
+  2) log "frontmatter: SKIPPED (PyYAML not installed)";;
+  *) python3 "${PLUGIN_ROOT}/tests/lint-skill-frontmatter.py" || true
+     fail "a SKILL.md frontmatter block is not strict-YAML clean (breaks Codex skill load)";;
+esac
+
+# --- phase 0g: CLAUDE.md ↔ AGENTS.md single-source invariant -----------------
+log "agents-mirror: every CLAUDE.md is a symlink → its canonical AGENTS.md"
+bash "${PLUGIN_ROOT}/tests/lint-agents-mirror.sh" >/dev/null 2>&1 \
+  || { bash "${PLUGIN_ROOT}/tests/lint-agents-mirror.sh" || true
+       fail "CLAUDE.md/AGENTS.md mirror invariant broken"; }
+
+# --- phase 0h: .g4c/ engine pointer resolves bin/g4run live (Design X) -------
+# Run geant4-init's actual step-5 recipe (extracted from SKILL.md, so no drift)
+# and assert the shim resolves the wrapper via the live env AND via the recorded
+# fallback — a plugin version bump must never strand an initialized workspace.
+log "g4c-resolve: .g4c shim resolves the wrapper live + via recorded fallback"
+g4c_recipe="$(awk '
+  /^[[:space:]]*```bash/ {buf=""; inblk=1; next}
+  /^[[:space:]]*```/ && inblk {if (buf ~ /cat > \.g4c\/env/) {printf "%s", buf; exit} inblk=0; next}
+  inblk {buf = buf $0 "\n"}
+' "${PLUGIN_ROOT}/skills/geant4-init/SKILL.md" | sed 's/^   //')"
+[ -n "${g4c_recipe}" ] || fail "phase 0h: could not extract the .g4c/ recipe from geant4-init/SKILL.md"
+G4C_WS="${SCRATCH}/g4c-ws"; mkdir -p "${G4C_WS}"
+( cd "${G4C_WS}" && eval "${g4c_recipe}" ) || fail "phase 0h: the .g4c/ recipe failed to run"
+[ -x "${G4C_WS}/.g4c/g4run" ] || fail "phase 0h: .g4c/g4run shim not created/executable"
+exp_tag="$("${PLUGIN_ROOT}/bin/g4run" image-tag)"
+got=$(cd "${G4C_WS}" && env CLAUDE_PLUGIN_ROOT="${PLUGIN_ROOT}" sh -c '. .g4c/env; .g4c/g4run image-tag')
+[ "${got}" = "${exp_tag}" ] || fail "phase 0h: shim did not resolve via live CLAUDE_PLUGIN_ROOT (got '${got}')"
+got=$(cd "${G4C_WS}" && env -u CLAUDE_PLUGIN_ROOT CODEX_HOME="${SCRATCH}/no-codex" sh -c '. .g4c/env; .g4c/g4run image-tag')
+[ "${got}" = "${exp_tag}" ] || fail "phase 0h: shim recorded-fallback did not resolve (got '${got}')"
+
 # --- phase 1: init equivalent ----------------------------------------------
 log "init: copy workspace skeleton from templates/workspace/"
 WS="${SCRATCH}/ws"
