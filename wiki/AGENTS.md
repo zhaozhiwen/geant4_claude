@@ -52,7 +52,7 @@ The wiki is set up as an Obsidian vault rooted at `wiki/`. Internal links use Ob
 | Any wiki page (same dir, other dir, other domain) | `[[scoring-styles]]` or `[[scoring-styles\|custom display text]]` |
 | Section anchor inside a wiki page | `[[scoring-styles#Decision guide]]` |
 | Frontmatter `related:` (renders as Obsidian property links) | `related: ["[[init-quartet]]", "[[scoring-styles]]"]` |
-| **Outside the vault** — `docs/DESIGN.md`, `wiki/raw/geant4-src/`, external URLs | Standard markdown: `[text](../docs/DESIGN.md)`, `[geant4 source](../../../raw/geant4-src/)`, `[Geant4 site](https://geant4.web.cern.ch/)` |
+| **Outside the vault** — `docs/DESIGN.md`, external URLs | Standard markdown: `[text](../docs/DESIGN.md)`, `[Geant4 source](https://github.com/Geant4/geant4/tree/v11.4.0)`, `[Geant4 site](https://geant4.web.cern.ch/)` |
 
 Every page must have at least one inbound link from `index.md` or another page. Orphans are a lint error.
 
@@ -63,7 +63,7 @@ Every page must have at least one inbound link from `index.md` or another page. 
 - Do not write tutorials. Those belong in skills.
 - Do not write stubs with no body.
 - Do not edit past entries in `log.md`.
-- Do not ingest deepwiki content as wiki pages. If `mcp__deepwiki__ask_question` / `read_wiki_structure` / `read_wiki_contents` are available, use them as orientation only — every claim must be verified against `raw/geant4-src/` before it lands in a synthesis page, and synthesis pages cite the `.cc` file, never deepwiki.
+- Do not ingest deepwiki content as wiki pages. If `mcp__deepwiki__ask_question` / `read_wiki_structure` / `read_wiki_contents` are available, use them as orientation only — every claim must be verified against the [Geant4 source on GitHub](https://github.com/Geant4/geant4/tree/v11.4.0) (v11.4.0, the pinned container version) before it lands in a synthesis page, and synthesis pages cite the `.cc` file (GitHub permalink), never deepwiki.
 
 ## Relation to other repo files
 

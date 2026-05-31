@@ -87,4 +87,4 @@ This is the reason `.g4c/g4run` is a live-resolving shim, not a frozen symlink.
       `${GEANT4_CLAUDE_DATA}` (`~/.cache/geant4_claude` on Codex) — identical
       across workspaces, intentionally not per-workspace.
 - [ ] Re-running `geant4-init` is idempotent (existing files skipped without
-      `--force`; `.g4c/` and the `wiki/raw/geant4-src` symlink are refreshed).
+      `--force`; `.g4c/` is refreshed).

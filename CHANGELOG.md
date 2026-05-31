@@ -59,6 +59,12 @@ release. A breaking change to the `Hits` TTree schema or to the
   skills calling `ensure_venv.sh` on first Python use — one identical path on both
   CLIs. Claude users see a one-time ~30 s install on first `geant4-init`/analyze
   instead of at session start.
+- **Dropped the optional Geant4 source-clone step from `geant4-init`** (and the
+  `wiki/raw/geant4-src` tree). The wiki now cites Geant4 source against the
+  upstream GitHub repo at the pinned tag
+  ([v11.4.0](https://github.com/Geant4/geant4/tree/v11.4.0)) — zero-setup, always
+  matches the container — so `geant4-init` no longer prompts to download a
+  ~200 MB tarball.
 
 ### Internal
 

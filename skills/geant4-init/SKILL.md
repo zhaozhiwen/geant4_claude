@@ -63,7 +63,7 @@ Optional: `--force` (overwrite existing workspace files).
    DATA="${GEANT4_CLAUDE_DATA:-${CLAUDE_PLUGIN_DATA:-${XDG_CACHE_HOME:-$HOME/.cache}/geant4_claude}}"
    mkdir -p .g4c "$DATA"
    # .g4c/env — sourced by every skill (and by the shim below).
-   #  - GEANT4_CLAUDE_DATA: shared dir for the plugin-wide geant4-src (frozen).
+   #  - GEANT4_CLAUDE_DATA: frozen shared data dir (standalone venv fallback base).
    #  - GEANT4_CLAUDE_ROOT: plugin root, resolved live — Claude's live env ->
    #    newest Codex install (by mtime; the cache leaf is a hash, not a sortable
    #    version) -> the path recorded here at init (standalone fallback).
@@ -104,7 +104,7 @@ Optional: `--force` (overwrite existing workspace files).
    ```bash
    . .g4c/env
    echo "[g4c] plugin root : ${GEANT4_CLAUDE_ROOT}"
-   echo "[g4c] shared data : ${GEANT4_CLAUDE_DATA}   (geant4-src)"
+   echo "[g4c] shared data : ${GEANT4_CLAUDE_DATA}   (venv fallback)"
    echo "[g4c] venv        : ${GEANT4_CLAUDE_VENV}"
    echo "[g4c] image cache : ${PWD}/cache/sif   (workspace-rooted)"
    ```
@@ -123,62 +123,7 @@ Optional: `--force` (overwrite existing workspace files).
    First-run downloads ~1–2 GB into the workspace cache (`<workspace>/cache/sif/`,
    resolved by the wrapper from the `.g4c/` marker). Reruns no-op.
 
-8. **Offer the Geant4 source checkout (one-time, plugin-wide).** The wiki's
-   `sources/geant4-code/synthesis/` pages cite specific `.cc:line` ranges, only
-   verifiable if the Geant4 source tree is present. Canonical location is
-   `${GEANT4_CLAUDE_DATA}/geant4-src/` (survives plugin version bumps); a symlink
-   at `${PLUGIN_ROOT}/wiki/raw/geant4-src` points at it.
-
-   Migrate any pre-relocation tree and (re)create the symlink:
-   ```bash
-   . .g4c/env
-   GEANT4_SRC="${GEANT4_CLAUDE_DATA}/geant4-src"
-   LEGACY_SRC="${GEANT4_CLAUDE_ROOT}/wiki/raw/geant4-src"
-   if [ -d "${LEGACY_SRC}" ] && [ ! -L "${LEGACY_SRC}" ]; then
-     if [ -e "${GEANT4_SRC}" ]; then
-       echo "[g4c] note: both ${LEGACY_SRC} and ${GEANT4_SRC} exist; skipping auto-migration."
-     else
-       mkdir -p "$(dirname "${GEANT4_SRC}")"; mv "${LEGACY_SRC}" "${GEANT4_SRC}"
-       echo "[g4c] migrated geant4-src -> ${GEANT4_SRC}"
-     fi
-   fi
-   if [ -d "${GEANT4_SRC}" ]; then
-     mkdir -p "$(dirname "${LEGACY_SRC}")"
-     if [ -L "${LEGACY_SRC}" ] || [ ! -e "${LEGACY_SRC}" ]; then
-       ln -sfn "${GEANT4_SRC}" "${LEGACY_SRC}"
-     elif [ -d "${LEGACY_SRC}" ]; then
-       echo "[g4c] warning: ${LEGACY_SRC} is a real directory; refusing to overwrite."
-     fi
-   fi
-   test -d "${GEANT4_SRC}/source" && echo "[g4c] geant4-src already present at ${GEANT4_SRC}"
-   ```
-
-   If missing, derive the matching tag from the pinned image and ask the user:
-   ```bash
-   . .g4c/env
-   G4_VERSION=$(sed -n 's/^IMAGE_TAG=.*g4install:\([0-9.]*\)-.*/\1/p' "${GEANT4_CLAUDE_ROOT}/bin/g4run")
-   TARBALL_URL="https://github.com/Geant4/geant4/archive/refs/tags/v${G4_VERSION}.tar.gz"
-   echo "[g4c] would download Geant4 v${G4_VERSION} source (~36 MB compressed, ~200 MB extracted) into ${GEANT4_CLAUDE_DATA}/geant4-src"
-   ```
-   Then use AskUserQuestion (Claude) or ask in prose (Codex):
-   - **Yes, fetch tarball** — recommended; ~36 MB download, ~200 MB on disk; no git history.
-   - **Skip for now** — wiki synthesis still readable, but `.cc:line` citations can't be cross-checked locally.
-
-   On **Yes**, fetch the matching tag, extract, and (re)create the symlink:
-   ```bash
-   . .g4c/env
-   GEANT4_SRC="${GEANT4_CLAUDE_DATA}/geant4-src"; LEGACY_SRC="${GEANT4_CLAUDE_ROOT}/wiki/raw/geant4-src"
-   mkdir -p "${GEANT4_SRC}" "$(dirname "${LEGACY_SRC}")"
-   TMPFILE=$(mktemp -t geant4-src.XXXXXX.tar.gz); trap 'rm -f "${TMPFILE}"' EXIT
-   if command -v curl >/dev/null 2>&1; then curl -fL --progress-bar -o "${TMPFILE}" "${TARBALL_URL}"
-   elif command -v wget >/dev/null 2>&1; then wget -O "${TMPFILE}" "${TARBALL_URL}"
-   else echo "[g4c] neither curl nor wget found"; rmdir "${GEANT4_SRC}" 2>/dev/null || true; exit 1; fi
-   tar -xzf "${TMPFILE}" -C "${GEANT4_SRC}" --strip-components=1
-   ln -sfn "${GEANT4_SRC}" "${LEGACY_SRC}"
-   ```
-   On **Skip**, continue; re-running this skill later is idempotent.
-
-9. **Report status:**
+8. **Report status:**
    ```bash
    . .g4c/env; .g4c/g4run info
    ```
@@ -201,8 +146,6 @@ Optional: `--force` (overwrite existing workspace files).
 - A cached `.sif` at `<workspace>/cache/sif/` (workspace-rooted; override with
   `GEANT4_CLAUDE_CACHE` to share one across workspaces).
 - A workspace venv at `<workspace>/venv/` (`GEANT4_CLAUDE_VENV`).
-- (Optional, on consent) Geant4 source tree at `${GEANT4_CLAUDE_DATA}/geant4-src/`
-  with the `wiki/raw/geant4-src` symlink.
 
 ## Failure modes
 
@@ -212,11 +155,10 @@ Optional: `--force` (overwrite existing workspace files).
 | `cp: cannot stat '…/templates/…'` | Plugin not properly installed, or `PLUGIN_ROOT` wrong. | Re-check step 1's `PLUGIN_ROOT`; re-install the plugin. |
 | `apptainer pull` auth/network error | Offline or registry unreachable. | Retry with network; or point `GEANT4_CLAUDE_CACHE` at a dir that already has the `.sif`. |
 | Existing files refuse to be touched | Workspace already initialized. | Re-run with `--force` (after confirming with the user). |
-| Geant4 source download 404/network | Offline, GitHub unreachable, or version not yet tagged. | Skip; re-run later. |
 
 ## Notes
 
 - Idempotent: re-running in an empty dir pulls once and copies once; re-running
   in a populated dir without `--force` is a no-op (but it always refreshes
-  `.g4c/` and the `wiki/raw/geant4-src` symlink, which is cheap and correct).
+  `.g4c/`, which is cheap and correct).
 - The image tag is pinned in `bin/g4run` and only there.

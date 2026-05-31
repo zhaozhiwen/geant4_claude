@@ -4,9 +4,8 @@
 # Drives the same flow as tests/CLEAN-INSTALL-CHECKLIST.md, but
 # automated: spawns a sandboxed Claude Code in a tmux session, types
 # natural-language requests, and verifies post-conditions with Bash
-# assertions. Symlinks the .sif and (if present) the Geant4 source tree
-# from the operator's real plugin data dir into the sandbox so we don't
-# re-download ~600 MB.
+# assertions. Symlinks the .sif (and, if present, the venv) from the
+# operator's host into the workspace so we don't re-download ~600 MB.
 #
 # NOTE ON TRIGGERING: steps are no longer slash commands. Each step is
 # triggered by a natural-language request that should auto-fire the
@@ -81,8 +80,7 @@
 #   for inspection).
 #
 # Requires: tmux, claude (logged in), apptainer, an existing .sif on this
-# host. Optional: an existing geant4-src tree (saves a 36 MB tarball
-# download).
+# host. Optional: a populated venv (saves the pdg pip install).
 
 set -euo pipefail
 
@@ -180,14 +178,6 @@ for cand in \
 done
 [ -n "$SIF_SRC" ] || fail "no ${SIF_NAME} found on host. Set up a Geant4 workspace once in real ~/.claude (which seeds it), then re-run this script."
 
-# Optional: locate a real geant4-src to symlink (avoid 36 MB tarball)
-G4SRC_SRC=""
-for cand in \
-  "${HOME}/.claude/plugins/data/${PLUGIN_ID}/geant4-src" \
-  ; do
-  [ -d "$cand/source" ] && { G4SRC_SRC="$cand"; break; }
-done
-
 # Optional: locate a populated venv to symlink (avoid pdg pip install)
 VENV_SRC=""
 for cand in \
@@ -222,13 +212,6 @@ cp ~/.claude.json "${SANDBOX}/.claude.json"
 # resolves the cache to ${WS}/cache and finds this staged .sif.
 ln -s "${SIF_SRC}" "${WS}/cache/sif/${SIF_NAME}"
 note "linked .sif -> ${WS}/cache/sif: ${SIF_SRC}"
-
-if [ -n "${G4SRC_SRC}" ]; then
-  ln -s "${G4SRC_SRC}" "${PLUGIN_DATA_SANDBOX}/geant4-src"
-  note "linked geant4-src: ${G4SRC_SRC}"
-else
-  note "geant4-src: no host copy; tarball will download (~36 MB) during init"
-fi
 
 if [ -n "${VENV_SRC}" ]; then
   ln -s "${VENV_SRC}" "${WS}/venv"
@@ -327,14 +310,6 @@ launch_claude
 # --- phase 3: geant4-init (NL) ---------------------------------------------
 log "phase 3: geant4-init via NL (workspace skeleton + image pull)"
 send "Set up a Geant4 workspace in the current directory."
-
-# AskUserQuestion for source clone may fire. With our symlink, it detects
-# the existing tree and skips. If it doesn't (no host copy), pick "Yes".
-sleep 30
-if tmux capture-pane -t "${SESSION}" -p | grep -qE "Clone|Download.*Geant4 v"; then
-  note "AskUserQuestion fired; selecting 'Yes' (option 1)"
-  key "Enter"  # default is option 1 (Yes)
-fi
 
 wait_for "ready" 120 || wait_for "info" 120 || wait_for "✓" 120 || true
 

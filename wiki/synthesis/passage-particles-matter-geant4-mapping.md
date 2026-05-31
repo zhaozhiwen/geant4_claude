@@ -9,7 +9,7 @@ related: ["[[passage-particles-matter]]", "[[passage-particles-matter-summary]]"
 
 Maps each section of [[passage-particles-matter]] (PDG Ch. 34, "Passage of Particles Through Matter") to the Geant4 classes that implement the corresponding physics. This is wiki-specific synthesis — not part of the PDG source — and lives outside `sources/` because it bridges the `physics` and `geant4-code` domains.
 
-The PDG section / equation references point into the full-content rendering; the Geant4 class names are search-anchors for the v11.4 source tree at `wiki/raw/geant4-src/`.
+The PDG section / equation references point into the full-content rendering; the Geant4 class names are search-anchors for the [Geant4 v11.4.0 source on GitHub](https://github.com/Geant4/geant4/tree/v11.4.0).
 
 ## Mapping
 

@@ -57,5 +57,6 @@ related: [other-slug, another-slug]
 
 ## External Geant4 knowledge sources
 
-- **[deepwiki.com/Geant4/geant4](https://deepwiki.com/Geant4/geant4)** — AI-generated docs over the Geant4 repo. Useful as an architectural sitemap; **not** source-verified, so treat answers as hypotheses to verify against `raw/geant4-src/` before citing in a synthesis page. Setup details (the MCP `.mcp.json` shipped by the plugin, tools exposed) are in [`docs/DESIGN.md`](../docs/DESIGN.md).
+- **[github.com/Geant4/geant4 — v11.4.0](https://github.com/Geant4/geant4/tree/v11.4.0)** — the actual Geant4 source at the pinned container version (`bin/g4run`'s image tag). Synthesis pages cite `.cc` files against this tree; browse or permalink specific lines directly on GitHub. There is no local clone — cite against the tagged tree.
+- **[deepwiki.com/Geant4/geant4](https://deepwiki.com/Geant4/geant4)** — AI-generated docs over the Geant4 repo. Useful as an architectural sitemap; **not** source-verified, so treat answers as hypotheses to verify against the [Geant4 source above](https://github.com/Geant4/geant4/tree/v11.4.0) before citing in a synthesis page. Setup details (the MCP `.mcp.json` shipped by the plugin, tools exposed) are in [`docs/DESIGN.md`](../docs/DESIGN.md).
 - **[pdg.lbl.gov/2025/reviews/](https://pdg.lbl.gov/2025/reviews/)** — Review of Particle Physics chapters (PDF). The Geant4-relevant ones are ingested under [`sources/physics/`](sources/physics/) when the chapter is needed.

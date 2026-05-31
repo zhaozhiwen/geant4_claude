@@ -99,13 +99,8 @@ Pass:
   workspace-rooted managed venv).
 - `.sif` lands at `<workspace>/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
   (workspace-rooted; **not** under the plugin install or `~/.geant4_claude`).
-- `AskUserQuestion` for the optional Geant4 source clone fires. Pick
-  **Yes**.
-- The tarball downloads (~36 MB compressed) and extracts to
-  `~/.claude/plugins/data/geant4-claude-geant4-claude/geant4-src/`.
-- A symlink at
-  `~/.claude/plugins/cache/geant4-claude/geant4-claude/<version>/wiki/raw/geant4-src`
-  resolves to the canonical tree.
+- No Geant4-source prompt fires (the source-clone step was removed; the wiki
+  links to the Geant4 source on GitHub instead).
 
 ## Phase 4 — Example flow
 

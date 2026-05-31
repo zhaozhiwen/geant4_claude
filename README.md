@@ -103,7 +103,7 @@ If you'd rather opt out: remove `.mcp.json` and/or `requirements.txt` from your 
 
 On both CLIs the venv is bootstrapped by the **geant4-init** skill the first time you scaffold a workspace (it's idempotent), and re-checked by analyze/preview/validate on first use.
 
-The first time you run the **geant4-init** skill it will additionally **ask once** whether to download the Geant4 source tarball (matching the pinned container's version, ~36 MB compressed / ~200 MB extracted) from GitHub releases into `${CLAUDE_PLUGIN_DATA}/geant4-src/`, with a symlink at `<plugin>/wiki/raw/geant4-src` so wiki page references keep working. The data-dir location means the tree survives plugin version bumps. Optional — say *Skip* and the skills still work. Saying *Yes* is what lets the assistant verify the wiki's `.cc:line` citations against actual Geant4 code when you ask Geant4-mechanics questions. Re-run the geant4-init skill later to be asked again.
+The plugin's wiki cites Geant4 source against the upstream GitHub repo at the pinned container version ([github.com/Geant4/geant4/tree/v11.4.0](https://github.com/Geant4/geant4/tree/v11.4.0)) — no local source tree is downloaded, so `geant4-init` has no source-clone step.
 
 ## Quickstart — describe the task, the skill runs
 

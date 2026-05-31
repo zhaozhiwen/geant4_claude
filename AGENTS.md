@@ -184,8 +184,8 @@ Spawns a sandboxed Claude Code in tmux (HOME-overridden so the real
 `/plugin install` → exit/relaunch (to load the installed plugin) →
 `geant4-init` (which seeds the venv via `ensure_venv.sh`) → `…example` → `…build` → `…run` →
 `…analyze`, and verifies on-disk post-conditions at each gate.
-Symlinks the host's `.sif` and (if present) `geant4-src` and `venv`
-into the sandbox to skip downloads.
+Symlinks the host's `.sif` and (if present) `venv` into the
+workspace to skip downloads.
 
 ```bash
 tests/clean-install-test.sh

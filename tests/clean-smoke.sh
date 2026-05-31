@@ -109,7 +109,7 @@ fi
 # --- phase 0e: ensure_venv.sh honors GEANT4_CLAUDE_VENV, no CLAUDE_* env -----
 # The venv is workspace-rooted: ensure_venv must build at GEANT4_CLAUDE_VENV
 # (set by .g4c/env), write its snapshot INSIDE the venv, and not touch the
-# shared GEANT4_CLAUDE_DATA dir (which holds only geant4-src).
+# shared GEANT4_CLAUDE_DATA dir (now just the standalone venv fallback base).
 log "ensure-venv: builds at GEANT4_CLAUDE_VENV (workspace), no CLAUDE_* env"
 EV_DATA="${SCRATCH}/ev-data"
 EV_VENV="${SCRATCH}/ev-ws/venv"
@@ -368,8 +368,8 @@ grep -qF "${want_tag}" "${PLUGIN_ROOT}/docs/_config.yml" \
 # Hard-block: the actual user's home path slipping into committed files. Scan
 # git-TRACKED files only — an untracked local scratch file (e.g. a maintainer's
 # BUILD_LOG.md) is not a leak, won't exist on a fresh clone, and must not fail
-# CI. .git/ and gitignored content (wiki/raw/geant4-src/) are excluded for
-# free by ls-files. JLab hostnames / shared-FS paths are softer — they
+# CI. .git/ and gitignored content are excluded for free by ls-files. JLab
+# hostnames / shared-FS paths are softer — they
 # sometimes legitimately appear in CHANGELOG/CLAUDE.md as bug-fix narrative;
 # that's pre-publish manual review territory, not a unit test.
 log "leakage: scan tracked files for /home/${USER}"

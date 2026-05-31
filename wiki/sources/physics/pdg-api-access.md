@@ -23,7 +23,7 @@ The [Particle Data Group](https://pdg.lbl.gov/) "Review of Particle Physics" is 
 |--------|--------------------|-------------|
 | **Python client** *(default)* | `pip install pdg` — v0.2.2 ships the 2025 edition with a bundled SQLite snapshot. | **Default for everything.** Offline, no rate limit, ergonomic API; accepts names / MC IDs / PDG identifiers. |
 | REST API *(backup)* | `https://pdgapi.lbl.gov/` (JSON) | When you need values newer than the installed `pdg` package, can't install Python deps, or want to verify a Python result against the live DB. **Rate limit: < 2 req/s** (5-min IP block on violation). |
-| Bulk SQLite | `pdgall-2025-v0.2.2.sqlite` from <https://pdg.lbl.gov/2025/api/> | Heavy joins across particles, sharing a snapshot, or writing straight SQL. Drop in `wiki/raw/` (gitignored, like `geant4-src/`) when needed. |
+| Bulk SQLite | `pdgall-2025-v0.2.2.sqlite` from <https://pdg.lbl.gov/2025/api/> | Heavy joins across particles, sharing a snapshot, or writing straight SQL. Drop in `wiki/raw/` (gitignored) when needed. |
 
 ## Particle identifiers — three conventions
 
@@ -124,7 +124,7 @@ Always record the **edition year** (e.g. "PDG 2025") next to the cited value —
 
 ## When NOT to ingest
 
-Same rule as `raw/geant4-src/` and the deepwiki MCP: **do not bulk-mirror PDG content into wiki pages**. Synthesis pages cite PDG with the citation string + edition; the data lives at PDG, not in the wiki repo. The bulk SQLite goes in `wiki/raw/` (gitignored) only when an active piece of work needs it.
+Same rule as the deepwiki MCP: **do not bulk-mirror PDG content into wiki pages**. Synthesis pages cite PDG with the citation string + edition; the data lives at PDG, not in the wiki repo. The bulk SQLite goes in `wiki/raw/` (gitignored) only when an active piece of work needs it.
 
 ## Gotchas
 
