@@ -190,6 +190,20 @@ got=$(cd "${G4C_WS}/task/deep" && env CLAUDE_PLUGIN_ROOT="${PLUGIN_ROOT}" sh -c 
   [ -f "$G4C/.g4c/env" ] && . "$G4C/.g4c/env"; G4RUN="${G4RUN:-$G4C/.g4c/g4run}"
   "$G4RUN" image-tag')
 [ "${got}" = "${exp_tag}" ] || fail "phase 0h: walk-up preamble did not resolve from a task subdir (got '${got}')"
+# Ad-hoc: the .g4c/g4run shim resolves on its own from a deep subdir with NO
+# pre-sourced env (it must source .g4c/env by absolute path, not $0/cwd-relative
+# — guards the `dirname ""` regression).
+got=$(cd "${G4C_WS}/task/deep" && env -u GEANT4_CLAUDE_ROOT -u CLAUDE_PLUGIN_ROOT \
+        CODEX_HOME="${SCRATCH}/no-codex" "${G4C_WS}/.g4c/g4run" image-tag 2>&1)
+[ "${got}" = "${exp_tag}" ] || fail "phase 0h: .g4c/g4run shim did not self-resolve ad-hoc from a subdir (got '${got}')"
+# Resolution order: with CLAUDE_PLUGIN_ROOT unset, the install recorded at init
+# wins over a stray Codex-cache copy (no cross-CLI surprise on a Claude project).
+mkdir -p "${SCRATCH}/fakecodex/plugins/cache/mkt/geant4-claude/zzz/bin"
+cp "${PLUGIN_ROOT}/bin/g4run" "${SCRATCH}/fakecodex/plugins/cache/mkt/geant4-claude/zzz/bin/g4run"
+got=$(cd "${G4C_WS}" && env -u CLAUDE_PLUGIN_ROOT CODEX_HOME="${SCRATCH}/fakecodex" \
+        sh -c '. .g4c/env; echo "$GEANT4_CLAUDE_ROOT"')
+[ "${got}" = "${PLUGIN_ROOT}" ] \
+  || fail "phase 0h: resolution chose '${got}', expected the recorded install ${PLUGIN_ROOT} (not the Codex copy)"
 
 # --- phase 1: project + task scaffold (two-tier) ---------------------------
 # geant4-init scaffolds the PROJECT (project docs + shared .g4c/); geant4-task

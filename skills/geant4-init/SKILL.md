@@ -77,20 +77,21 @@ Optional: `--force` (overwrite existing project files).
    mkdir -p .g4c "$DATA"
    # .g4c/env — sourced by every skill (and by the shim below).
    #  - GEANT4_CLAUDE_DATA: frozen shared data dir (standalone venv fallback base).
-   #  - GEANT4_CLAUDE_ROOT: plugin root, resolved live — Claude's live env ->
-   #    newest Codex install (by mtime; the cache leaf is a hash, not a sortable
-   #    version) -> the path recorded here at init (standalone fallback).
+   #  - GEANT4_CLAUDE_ROOT: plugin root, resolved live each source — Claude's live
+   #    env -> the install recorded at init (this project's own install) -> newest
+   #    install by mtime across the Claude + Codex caches (handles a version bump
+   #    that removed the recorded path).
    #  - GEANT4_CLAUDE_VENV: <project-root>/venv, found by walking up to .g4c/
    #    so a task subdir invocation resolves up to it. (The .sif cache is
    #    resolved the same way by the wrapper itself: <root>/cache.)
    cat > .g4c/env <<EOF
    export GEANT4_CLAUDE_DATA="${DATA}"
    _g4c_root="\${CLAUDE_PLUGIN_ROOT:-}"
+   [ -x "\${_g4c_root}/bin/g4run" ] || _g4c_root="${PLUGIN_ROOT}"
    if [ ! -x "\${_g4c_root}/bin/g4run" ]; then
-     _g4c_root="\$(ls -td "\${CODEX_HOME:-\$HOME/.codex}"/plugins/cache/*/geant4-claude/*/ 2>/dev/null | head -1)"
+     _g4c_root="\$(ls -td "\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}"/plugins/cache/*/geant4-claude/*/ "\${CODEX_HOME:-\$HOME/.codex}"/plugins/cache/*/geant4-claude/*/ 2>/dev/null | head -1)"
      _g4c_root="\${_g4c_root%/}"
    fi
-   [ -x "\${_g4c_root}/bin/g4run" ] || _g4c_root="${PLUGIN_ROOT}"
    export GEANT4_CLAUDE_ROOT="\${_g4c_root}"
    _g4c_ws="\$PWD"
    while [ "\${_g4c_ws}" != "/" ] && [ ! -d "\${_g4c_ws}/.g4c" ]; do _g4c_ws="\$(dirname "\${_g4c_ws}")"; done
@@ -98,12 +99,16 @@ Optional: `--force` (overwrite existing project files).
    export GEANT4_CLAUDE_VENV="\${_g4c_ws}/venv"
    unset _g4c_root _g4c_ws
    EOF
-   # .g4c/g4run — a shim (not a symlink): defers to .g4c/env's live ROOT, so the
-   # wrapper path is never frozen. Skills still just call .g4c/g4run unchanged.
-   cat > .g4c/g4run <<'EOF'
+   # .g4c/g4run — a shim (not a symlink). It sources .g4c/env by ABSOLUTE path
+   # (baked at init — no $0, no nested quotes, so it can't be mangled to
+   # `dirname ""` and works from any cwd), and only when GEANT4_CLAUDE_ROOT isn't
+   # already exported — the skill preamble sources .g4c/env first, so the normal
+   # path doesn't depend on the baked path (survives a moved project).
+   G4C_DIR="$(cd .g4c && pwd)"
+   cat > .g4c/g4run <<EOF
    #!/bin/sh
-   . "$(dirname "$0")/env"
-   exec "${GEANT4_CLAUDE_ROOT}/bin/g4run" "$@"
+   [ -n "\${GEANT4_CLAUDE_ROOT:-}" ] || . "${G4C_DIR}/env"
+   exec "\${GEANT4_CLAUDE_ROOT}/bin/g4run" "\$@"
    EOF
    chmod +x .g4c/g4run
    ```

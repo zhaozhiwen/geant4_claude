@@ -285,20 +285,27 @@ from a task subdir reach it by walking up the tree to `.g4c/`:
 
 | `.g4c/` entry | What it is |
 |---------------|------------|
-| `.g4c/g4run` | A `/bin/sh` shim that sources `.g4c/env` and execs `${GEANT4_CLAUDE_ROOT}/bin/g4run` — so the wrapper path is resolved live, never frozen. |
+| `.g4c/g4run` | A `/bin/sh` shim that sources `.g4c/env` (by absolute path baked at init — no `$0` — and only if `GEANT4_CLAUDE_ROOT` isn't already exported) and execs `${GEANT4_CLAUDE_ROOT}/bin/g4run` — so the wrapper path is resolved live, never frozen. |
 | `.g4c/env` | Exports `GEANT4_CLAUDE_DATA` (frozen shared data dir — now just the standalone venv fallback base), resolves `GEANT4_CLAUDE_ROOT` **live** every time it is sourced, and resolves a workspace-rooted `GEANT4_CLAUDE_VENV` by walking up to `.g4c/`. The `.sif` cache is *not* recorded here — `bin/g4run` resolves it from the workspace the same way. |
 
 **Why the root is resolved live, not frozen.** Each CLI installs every plugin
 version under its own dir, so a path recorded at init would dangle after an
 update. `.g4c/env` therefore re-resolves the root on each source, in order:
-`CLAUDE_PLUGIN_ROOT` (Claude's live env) → the newest install under
-`$CODEX_HOME/plugins/cache/*/geant4-claude/*/` (by mtime — the cache leaf is a
-hash, not a sortable version) → the path recorded at init (bare-clone /
-standalone fallback). On Claude the live env is authoritative; on Codex the glob
-finds the current install with zero re-init. The recorded fallback is how
-`geant4-init` itself learned the root: `${CLAUDE_PLUGIN_ROOT}` on Claude, or —
-on Codex, which hands the skill its own directory in context — its parent's
-parent (`…/skills/geant4-init/` → `…/`).
+(1) `CLAUDE_PLUGIN_ROOT` (Claude's live env, authoritative on a Claude run);
+(2) **the install recorded at init** — this project's own install, whichever CLI
+created it; (3) the newest install by mtime across *both* the Claude and Codex
+plugin caches (`${CLAUDE_CONFIG_DIR:-$HOME/.claude}` and `${CODEX_HOME:-$HOME/.codex}`
+`/plugins/cache/*/geant4-claude/*/` — the cache leaf is a hash, not a sortable
+version), which kicks in only when the recorded path was removed by a version
+bump. **Recorded-before-glob is deliberate:** a Claude project whose
+`CLAUDE_PLUGIN_ROOT` is momentarily unset resolves to its *own* Claude install,
+not a stray Codex-cache copy. On Codex (no live env var) tier 2 is the recorded
+Codex install, and tier 3 follows it across version bumps. The recorded value is
+how `geant4-init` learned the root: `${CLAUDE_PLUGIN_ROOT}` on Claude, or — on
+Codex, which hands the skill its own directory in context — its parent's parent
+(`…/skills/geant4-init/` → `…/`). The `.g4c/g4run` shim sources `.g4c/env` by
+absolute path (baked at init — no `$0`, robust to cwd) and only when
+`GEANT4_CLAUDE_ROOT` isn't already exported.
 
 **The preamble.** Every other skill begins by walking up from `$PWD` to the
 nearest `.g4c/` (so it resolves from any task subdir within the project), then
