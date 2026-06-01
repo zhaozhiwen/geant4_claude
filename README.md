@@ -21,7 +21,7 @@ pinned apptainer image; analysis runs on the host with
 > geant4-detector skill writes standalone GDML (including an
 > optical/RINDEX path) for use with whatever `main.cc` you bring. The
 > geant4-example skill is a self-contained smoke test that drops a
-> working demo into the workspace so you can confirm the toolchain works
+> working demo into a task so you can confirm the toolchain works
 > on your machine before writing any of your own code.
 
 ## Works on Claude Code and Codex CLI
@@ -144,7 +144,7 @@ before doing anything destructive.
 
 The shortest path to seeing the whole flow work. Drops a complete,
 runnable demo (1 × 1 × 10 cm lead block, 1 GeV e⁻ beam, edep
-histogram) into a fresh workspace and runs it as-is. Useful **once**
+histogram) into a fresh task and runs it as-is. Useful **once**
 on a clean install to confirm apptainer, the cached image, and the
 host-side Python stack all work; not a flow you'd use for your real
 simulation. Just describe each step — the named skill triggers:
@@ -269,13 +269,13 @@ A task reaches the project's shared engine by walking up to `.g4c/`, so the
 `.sif` and venv are downloaded/built once per project, not per task.
 
 It also writes a `CLAUDE.md` symlink to `AGENTS.md` (the canonical
-in-workspace rules) so Claude Code reads the same rules, and records
+in-project rules) so Claude Code reads the same rules, and records
 `.g4c/` — the engine pointer every
 other skill reads to locate `bin/g4run` and the cache, CLI-neutrally.
 
 The **geant4-example** skill is independent of the manual flow
 above. It drops a self-contained demo (GDML + macro + a generic
-GDML-loading `main.cc` + analysis script) into the workspace, useful
+GDML-loading `main.cc` + analysis script) into a task, useful
 for confirming the toolchain works on your machine before you write
 any of your own code. Treat the dropped files as smoke-test fixtures
 or reference material — when you're ready, write your own

@@ -13,7 +13,7 @@ A full Cherenkov closure study — exactly the kind of run the [Quickstart](#qui
 >
 > 1000-event simulation observed **161.35 ± 0.40** Cherenkov photons per electron; Frank-Tamm prediction (with the wavelength-dependent refractive index pulled from GDML, 200–775 nm) gave **160.98** photons — agreement at **0.93 σ**. Radial profile on the downstream backplate hits the geometric endpoint *R = (D + L/2)·tan θ<sub>c</sub>* = 3.15 cm to 1.3 %. All three closure checks **PASS**.
 
-That report is the `report.html` file the plugin scaffolds into every workspace — a presentation layer over `log.md` + `result.md` + the `runs/` directory. Open it once you've run a study; share it by running `python3 embed_html.py report.html` to get a portable single-file copy with all plot images inlined.
+That report is the `report.html` file the plugin scaffolds into each simulation **task** — a presentation layer over the task's `log.md` + `result.md` + `runs/`. Open it once you've run a study; share it by running `python3 embed_html.py report.html` to get a portable single-file copy with all plot images inlined.
 
 ## Quickstart
 
@@ -28,8 +28,8 @@ The skill asks any missing-spec questions, shows a brief plan, runs it on approv
 
 Three independent paths to a working simulation:
 
-- **Describe it** — the orchestrator drives `init → detector → build → run → analyze` end-to-end.
-- **Try the shipped example** — the **geant4-example** skill drops a lead-block demo into your workspace as a one-shot smoke test (just ask for the example).
+- **Describe it** — the orchestrator drives `init → task → detector → build → run → analyze` end-to-end (it sets up the project and a task subdir for you).
+- **Try the shipped example** — the **geant4-example** skill drops a lead-block demo into a task as a one-shot smoke test (just ask for the example).
 - **Bring your own `main.cc`** — when you need custom physics (optical photons, HP neutrons, polarization), hard-coded geometry, or a non-`Hits` output schema.
 
 Full walkthroughs in the [README](https://github.com/zhaozhiwen/geant4_claude#quickstart).
@@ -40,7 +40,7 @@ Full walkthroughs in the [README](https://github.com/zhaozhiwen/geant4_claude#qu
 - **Single runtime seam.** All Geant4 / ROOT / CMake calls go through `bin/g4run`. The container tag is pinned in one place. The plugin contributes no compiled code — every binary is the user's binary, built inside the container.
 - **Schema-aware analysis.** The **geant4-analyze** skill inspects the ROOT file and either uses the canned `Hits`-TTree plot or generates a custom analysis script tailored to whatever branches it actually finds.
 
-Architecture, contracts, and the post-v0.0.3 hardening backlog: [DESIGN.md](DESIGN/).
+Architecture, contracts, and the two-tier project/task model: [DESIGN.md](DESIGN/).
 
 ## Requirements
 

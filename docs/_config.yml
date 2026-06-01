@@ -1,5 +1,5 @@
 title: geant4_claude
-description: A Claude Code plugin for Geant4 simulations — describe a detector, run it, analyze it.
+description: A Claude Code + Codex CLI plugin for Geant4 simulations — describe a detector, run it, analyze it.
 url: https://zhaozhiwen.github.io
 baseurl: /geant4_claude
 repository: zhaozhiwen/geant4_claude
