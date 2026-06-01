@@ -1,22 +1,29 @@
 ---
 name: geant4
-description: Orchestrate the full Geant4 simulation flow (init → detector → preview → build → run → analyze) from a single natural-language user request. Load whenever the user asks to "do", "build", "run", "set up", "create", or "simulate" anything in Geant4 — including one-shot setups like "simulate a 1 GeV e- on a lead block" or "Cherenkov yield from a CO2 radiator". Captures the physics spec, asks targeted clarifying questions when anything required is missing, presents a brief plan for approval, then drives the step skills in sequence. This is the main entry point for any user who hasn't already picked a single step to run.
+description: Orchestrate the full Geant4 simulation flow (init project → create task → detector → preview → build → run → analyze) from a single natural-language user request. Load whenever the user asks to "do", "build", "run", "set up", "create", or "simulate" anything in Geant4 — including one-shot setups like "simulate a 1 GeV e- on a lead block" or "Cherenkov yield from a CO2 radiator". Captures the physics spec, asks targeted clarifying questions when anything required is missing, presents a brief plan for approval, then drives the step skills in sequence. Each simulation becomes a task subdirectory of the project; the orchestrator creates both tiers transparently. This is the main entry point for any user who hasn't already picked a single step to run.
 ---
 
 # geant4 — full-flow orchestrator
 
 Use this skill the moment the user asks for a Geant4 simulation. It is the
 natural-language **front door** for everything else this plugin does — there
-is no slash menu; skills auto-trigger on both Claude Code and Codex. The five
-core step skills (**geant4-init**, **geant4-detector**, **geant4-build**,
-**geant4-run**, **geant4-analyze**) are the *steps*; this skill is the
-*director* that turns "simulate X" into a planned sequence of those steps the
-user has approved.
+is no slash menu; skills auto-trigger on both Claude Code and Codex. The
+core step skills (**geant4-init**, **geant4-task**, **geant4-detector**,
+**geant4-build**, **geant4-run**, **geant4-analyze**) are the *steps*; this
+skill is the *director* that turns "simulate X" into a planned sequence of
+those steps the user has approved.
+
+The plugin is **two-tier**: **geant4-init** scaffolds a *project* (top dir,
+shared engine `.g4c/`/`cache/`/`venv/`, project `log.md`) once; each simulation
+is then a *task* subdirectory created by **geant4-task**. The orchestrator
+creates both tiers transparently — a one-shot "simulate X" auto-inits the
+project (if needed) and a sensibly-named task subdir, so casual users never
+have to think about the split.
 
 The default flow this skill drives is the no-C++ path:
 
 ```
-init → detector → preview → example → (edit macros/run.mac) → build → run → analyze → validate
+init (project, once) → task (subdir) → detector → preview → example → (edit macros/run.mac) → build → run → analyze → validate
 ```
 
 The **geant4-preview** skill renders three orthographic PNGs of the
@@ -43,7 +50,7 @@ Trigger on any of:
   calorimetry / shower sim", "set up a Geant4 study of …".
 - A physics setup description (beam + target + detector) without "Geant4"
   named explicitly, when Geant4 is the obvious tool.
-- "where do I start?" inside a workspace scaffolded by the plugin.
+- "where do I start?" inside a project or task scaffolded by the plugin.
 
 Do **not** load this skill when:
 
@@ -189,20 +196,21 @@ Spec
 - Analysis:  <…>
 
 Steps
-1. geant4-init       — scaffold workspace + cache image
-2. geant4-detector   — write geometries/<name>.gdml
-3. geant4-preview    — three orthographic PNGs of the GDML;
+1. geant4-init       — scaffold the project + shared engine (once per project; skip if already initialized)
+2. geant4-task       — create the task subdir <name>/ and cd into it
+3. geant4-detector   — write geometries/<name>.gdml
+4. geant4-preview    — three orthographic PNGs of the GDML;
      eyeball before building. Skip if the user said "no preview".
-4. <one of:>
+5. <one of:>
      geant4-example  — drop in the GDML-loading main + macro
      <or> hand-write src/main.cc + src/CMakeLists.txt for <reason>
-5. edit macros/<name>.mac for beam particle/energy/event count
-6. geant4-build
-7. geant4-run --exe build/<binary> -- \
+6. edit macros/<name>.mac for beam particle/energy/event count
+7. geant4-build
+8. geant4-run --exe build/<binary> -- \
      geometries/<name>.gdml macros/<name>.mac {run_dir}/<output>.root
-8. geant4-analyze runs/<id>
+9. geant4-analyze runs/<id>
      <one line: canned Hits-TTree plot vs. custom uproot script vs. ROOT macro>
-9. geant4-validate <topic> runs/<id> <topic flags>
+10. geant4-validate <topic> runs/<id> <topic flags>
      — closure test when an analytic prediction exists (Cherenkov:
        Frank-Tamm). Skip only if no validator covers the physics.
 
@@ -216,7 +224,7 @@ Open questions / risks
 
 Then use `AskUserQuestion` with three options:
 
-1. **Approve and run** — proceed with steps 1–9.
+1. **Approve and run** — proceed with steps 1–10.
 2. **Edit the spec** — user wants to change something; loop back to step 1.
 3. **Just write the plan, don't run yet** — leaves the plan in the chat
    without executing; useful when the user wants a second look.
@@ -229,8 +237,12 @@ Only after the user picks "Approve and run". For each step:
 
 1. Run it.
 2. Check its post-condition before moving on:
-   - `init` → `CLAUDE.md`, `.gitignore`, `log.md`, `result.md` and the
-     six directories exist; `.sif` cached.
+   - `init` (project) → project `AGENTS.md`/`CLAUDE.md`, `log.md`, `.gitignore`
+     and `.g4c/` exist; `.sif` cached under `cache/`. Skip if the project is
+     already initialized (`.g4c/` resolves up-tree).
+   - `task` → the task subdir exists with the six dirs + handoff docs
+     (`AGENTS.md`, `log.md`, `result.md`, `report.html`); cwd is inside it; a
+     Tasks-table row was added to the project `log.md`.
    - `detector` → `geometries/<name>.gdml` exists and validates.
    - `preview` → `geometries/<name>.preview/{preview_xy,preview_yz,preview_xz}.png`
      exist. Open the side view (`preview_yz.png`) and confirm the
@@ -293,6 +305,13 @@ non-negotiable #6 — the browser report must not lag the run).
 The `<!-- ENTRY TEMPLATE -->` comment block at the bottom of `log.md`
 is a reference for future sessions; do not modify or delete it.
 
+**Also update the project `log.md`** (one directory up, at the project
+root): set this task's row in the Tasks table to its current status
+(`built` / `analyzed`) with a one-line headline result, and ensure its
+`## Log` entry names the run id. The per-task `log.md` is this task's
+detailed log; the project `log.md` is the cross-task registry — keep
+both current.
+
 ## Step 4 — Final report
 
 End with a single block:
@@ -324,6 +343,8 @@ plan — the plots and numbers are the recap.
 - `skills/geant4-validate/SKILL.md` — physics closure test (Frank-Tamm for
   Cherenkov); the final step of the default flow when a validator
   covers the physics.
-- `templates/workspace/CLAUDE.md` — the rules that apply once the
-  workspace is scaffolded; loaded into Claude's context for every
-  subsequent action in the workspace.
+- `skills/geant4-task/SKILL.md` — create a task subdir (one per simulation)
+  from the task skeleton; runs after geant4-init.
+- `templates/AGENTS.md` — project-tier rules (managing/recording tasks);
+  `templates/workspace/AGENTS.md` — task-tier rules, loaded once a task is
+  scaffolded; the orchestrator applies its non-negotiable #6 (handoff docs).

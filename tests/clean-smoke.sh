@@ -179,20 +179,43 @@ got=$(cd "${G4C_WS}" && env CLAUDE_PLUGIN_ROOT="${PLUGIN_ROOT}" sh -c '. .g4c/en
 [ "${got}" = "${exp_tag}" ] || fail "phase 0h: shim did not resolve via live CLAUDE_PLUGIN_ROOT (got '${got}')"
 got=$(cd "${G4C_WS}" && env -u CLAUDE_PLUGIN_ROOT CODEX_HOME="${SCRATCH}/no-codex" sh -c '. .g4c/env; .g4c/g4run image-tag')
 [ "${got}" = "${exp_tag}" ] || fail "phase 0h: shim recorded-fallback did not resolve (got '${got}')"
-# .g4c/env exports a workspace-rooted venv (walked up to the .g4c/ marker).
+# .g4c/env exports a project-rooted venv (walked up to the .g4c/ marker).
 got=$(cd "${G4C_WS}" && env CLAUDE_PLUGIN_ROOT="${PLUGIN_ROOT}" sh -c '. .g4c/env; echo "$GEANT4_CLAUDE_VENV"')
-[ "${got}" = "${G4C_WS}/venv" ] || fail "phase 0h: .g4c/env GEANT4_CLAUDE_VENV != <workspace>/venv (got '${got}')"
+[ "${got}" = "${G4C_WS}/venv" ] || fail "phase 0h: .g4c/env GEANT4_CLAUDE_VENV != <project>/venv (got '${got}')"
+# Two-tier linchpin: the flow-skill walk-up preamble resolves the engine from a
+# TASK SUBDIR by walking up to the project's .g4c/.
+mkdir -p "${G4C_WS}/task/deep"
+got=$(cd "${G4C_WS}/task/deep" && env CLAUDE_PLUGIN_ROOT="${PLUGIN_ROOT}" sh -c '
+  G4C="$PWD"; while [ "$G4C" != "/" ] && [ ! -d "$G4C/.g4c" ]; do G4C="$(dirname "$G4C")"; done
+  [ -f "$G4C/.g4c/env" ] && . "$G4C/.g4c/env"; G4RUN="${G4RUN:-$G4C/.g4c/g4run}"
+  "$G4RUN" image-tag')
+[ "${got}" = "${exp_tag}" ] || fail "phase 0h: walk-up preamble did not resolve from a task subdir (got '${got}')"
 
-# --- phase 1: init equivalent ----------------------------------------------
-log "init: copy workspace skeleton from templates/workspace/"
-WS="${SCRATCH}/ws"
+# --- phase 1: project + task scaffold (two-tier) ---------------------------
+# geant4-init scaffolds the PROJECT (project docs + shared .g4c/); geant4-task
+# creates each task subdir from templates/workspace. The smoke renders both
+# tiers directly (it doesn't run the skills) and runs the flow inside the task.
+log "init: project docs (templates/AGENTS.md, log.md) + shared .g4c/ marker"
+PROJECT="${SCRATCH}/proj"
+mkdir -p "${PROJECT}/.g4c"
+cp "${PLUGIN_ROOT}/templates/AGENTS.md" "${PLUGIN_ROOT}/templates/log.md" "${PROJECT}/"
+( cd "${PROJECT}" && ln -sfn AGENTS.md CLAUDE.md )
+[ -f "${PROJECT}/AGENTS.md" ] || fail "project AGENTS.md missing"
+[ -f "${PROJECT}/log.md" ]    || fail "project log.md missing"
+[ -L "${PROJECT}/CLAUDE.md" ] || fail "project CLAUDE.md symlink missing"
+
+log "task: copy task skeleton from templates/workspace/ into a task subdir"
+WS="${PROJECT}/task-smoke"
 mkdir -p "${WS}" && cd "${WS}"
 cp -r "${PLUGIN_ROOT}/templates/workspace/." .
-[ -f CLAUDE.md ]   || fail "workspace/CLAUDE.md missing"
-[ -f .gitignore ]  || fail "workspace/.gitignore missing"
+[ -f CLAUDE.md ]   || fail "task CLAUDE.md missing"
+[ -f .gitignore ]  || fail "task .gitignore missing"
 for d in src geometries macros runs analysis; do
-  [ -d "$d" ] || fail "workspace skeleton missing $d/"
+  [ -d "$d" ] || fail "task skeleton missing $d/"
 done
+# the task .gitignore must NOT carry the shared-engine entries (project-level now)
+grep -qxE '\.g4c/|cache/|venv/' .gitignore \
+  && fail "task .gitignore should not list .g4c/ cache/ venv/ (those are project-level)" || true
 
 log "init: pull pinned image (skipped if .sif already present)"
 g4run pull
@@ -337,15 +360,15 @@ sif_after=$(stat -c%Y -L "${sif}")
 # With no GEANT4_CLAUDE_CACHE override, g4run walks up from $PWD to the .g4c/
 # marker and anchors the cache at <root>/cache; with no marker it falls back to
 # $PWD/cache. (No env no longer means "die" — the cache is workspace-rooted.)
-log "cache: bare g4run resolves <workspace-root>/cache via the .g4c/ marker"
+log "cache: bare g4run resolves <project-root>/cache via the .g4c/ marker"
 WSR="${SCRATCH}/wsroot"; mkdir -p "${WSR}/.g4c" "${WSR}/proj/deep"
 info_out=$(cd "${WSR}/proj/deep" && env -i HOME="${HOME}" PATH="${PATH}" \
             "${PLUGIN_ROOT}/bin/g4run" info 2>&1)
 got=$(printf '%s\n' "${info_out}" | awk '/^cache:/{print $2}')
 [ "${got}" = "${WSR}/cache" ] \
   || fail "cache did not resolve to the .g4c/ marker dir; got '${got}', want '${WSR}/cache'"
-printf '%s\n' "${info_out}" | grep -qF '[workspace (<root>/cache)]' \
-  || fail "cache info not tagged [workspace (<root>/cache)]"
+printf '%s\n' "${info_out}" | grep -qF '[project (<root>/cache)]' \
+  || fail "cache info not tagged [project (<root>/cache)]"
 # No marker up-tree -> $PWD/cache fallback (bare clone), still no error.
 BARE="${SCRATCH}/bare"; mkdir -p "${BARE}"
 got=$(cd "${BARE}" && env -i HOME="${HOME}" PATH="${PATH}" \

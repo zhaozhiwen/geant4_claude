@@ -37,7 +37,8 @@ Two backends ship; pick with `--backend`:
 
 1. **Resolve the engine** (every skill starts with this; written by geant4-init):
    ```bash
-   [ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+   G4C="$PWD"; while [ "$G4C" != "/" ] && [ ! -d "$G4C/.g4c" ]; do G4C="$(dirname "$G4C")"; done
+   [ -f "$G4C/.g4c/env" ] && . "$G4C/.g4c/env"; G4RUN="${G4RUN:-$G4C/.g4c/g4run}"
    ```
    If `.g4c/` is missing, stop and tell the user to run the **geant4-init**
    skill first.

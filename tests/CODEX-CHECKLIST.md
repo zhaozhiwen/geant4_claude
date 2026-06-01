@@ -49,42 +49,45 @@ Run it on a host with apptainer + git + curl/wget + python3.
 
 ## 4. End-to-end run
 
-- [ ] First request triggers `geant4-init` (workspace skeleton drops both
-      `CLAUDE.md` and `AGENTS.md`; `.g4c/` engine pointer written; `.sif` pulled).
-- [ ] `geant4-detector` → standalone GDML, or `geant4-example` drops in a
-      GDML-loading `main.cc` + macro + analysis.
+- [ ] First request triggers `geant4-init` → **project** docs (`AGENTS.md`,
+      `CLAUDE.md`, `log.md`, `.gitignore`) + the shared `.g4c/` engine pointer;
+      `.sif` pulled into the project `cache/`.
+- [ ] `geant4-task` (or the orchestrator) creates a **task subdir** (e.g.
+      `demo/`) from the task skeleton and `cd`s into it; a Tasks-table row is
+      added to the project `log.md`.
+- [ ] Inside the task: `geant4-detector` → standalone GDML, or `geant4-example`
+      drops in a GDML-loading `main.cc` + macro + analysis.
 - [ ] `geant4-build` compiles inside the container; `geant4-run` produces
-      `runs/<id>/{hits.root, log.txt, config.json}` (or the run's output schema).
+      `<task>/runs/<id>/{hits.root, log.txt, config.json}`.
 - [ ] `geant4-analyze` installs the venv lazily on first use (no SessionStart
-      hook on Codex) under `${GEANT4_CLAUDE_DATA}/venv`, and writes PNGs.
-- [ ] `log.md` gets the verbatim run entry (user input → plan → decision → outcome).
+      hook on Codex) at the **project** `venv/`, and writes PNGs.
+- [ ] The task's `log.md` gets the verbatim run entry; the project `log.md`
+      Tasks row is updated.
 
 ## 5. Engine pointer survives a plugin update (Design X)
 
 This is the reason `.g4c/g4run` is a live-resolving shim, not a frozen symlink.
 
-- [ ] In an initialized workspace, `cat .g4c/g4run` shows a `/bin/sh` shim that
+- [ ] In an initialized project, `cat .g4c/g4run` shows a `/bin/sh` shim that
       sources `.g4c/env` and execs `${GEANT4_CLAUDE_ROOT}/bin/g4run`.
 - [ ] `. .g4c/env; echo "$GEANT4_CLAUDE_ROOT"` prints the **currently installed**
       version dir under `~/.codex/plugins/cache/…/geant4-claude/…`.
 - [ ] Install a newer plugin version (`codex plugin add geant4-claude@geant4-claude`
       after a version bump), then — **without re-running `geant4-init`** — run any
-      skill in the same workspace. It resolves the **new** version automatically
-      (the shim re-globs the newest install by mtime). No "cannot execute" error.
+      skill in the project (including from a task subdir). It resolves the **new**
+      version automatically (the shim re-globs the newest install by mtime). No
+      "cannot execute" error.
 
 ## 6. Path hygiene
 
-- [ ] The `.sif` landed at `<workspace>/cache/sif/` and the venv at
-      `<workspace>/venv/` — workspace-rooted (the wrapper resolves them from the
-      `.g4c/` marker), **not** under the version-pinned plugin install dir. This
-      is what makes a workspace self-contained and survive a plugin update.
-      Confirm with `. .g4c/env; .g4c/g4run info` — cache line tagged
-      `[workspace (<root>/cache)]`.
+- [ ] The `.sif` landed at `<project>/cache/sif/` and the venv at
+      `<project>/venv/` — **project-rooted** (the wrapper resolves them by
+      walking up from the task subdir to the project's `.g4c/`), **not** under
+      the version-pinned plugin install dir. This is what makes a project
+      self-contained and survive a plugin update. From a task subdir, run any
+      skill (or `g4run info`) — cache line tagged `[project (<root>/cache)]`.
 - [ ] `GEANT4_CLAUDE_CACHE` overrides the cache location (point it at a
-      shared/pre-staged `.sif` to skip a per-workspace ~600 MB copy); `info`
+      shared/pre-staged `.sif` to skip a per-project ~600 MB copy); `info`
       then tags the cache line `[GEANT4_CLAUDE_CACHE override]`.
-- [ ] The one shared artifact is the plugin-wide Geant4 source tree under
-      `${GEANT4_CLAUDE_DATA}` (`~/.cache/geant4_claude` on Codex) — identical
-      across workspaces, intentionally not per-workspace.
 - [ ] Re-running `geant4-init` is idempotent (existing files skipped without
       `--force`; `.g4c/` is refreshed).

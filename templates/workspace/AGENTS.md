@@ -1,10 +1,14 @@
-# AGENTS.md — Geant4 workspace
+# AGENTS.md — Geant4 simulation task
 
 Rules for the AI assistant when working in this Geant4 simulation
-workspace (works on both Claude Code and OpenAI Codex). The
-`geant4_claude` plugin scaffolded these directories. The plugin's
-skills (**geant4-build**, **geant4-run**, **geant4-analyze**,
-**geant4-detector**) operate on the layout below. There are no slash
+**task** — one subdirectory of a Geant4 **project**. The parent project
+dir holds the shared engine (`.g4c/`, `cache/`, `venv/`) and a project
+`log.md` that tracks all tasks; this dir holds just *this* task's source,
+runs, and handoff docs. Works on both Claude Code and OpenAI Codex. The
+`geant4_claude` plugin scaffolded this task (via the **geant4-task**
+skill). The plugin's skills (**geant4-build**, **geant4-run**,
+**geant4-analyze**, **geant4-detector**) operate on the layout below and
+reach the shared engine by walking up to `.g4c/`. There are no slash
 commands — describe what you want in natural language and the matching
 skill runs.
 
@@ -26,9 +30,7 @@ the four runtime skills work the same in both cases.
 | `macros/`     | Geant4 macro files (`*.mac`). Versioned. |
 | `runs/`       | One sub-directory per **geant4-run** invocation. **Gitignored** (only the placeholder is kept). |
 | `analysis/`   | Python scripts that read `runs/<id>/*.root`. |
-| `cache/`      | Workspace-rooted container image (`.sif`). **Gitignored.** Written by geant4-init/`g4run`; set `GEANT4_CLAUDE_CACHE` to share one across workspaces instead. |
-| `venv/`       | Workspace-rooted Python venv (uproot/numpy/matplotlib). **Gitignored.** Seeded by geant4-init. |
-| `log.md`      | Chronological work log — append at the top after each session. |
+| `log.md`      | **This task's** chronological work log — append at the top after each session. (The project `log.md` one dir up tracks all tasks.) |
 | `result.md`   | Per-run findings, with paths to `runs/<id>/` and `analysis/`. |
 | `report.html` | Single-page browser-friendly summary of the study (overview, runs table, key numbers, plots, interpretation). Self-contained — open in any browser via `file://`. Derived from `log.md` + `result.md` + `runs/`; markdown is authoritative if they disagree. |
 | `embed_html.py` | Stdlib-only helper that takes `report.html` (with relative `<img src="runs/...">` paths) and writes `report_portable.html` with each image base64-embedded inline. Run when you want to email or upload the report as a single self-contained file. Idempotent and traceable (preserves original paths in `data-source` attributes). Output is gitignored (`*_portable.html`). |

@@ -77,7 +77,7 @@ cache_source_label() {
   if [[ -n "${GEANT4_CLAUDE_CACHE:-}" ]]; then
     echo "GEANT4_CLAUDE_CACHE override"
   else
-    echo "workspace (<root>/cache)"
+    echo "project (<root>/cache)"
   fi
 }
 

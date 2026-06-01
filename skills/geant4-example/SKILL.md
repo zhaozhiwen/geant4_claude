@@ -1,6 +1,6 @@
 ---
 name: geant4-example
-description: Use when the user wants to drop a working end-to-end sample (GDML-loading main + sample geometry/macro/analysis) into the workspace — the default binary for the natural-language detector flow. Copies from the plugin's example template and validates the GDML. Requires geant4-init to have run.
+description: Use when the user wants to drop a working end-to-end sample (GDML-loading main + sample geometry/macro/analysis) into the current task — the default binary for the natural-language detector flow. Copies from the plugin's example template and validates the GDML. Run from inside a task dir created by geant4-task (after geant4-init).
 ---
 
 # geant4-example — drop the GDML-loading main + sample into the workspace
@@ -31,16 +31,18 @@ custom physics, or an output schema that isn't `Hits`.
 
 1. **Resolve the engine** (every skill starts with this; written by geant4-init):
    ```bash
-   [ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+   G4C="$PWD"; while [ "$G4C" != "/" ] && [ ! -d "$G4C/.g4c" ]; do G4C="$(dirname "$G4C")"; done
+   [ -f "$G4C/.g4c/env" ] && . "$G4C/.g4c/env"; G4RUN="${G4RUN:-$G4C/.g4c/g4run}"
    ```
    If `.g4c/` is missing, stop and tell the user to run the **geant4-init**
    skill first.
 
-2. **Refuse to run on an empty workspace.** This builds on the
-   skeleton from the **geant4-init** skill:
+2. **Refuse to run outside a task dir.** This builds on the task skeleton
+   created by the **geant4-task** skill (run from *inside* a task subdir, not
+   the project root):
    ```bash
    for d in src geometries macros analysis runs; do
-     test -d "${d}" || { echo "no ${d}/; run the geant4-init skill first"; exit 1; }
+     test -d "${d}" || { echo "no ${d}/; run the geant4-task skill first (from inside the task dir)"; exit 1; }
    done
    ```
 
@@ -92,7 +94,7 @@ untouched.
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `.g4c/` missing | Workspace not initialized. | Run the geant4-init skill first. |
-| `no src/; run the geant4-init skill first` | The workspace skeleton isn't there. | Run the geant4-init skill. |
+| `no src/; run the geant4-task skill first` | Not inside a task dir (the task skeleton isn't here). | Run the **geant4-task** skill (after **geant4-init**), then run this from inside the task dir. |
 | Collision: `src/main.cc` already exists | The workspace already has user code. | Pass `--force` only after confirming with the user that the file is safe to overwrite — most likely they want to keep their own. |
 | `validate-gdml` fails | The example template is corrupted. | Re-install the plugin. |
 

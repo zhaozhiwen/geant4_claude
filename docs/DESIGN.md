@@ -45,10 +45,13 @@ matching skill loads; there are no slash commands to type on either CLI.
 $ cd ~/projects/my-detector
 $ claude          # or: codex
 
-> set up a Geant4 workspace                       # → geant4-init skill
-✓ wrote workspace skeleton (src/, geometries/, macros/, runs/, analysis/, CLAUDE.md, log.md, result.md)
+> set up a Geant4 project                          # → geant4-init skill
+✓ wrote project docs (AGENTS.md, CLAUDE.md, log.md, .gitignore)
 ✓ wrote .g4c/ engine pointer (g4run shim + env)
-✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at <workspace>/cache/sif)
+✓ pulled ghcr.io/gemc/g4install:11.4.0-almalinux-9.4 (cached at <project>/cache/sif)
+
+> create a task called lead-block                  # → geant4-task skill
+✓ wrote task lead-block/ (src/, geometries/, macros/, runs/, analysis/ + handoff docs)
 
 > design a 1×1×10 cm lead block in an air world,  # → geant4-detector skill
   tag the lead as sensitive
@@ -241,8 +244,9 @@ command name.
 
 | Skill | Kind | One-line purpose |
 |-------|------|------------------|
-| `geant4` | orchestrator | **Full-flow entry point.** Auto-loads on "simulate / build / run / set up a Geant4 …" requests; gap-checks the spec across six fields (goal, geometry, beam, sensitive, output, analysis); presents a brief plan; on approval drives `init → detector → preview → build → run → analyze → validate` in sequence (validate runs when a closure validator covers the physics). The one skill that *drives* a workflow rather than describing one. |
-| `geant4-init` | procedure | Scaffold the generic workspace skeleton (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` plus `CLAUDE.md`/`AGENTS.md`, `.gitignore`, `log.md`, `result.md`, `report.html`); **write the `.g4c/` engine pointer**; bootstrap the venv (`ensure_venv.sh`); pull the pinned image. The keystone — must run before any other procedure skill. |
+| `geant4` | orchestrator | **Full-flow entry point.** Auto-loads on "simulate / build / run / set up a Geant4 …" requests; gap-checks the spec across six fields (goal, geometry, beam, sensitive, output, analysis); presents a brief plan; on approval drives `init → task → detector → preview → build → run → analyze → validate` in sequence (validate runs when a closure validator covers the physics). The one skill that *drives* a workflow rather than describing one. |
+| `geant4-init` | procedure | Scaffold the **project** (top dir): project docs (`AGENTS.md`/`CLAUDE.md`, the `log.md` task registry, `.gitignore`); **write the shared `.g4c/` engine pointer**; bootstrap the venv (`ensure_venv.sh`); pull the pinned image. The keystone — once per project, before any other skill. |
+| `geant4-task` | procedure | Create a **task** subdirectory from the task skeleton (`src/`, `geometries/`, `macros/`, `runs/`, `analysis/` + handoff docs); register it in the project `log.md`; `cd` in. Runs after `geant4-init`; each simulation is one task, sharing the project's engine. |
 | `geant4-detector` | procedure | Translate a natural-language detector spec into a validated standalone GDML file under `geometries/` (validated in-container). Output is consumable by any `main.cc` that calls `G4GDMLParser::Read(...)`. Optical specs get RINDEX GDML, gated at parse time. |
 | `geant4-example` | procedure | Drop a self-contained smoke test (GDML + macro + generic GDML-loading `main.cc` + analysis script) into the workspace. Used once on a fresh install to confirm the toolchain, or as reference code; also the default binary the orchestrator composes for simple-physics specs. |
 | `geant4-preview` | procedure | Render three orthographic PNG previews (XY/YZ/XZ) of a GDML file. Default sketch backend reads `<solids>` + `<structure>` and draws with matplotlib (no container, ~1 s, box/tube/cone/polycone + rotations); raytracer backend is the alpha Geant4-rendered fallback. Orchestrator inserts this after `geant4-detector`. |
@@ -274,9 +278,10 @@ equivalent) and **cannot bundle hooks** — its plugin validator rejects a
 Codex. And since the plugin ships no session-start hook on Claude either, the
 venv bootstrap is skill-driven on both CLIs (see **venv bootstrap** below).
 
-**The solution — a per-workspace pointer, `.g4c/` (gitignored):** the
+**The solution — a per-project pointer, `.g4c/` (gitignored):** the
 `geant4-init` skill resolves the data dir *once*, records how to re-resolve the
-plugin root *live*, and writes both into the workspace:
+plugin root *live*, and writes both into the **project root**. Skills running
+from a task subdir reach it by walking up the tree to `.g4c/`:
 
 | `.g4c/` entry | What it is |
 |---------------|------------|
@@ -295,10 +300,13 @@ finds the current install with zero re-init. The recorded fallback is how
 on Codex, which hands the skill its own directory in context — its parent's
 parent (`…/skills/geant4-init/` → `…/`).
 
-**The preamble.** Every other skill begins with:
+**The preamble.** Every other skill begins by walking up from `$PWD` to the
+nearest `.g4c/` (so it resolves from any task subdir within the project), then
+sourcing it:
 
 ```bash
-[ -f .g4c/env ] && . .g4c/env; G4RUN="${G4RUN:-$PWD/.g4c/g4run}"
+G4C="$PWD"; while [ "$G4C" != "/" ] && [ ! -d "$G4C/.g4c" ]; do G4C="$(dirname "$G4C")"; done
+[ -f "$G4C/.g4c/env" ] && . "$G4C/.g4c/env"; G4RUN="${G4RUN:-$G4C/.g4c/g4run}"
 ```
 
 then calls `"${G4RUN}" …`. This sources the cache/root env and resolves the

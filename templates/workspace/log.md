@@ -1,7 +1,8 @@
-# Project log
+# Task log
 
-Chronological notes on this Geant4 simulation project. Prepend the
-most recent entry at the top. Each entry captures **what the user
+Chronological notes on this Geant4 simulation **task**. Prepend the
+most recent entry at the top. (The project-level `log.md` one directory
+up tracks *all* tasks; this file is this task's detailed log.) Each entry captures **what the user
 asked for**, **what Claude planned**, **what the user decided**, and
 **what actually happened**. Future Claude sessions read this to pick
 up where you left off; the user reads it to remember why a particular

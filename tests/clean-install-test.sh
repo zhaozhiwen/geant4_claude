@@ -307,32 +307,46 @@ send "/exit"
 sleep 4
 launch_claude
 
-# --- phase 3: geant4-init (NL) ---------------------------------------------
-log "phase 3: geant4-init via NL (workspace skeleton + image pull)"
-send "Set up a Geant4 workspace in the current directory."
+# --- phase 3: geant4-init (NL) → project ----------------------------------
+log "phase 3: geant4-init via NL (project docs + shared engine + image pull)"
+send "Set up a Geant4 project in the current directory."
 
 wait_for "ready" 120 || wait_for "info" 120 || wait_for "✓" 120 || true
 
-# Verify workspace created
-[ -f "${WS}/CLAUDE.md" ]      || fail "workspace CLAUDE.md missing"
-[ -f "${WS}/.gitignore" ]      || fail "workspace .gitignore missing"
-for d in src geometries macros runs analysis; do
-  [ -d "${WS}/${d}" ] || fail "workspace ${d}/ missing"
-done
+# Verify the PROJECT was scaffolded (docs + shared engine), NOT a task skeleton
+[ -f "${WS}/AGENTS.md" ]  || fail "project AGENTS.md missing"
+[ -f "${WS}/CLAUDE.md" ]  || fail "project CLAUDE.md missing"
+[ -f "${WS}/log.md" ]     || fail "project log.md missing"
+[ -f "${WS}/.gitignore" ] || fail "project .gitignore missing"
+[ -d "${WS}/.g4c" ]       || fail "project .g4c/ engine pointer missing"
 [ -f "${WS}/cache/sif/${SIF_NAME}" ] || \
-  fail ".sif missing from workspace cache (symlink broken?)"
-note "✓ workspace skeleton + workspace-rooted .sif present"
+  fail ".sif missing from project cache (symlink broken?)"
+note "✓ project docs + shared .g4c/ + project-rooted .sif present"
 
-# geant4-init runs scripts/ensure_venv.sh, which is what now seeds the pdg
-# venv (no SessionStart hook). Give pip a moment if it had to install.
+# geant4-init runs scripts/ensure_venv.sh, which seeds the pdg venv at the
+# PROJECT root (no SessionStart hook). Give pip a moment if it had to install.
 sleep 5
 if [ -d "${WS}/venv/bin" ]; then
   "${WS}/venv/bin/python" -c "import pdg" 2>/dev/null \
-    && note "✓ pdg installed in workspace venv" \
+    && note "✓ pdg installed in project venv" \
     || fail "venv exists but pdg not importable"
 else
   fail "geant4-init did not create venv at ${WS}/venv"
 fi
+
+# --- phase 3b: geant4-task (NL) → task subdir ------------------------------
+log "phase 3b: geant4-task via NL (create a task subdir)"
+send "Create a new simulation task called demo."
+TASK="${WS}/demo"
+wait_for_file "${TASK}/CLAUDE.md" 60 || wait_for_file "${TASK}/.gitignore" 60 || true
+[ -d "${TASK}" ] || fail "task dir ${TASK} not created"
+for d in src geometries macros runs analysis; do
+  [ -d "${TASK}/${d}" ] || fail "task ${d}/ missing"
+done
+note "✓ task subdir scaffolded at ${TASK}"
+# Subsequent phases (example/build/run/analyze) operate inside the task subdir;
+# point WS at it so the existing ${WS}/... assertions resolve there.
+WS="${TASK}"
 
 # --- phase 4a: geant4-example (NL) -----------------------------------------
 log "phase 4a: geant4-example via NL (drop demo)"

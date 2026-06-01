@@ -78,34 +78,37 @@ Pass:
 > SessionStart hook on either CLI. It is seeded later, when the
 > `geant4-init` skill runs `scripts/ensure_venv.sh` (checked in phase 3).
 
-## Phase 3 — Set up workspace (geant4-init skill)
+## Phase 3 — Set up project + task (geant4-init, geant4-task)
 
 ```bash
 mkdir /tmp/g4c_clean_smoke && cd /tmp/g4c_clean_smoke
 ```
 
-In Claude Code, ask in plain language (this should auto-trigger the
-`geant4-init` skill):
+In Claude Code, ask in plain language (auto-triggers `geant4-init`, then
+`geant4-task`):
 
 ```text
-> Set up a Geant4 workspace in the current directory.
+> Set up a Geant4 project in the current directory.
+> Create a simulation task called demo.
 ```
 
 Pass:
-- Workspace skeleton appears: `CLAUDE.md`, `.gitignore`, plus empty
-  `src/`, `geometries/`, `macros/`, `runs/`, `analysis/`.
-- `<workspace>/venv/bin/python -c "import pdg"` succeeds (the `geant4-init`
-  skill ran `scripts/ensure_venv.sh`, which installed `pdg` into the
-  workspace-rooted managed venv).
-- `.sif` lands at `<workspace>/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
-  (workspace-rooted; **not** under the plugin install or `~/.geant4_claude`).
+- **Project** scaffolded: `AGENTS.md`, `CLAUDE.md`, `log.md`, `.gitignore`, and
+  the shared `.g4c/` engine pointer — **no** `src/` skeleton at the project root.
+- `<project>/venv/bin/python -c "import pdg"` succeeds (the `geant4-init` skill
+  ran `scripts/ensure_venv.sh`, installing `pdg` into the **project** venv).
+- `.sif` lands at `<project>/cache/sif/g4install_11.4.0-almalinux-9.4.sif`
+  (project-rooted; **not** under the plugin install or `~/.geant4_claude`).
 - No Geant4-source prompt fires (the source-clone step was removed; the wiki
   links to the Geant4 source on GitHub instead).
+- **Task** `demo/` appears with the skeleton (`src/`, `geometries/`, `macros/`,
+  `runs/`, `analysis/` + its own `CLAUDE.md`/`log.md`/`result.md`/`report.html`),
+  cwd moves into it, and a Tasks-table row is added to the project `log.md`.
 
-## Phase 4 — Example flow
+## Phase 4 — Example flow (inside the `demo/` task)
 
-In Claude Code, in `/tmp/g4c_clean_smoke`, ask in plain language (each
-request should auto-trigger the matching skill):
+In Claude Code, **inside the `demo/` task dir** (geant4-task left you there),
+ask in plain language (each request should auto-trigger the matching skill):
 
 ```text
 > Drop in the shipped example (GDML + main.cc + macro + analysis).
@@ -134,12 +137,13 @@ mkdir /tmp/g4c_clean_custom && cd /tmp/g4c_clean_custom
 In Claude Code, ask in plain language:
 
 ```text
-> Set up a Geant4 workspace in the current directory.
+> Set up a Geant4 project in the current directory.
+> Create a simulation task called custom.
 ```
 
-Then **outside** Claude Code (or with Claude's help), hand-write a
-minimal `src/main.cc` + `src/CMakeLists.txt` whose binary writes a
-non-`Hits` schema (e.g. a `Tracks` TTree). Then ask in plain language:
+Then **outside** Claude Code (or with Claude's help), inside the `custom/`
+task dir hand-write a minimal `src/main.cc` + `src/CMakeLists.txt` whose binary
+writes a non-`Hits` schema (e.g. a `Tracks` TTree). Then ask in plain language:
 
 ```text
 > Build the simulation from src/ into build/.
@@ -154,29 +158,30 @@ Pass:
 
 ## Phase 6 — Idempotency
 
-Back in `/tmp/g4c_clean_smoke`, ask in plain language again:
+Back in `/tmp/g4c_clean_smoke` (the project root), ask again, then build
+inside `demo/`:
 
 ```text
-> Set up a Geant4 workspace in the current directory.
-> Build the simulation from src/ into build/.
+> Set up a Geant4 project in the current directory.
+> (in demo/) Build the simulation from src/ into build/.
 ```
 
 Pass:
-- `geant4-init` (without `--force`) detects the populated workspace and
+- `geant4-init` (without `--force`) detects the populated project and
   no-ops.
 - `geant4-build` is incremental (finishes in seconds, doesn't recompile
   unchanged sources).
 - The `.sif` is **not** re-pulled. Spot-check the mtime.
 
-## Phase 7 — Workspace-rooted cache regression
+## Phase 7 — Project-rooted cache regression
 
-The cache + venv are anchored to the workspace (the wrapper walks up to the
-`.g4c/` marker), not the plugin install, so a workspace is self-contained and
-survives plugin updates. `g4run info` tags the cache `[workspace (<root>/cache)]`.
+The cache + venv are anchored to the project (the wrapper walks up to the
+`.g4c/` marker), not the plugin install, so a project is self-contained and
+survives plugin updates. `g4run info` tags the cache `[project (<root>/cache)]`.
 
 Pass:
-- The `.sif` lives in `<workspace>/cache/sif/`, and the venv in
-  `<workspace>/venv/` — **not** under `~/.claude/plugins/data/.../cache` or the
+- The `.sif` lives in `<project>/cache/sif/`, and the venv in
+  `<project>/venv/` — **not** under `~/.claude/plugins/data/.../cache` or the
   legacy `~/.geant4_claude/`.
 - `runs/<id>/log.txt` files contain no mention of pulling the image
   except on the very first `geant4-init` run.

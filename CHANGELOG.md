@@ -48,6 +48,15 @@ release. A breaking change to the `Hits` TTree schema or to the
 
 ### Changed (breaking)
 
+- **Two-tier layout: project → tasks.** `geant4-init` now scaffolds a *project*
+  (top dir — project `AGENTS.md`/`log.md` task registry, plus the shared `.g4c/`
+  engine + `cache/` + `venv/`), and a new **`geant4-task`** skill creates each
+  simulation as a *task* subdirectory from the task skeleton. Flow skills run
+  from a task subdir and reach the shared engine by **walking up** to `.g4c/`
+  (the cwd-only preamble became a walk-up). The `geant4` orchestrator creates
+  both tiers transparently for one-shot requests. Was: one flat workspace per
+  simulation — a flat layout still resolves (project == one task), but
+  `geant4-init` now writes project docs, not the `src/` skeleton.
 - **All slash commands removed; every procedure is now a skill.** Claude users no
   longer get a `/geant4-*` slash menu — describe the task and the matching skill
   (e.g. `geant4-build`) triggers. This is the one format both CLIs run identically.

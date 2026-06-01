@@ -1,4 +1,6 @@
-# geant4_claude workspace — generated artifacts
+# geant4_claude task — generated artifacts
+# (the shared engine — .g4c/ cache/ venv/ — is gitignored at the PROJECT root,
+# one dir up, not here.)
 runs/*/
 !runs/.gitkeep
 *.root
@@ -8,9 +10,3 @@ __pycache__/
 .ipynb_checkpoints/
 # derived portable HTML produced by embed_html.py (regenerable)
 *_portable.html
-# engine pointer written by the geant4-init skill (per-workspace, local)
-.g4c/
-# workspace-rooted runtime artifacts written by geant4-init/g4run (large, local):
-# the pinned container image and the managed Python venv
-cache/
-venv/
